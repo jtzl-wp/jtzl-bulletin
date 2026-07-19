@@ -1,13 +1,15 @@
 <?php
 /**
  * Plugin Name:       Bulletin for bbPress
- * Plugin URI:        https://github.com/shikadigital/bulletin
+ * Plugin URI:        https://github.com/jtzl-wp/jtzl-bulletin
  * Description:       A mobile-first, decluttered reading layer for bbPress. The post is the hero; navigation is deliberately secondary. Renders its own minimal document on the reading screens and leaves every other page on the site's own theme.
  * Version:           0.1.0
- * Requires at least: 5.9
- * Requires PHP:      7.2
- * Author:            Shika Digital
- * Text Domain:       bulletin
+ * Requires at least: 6.0
+ * Requires PHP:      8.2
+ * Requires Plugins:  bbpress
+ * Author:            JTZL
+ * Author URI:        https://github.com/jtzl-wp
+ * Text Domain:       jtzl-bulletin
  * Domain Path:       /languages
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
@@ -19,7 +21,7 @@
  * working. Non-forum pages — and, in v1, bbPress pages we have no design for —
  * are left untouched on the active theme.
  *
- * @package Bulletin
+ * @package JTZL\Bulletin
  */
 
 // Exit if accessed directly.
@@ -27,10 +29,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'BLTN_VERSION', '0.1.0' );
-define( 'BLTN_FILE', __FILE__ );
-define( 'BLTN_DIR', plugin_dir_path( __FILE__ ) );
-define( 'BLTN_URL', plugin_dir_url( __FILE__ ) );
+define( 'JTZL_BLTN_VERSION', '0.1.0' );
+define( 'JTZL_BLTN_FILE', __FILE__ );
+define( 'JTZL_BLTN_DIR', plugin_dir_path( __FILE__ ) );
+define( 'JTZL_BLTN_URL', plugin_dir_url( __FILE__ ) );
+define( 'JTZL_BLTN_BASENAME', plugin_basename( __FILE__ ) );
+
+if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
+	require_once __DIR__ . '/vendor/autoload.php';
+}
 
 /**
  * Boot the plugin after all plugins have loaded, so bbPress is guaranteed to be
@@ -38,27 +45,28 @@ define( 'BLTN_URL', plugin_dir_url( __FILE__ ) );
  *
  * Priority 20 keeps us safely after bbPress's own default-priority bootstrap.
  */
-function bltn_boot() {
+function jtzl_bltn_boot() {
 	// Companion plugin: with no bbPress there is nothing to declutter. Fail
-	// loudly in the admin, quietly on the front end.
+	// loudly in the admin, quietly on the front end. The test harness always loads
+	// bbPress, so this defensive branch — like a direct-access guard — cannot run
+	// under coverage.
 	if ( ! function_exists( 'is_bbpress' ) ) {
-		add_action( 'admin_notices', 'bltn_notice_missing_bbpress' );
+		// @codeCoverageIgnoreStart
+		add_action( 'admin_notices', 'jtzl_bltn_notice_missing_bbpress' );
 		return;
+		// @codeCoverageIgnoreEnd
 	}
 
-	require_once BLTN_DIR . 'includes/helpers.php';
-	require_once BLTN_DIR . 'includes/takeover.php';
-	require_once BLTN_DIR . 'includes/assets.php';
-	require_once BLTN_DIR . 'includes/prev-next.php';
-	require_once BLTN_DIR . 'includes/ajax.php';
+	$bootstrap = new \JTZL\Bulletin\Bootstrap( \JTZL\Bulletin\Plugin::get_container() );
+	$bootstrap->register_hooks();
 }
-add_action( 'plugins_loaded', 'bltn_boot', 20 );
+add_action( 'plugins_loaded', 'jtzl_bltn_boot', 20 );
 
 /**
  * Admin notice shown when bbPress is not active.
  */
-function bltn_notice_missing_bbpress() {
-	$message = __( '<strong>Bulletin for bbPress</strong> needs bbPress to be installed and active. It has no effect on its own.', 'bulletin' );
+function jtzl_bltn_notice_missing_bbpress() {
+	$message = __( '<strong>Bulletin for bbPress</strong> needs bbPress to be installed and active. It has no effect on its own.', 'jtzl-bulletin' );
 	printf(
 		'<div class="notice notice-warning"><p>%s</p></div>',
 		wp_kses( $message, array( 'strong' => array() ) )

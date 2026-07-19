@@ -1,0 +1,79 @@
+<?php
+/**
+ * DI container factory.
+ *
+ * @package JTZL\Bulletin
+ */
+
+namespace JTZL\Bulletin;
+
+use DI\Container;
+use DI\ContainerBuilder;
+use JTZL\Bulletin\Asset\AssetManager;
+use JTZL\Bulletin\Takeover\TemplateController;
+use JTZL\Bulletin\WordPress\ContextInterface;
+use JTZL\Bulletin\WordPress\WordPressContext;
+use function DI\autowire;
+
+/**
+ * Builds and configures the PHP-DI container. All service definitions live in
+ * one place; the composition root (Bootstrap) then resolves services and binds
+ * them to WordPress hooks.
+ */
+class ContainerFactory {
+
+	/**
+	 * Build the container.
+	 *
+	 * Compilation is enabled in production (into var/cache) and disabled when
+	 * WP_DEBUG is on, so local development never serves a stale compiled container.
+	 *
+	 * @param bool|null $enable_compilation Force compilation on/off (test seam).
+	 * @return Container
+	 */
+	public static function create( ?bool $enable_compilation = null ): Container {
+		$builder = new ContainerBuilder();
+
+		$should_compile = $enable_compilation ?? ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG );
+		if ( $should_compile && defined( 'JTZL_BLTN_DIR' ) ) {
+			$cache_dir = JTZL_BLTN_DIR . 'var/cache';
+			if ( ! file_exists( $cache_dir ) ) {
+				wp_mkdir_p( $cache_dir );
+			}
+			$builder->enableCompilation( $cache_dir );
+		}
+
+		$builder->useAutowiring( true );
+		$builder->addDefinitions( self::get_definitions() );
+
+		return $builder->build();
+	}
+
+	/**
+	 * The container definitions.
+	 *
+	 * Autowiring resolves everything that needs only other services; the few
+	 * scalar constructor arguments (plugin paths, version, template dir) are
+	 * supplied here.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private static function get_definitions(): array {
+		$plugin_dir    = defined( 'JTZL_BLTN_DIR' ) ? JTZL_BLTN_DIR : '';
+		$plugin_url    = defined( 'JTZL_BLTN_URL' ) ? JTZL_BLTN_URL : '';
+		$plugin_ver    = defined( 'JTZL_BLTN_VERSION' ) ? JTZL_BLTN_VERSION : '0.0.0';
+		$templates_dir = $plugin_dir . 'templates/';
+
+		return array(
+			ContextInterface::class => autowire( WordPressContext::class ),
+
+			AssetManager::class => autowire()
+				->constructorParameter( 'plugin_dir', $plugin_dir )
+				->constructorParameter( 'plugin_url', $plugin_url )
+				->constructorParameter( 'version', $plugin_ver ),
+
+			TemplateController::class => autowire()
+				->constructorParameter( 'templates_dir', $templates_dir ),
+		);
+	}
+}

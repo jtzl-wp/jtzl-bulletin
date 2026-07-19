@@ -1,0 +1,104 @@
+{
+	"name": "jtzl/bulletin",
+	"description": "Bulletin for bbPress - a mobile-first, decluttered reading layer for bbPress",
+	"type": "wordpress-plugin",
+	"license": "GPL-2.0-or-later",
+	"require": {
+		"php": ">=8.2",
+		"php-di/php-di": "^7.0"
+	},
+	"require-dev": {
+		"composer/installers": "^2.2",
+		"deptrac/deptrac": "^2.0",
+		"php-stubs/wordpress-stubs": "^6.8",
+		"phpcompatibility/phpcompatibility-wp": "*",
+		"phpmd/phpmd": "^2.15",
+		"phpmetrics/phpmetrics": "^2.9",
+		"phpstan/extension-installer": "^1.4",
+		"phpstan/phpstan": "^2.0",
+		"phpunit/phpunit": "^9.6",
+		"sirbrillig/phpcs-variable-analysis": "^2.11",
+		"szepeviktor/phpstan-wordpress": "^2.0",
+		"wp-coding-standards/wpcs": "^3.0",
+		"wpackagist-plugin/bbpress": "~2.6.14",
+		"yoast/phpunit-polyfills": "^3.0"
+	},
+	"repositories": [
+		{
+			"type": "composer",
+			"url": "https://wpackagist.org",
+			"only": [
+				"wpackagist-plugin/*",
+				"wpackagist-theme/*"
+			]
+		}
+	],
+	"extra": {
+		"installer-paths": {
+			"tests/framework/wp-plugins/{$name}/": [
+				"type:wordpress-plugin"
+			]
+		}
+	},
+	"autoload": {
+		"psr-4": {
+			"JTZL\\Bulletin\\": "includes/"
+		}
+	},
+	"autoload-dev": {
+		"psr-4": {
+			"JTZL\\Bulletin\\Tests\\": "tests/"
+		},
+		"exclude-from-classmap": [
+			"/tests/framework/"
+		]
+	},
+	"config": {
+		"allow-plugins": {
+			"dealerdirect/phpcodesniffer-composer-installer": true,
+			"composer/installers": true,
+			"phpstan/extension-installer": true
+		},
+		"optimize-autoloader": true,
+		"sort-packages": true
+	},
+	"scripts": {
+		"format": "@php ./vendor/bin/phpcbf . --report=summary,source",
+		"lint": "@php ./vendor/bin/phpcs . --report=summary,source",
+		"lint:errors": "@lint -n",
+		"deptrac": "@php ./vendor/bin/deptrac analyze --config-file=deptrac.yaml",
+		"metrics:phpmetrics": [
+			"mkdir -p build/reports/phpmetrics",
+			"@php -d error_reporting=E_ERROR ./vendor/bin/phpmetrics --exclude=tests,vendor,node_modules,build,.github,bin,scripts,stubs,languages,var,templates,WordPress --report-json=build/reports/phpmetrics.json --report-summary-json=build/reports/phpmetrics-summary.json --report-html=build/reports/phpmetrics ."
+		],
+		"metrics:phpmd": [
+			"@php ./vendor/bin/phpmd includes,jtzl-bulletin.php,uninstall.php text phpmd.xml --exclude tests,vendor",
+			"@php -r \"echo 'PHPMD: no size/complexity anomalies found.' . PHP_EOL;\""
+		],
+		"metrics:size": [
+			"@metrics:phpmetrics"
+		],
+		"metrics:guard": [
+			"@metrics:size",
+			"@php ./bin/check-phpmetrics-thresholds"
+		],
+		"anomaly": [
+			"@deptrac",
+			"@metrics:phpmd"
+		],
+		"phpstan": [
+			"@php ./vendor/bin/phpstan clear-result-cache",
+			"@php ./vendor/bin/phpstan analyse --memory-limit=1G"
+		],
+		"check": [
+			"@anomaly",
+			"@phpstan",
+			"@lint:errors"
+		],
+		"test": "@php ./vendor/bin/phpunit",
+		"test:coverage": [
+			"@check",
+			"XDEBUG_MODE=coverage php ./vendor/bin/phpunit --coverage-html coverage/html --coverage-clover coverage/clover.xml --coverage-text"
+		]
+	}
+}
