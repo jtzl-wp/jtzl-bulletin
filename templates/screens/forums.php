@@ -15,6 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 $bltn_container = \JTZL\Bulletin\Plugin::get_container();
 $bltn_appbar    = $bltn_container->get( \JTZL\Bulletin\View\AppBar::class );
 $bltn_ctx       = $bltn_container->get( \JTZL\Bulletin\WordPress\ContextInterface::class );
+$bltn_forumrow  = $bltn_container->get( \JTZL\Bulletin\View\ForumRow::class );
 ?>
 <section class="bltn-screen">
 
@@ -35,35 +36,20 @@ $bltn_ctx       = $bltn_container->get( \JTZL\Bulletin\WordPress\ContextInterfac
 				bbp_the_forum();
 
 				$bltn_desc    = wp_strip_all_tags( bbp_get_forum_content() );
-				$bltn_count   = (int) bbp_get_forum_topic_count( 0, true, true );
 				$bltn_last_id = (int) bbp_get_forum_last_active_id();
-				$bltn_author  = $bltn_ctx->get_author_name( $bltn_last_id );
-				$bltn_active  = $bltn_last_id ? bbp_get_forum_last_active_time() : '';
-				?>
-				<a class="bltn-row" href="<?php bbp_forum_permalink(); ?>">
-					<div class="bltn-row__top">
-						<h2 class="bltn-forum__name"><?php bbp_forum_title(); ?></h2>
-						<?php // Unread dot is wired in P2; placeholder markup lives in the CSS namespace. ?>
-					</div>
 
-					<?php if ( '' !== $bltn_desc ) : ?>
-						<p class="bltn-row__desc"><?php echo esc_html( wp_trim_words( $bltn_desc, 22, '…' ) ); ?></p>
-					<?php endif; ?>
-
-					<p class="bltn-row__meta">
-						<?php
-						/* translators: %s: formatted thread count. */
-						echo esc_html( sprintf( _n( '%s thread', '%s threads', $bltn_count, 'jtzl-bulletin' ), number_format_i18n( $bltn_count ) ) );
-						?>
-						<?php if ( '' !== $bltn_author ) : ?>
-							&middot; <b><?php echo esc_html( $bltn_author ); ?></b>
-						<?php endif; ?>
-						<?php if ( '' !== $bltn_active ) : ?>
-							&middot; <?php echo esc_html( $bltn_active ); ?>
-						<?php endif; ?>
-					</p>
-				</a>
-			<?php endwhile; ?>
+				$bltn_forumrow->render(
+					array(
+						'permalink'   => bbp_get_forum_permalink(),
+						'title'       => bbp_get_forum_title(),
+						'description' => '' !== $bltn_desc ? wp_trim_words( $bltn_desc, 22, '…' ) : '',
+						'topics'      => (int) bbp_get_forum_topic_count( 0, true, true ),
+						'author'      => $bltn_ctx->get_author_name( $bltn_last_id ),
+						'active'      => $bltn_last_id ? bbp_get_forum_last_active_time() : '',
+					)
+				);
+			endwhile;
+			?>
 
 		<?php else : ?>
 
