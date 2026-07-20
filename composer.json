@@ -66,7 +66,8 @@
 		"format": "@php ./vendor/bin/phpcbf . --report=summary,source",
 		"lint": "@php ./vendor/bin/phpcs . --report=summary,source",
 		"lint:errors": "@lint -n",
-		"deptrac": "@php ./vendor/bin/deptrac analyze --config-file=deptrac.yaml",
+		"check:template-parity": "@php ./bin/check-template-parity.php",
+		"deptrac": "@php ./vendor/bin/deptrac analyze --config-file=deptrac.yaml --report-uncovered --fail-on-uncovered",
 		"metrics:phpmetrics": [
 			"mkdir -p build/reports/phpmetrics",
 			"@php -d error_reporting=E_ERROR ./vendor/bin/phpmetrics --exclude=tests,vendor,node_modules,build,.github,bin,scripts,stubs,languages,var,templates,WordPress --report-json=build/reports/phpmetrics.json --report-summary-json=build/reports/phpmetrics-summary.json --report-html=build/reports/phpmetrics ."
@@ -91,6 +92,7 @@
 			"@php ./vendor/bin/phpstan analyse --memory-limit=1G"
 		],
 		"check": [
+			"@check:template-parity",
 			"@anomaly",
 			"@phpstan",
 			"@lint:errors"
