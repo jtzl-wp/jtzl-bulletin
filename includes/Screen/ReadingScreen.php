@@ -38,11 +38,9 @@ class ReadingScreen {
 	 * @return bool
 	 */
 	public function is_reading_screen(): bool {
-		return $this->wp->is_bbpress() && (
-			$this->wp->is_forum_archive()
-			|| $this->wp->is_single_forum()
-			|| $this->wp->is_single_topic()
-		);
+		return $this->is_forums_index()
+			|| $this->is_single_forum()
+			|| $this->is_single_topic();
 	}
 
 	/**
@@ -66,9 +64,15 @@ class ReadingScreen {
 	/**
 	 * Whether the current request is a single topic's reading view.
 	 *
+	 * Declines the takeover when threaded replies are active: bbp_has_replies()
+	 * forces posts_per_page to -1 for a hierarchical query, so the whole thread
+	 * would load unpaginated and "load more replies" would never appear. Falling
+	 * through to the theme's own bbPress templates — which render threading
+	 * correctly — beats shipping that performance cliff (see issue #11).
+	 *
 	 * @return bool
 	 */
 	public function is_single_topic(): bool {
-		return $this->wp->is_bbpress() && $this->wp->is_single_topic();
+		return $this->wp->is_bbpress() && $this->wp->is_single_topic() && ! $this->wp->is_thread_replies_active();
 	}
 }

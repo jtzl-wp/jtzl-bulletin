@@ -96,6 +96,13 @@ interface ContextInterface {
 	 */
 	public function is_single_reply(): bool;
 
+	/**
+	 * Whether threaded (hierarchical) replies are enabled site-wide.
+	 *
+	 * @return bool
+	 */
+	public function is_thread_replies_active(): bool;
+
 	// --- Auth & site state --------------------------------------------------
 
 	/**

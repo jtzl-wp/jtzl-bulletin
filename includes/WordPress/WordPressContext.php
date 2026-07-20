@@ -108,6 +108,15 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * Whether threaded (hierarchical) replies are enabled site-wide.
+	 *
+	 * @return bool
+	 */
+	public function is_thread_replies_active(): bool {
+		return (bool) bbp_thread_replies();
+	}
+
+	/**
 	 * Whether a user is logged in.
 	 *
 	 * @return bool
