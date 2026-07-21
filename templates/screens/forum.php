@@ -3,17 +3,15 @@
  * Screen: one forum's threads.
  *
  * Forum header (name, description, meta, native Subscribe), then any sub-forums,
- * then the topics split into a "Pinned" section (stickies, page 1 only) and the
- * rest. bbPress prepends stickies to the same loop, so we capture each row's
- * data during the single loop and sort it into the two buckets afterwards.
+ * then the topics as a "Pinned" section (stickies, first page only) and the rest,
+ * which pages on beyond the first 15 through an inline "load more threads".
  *
- * Both loops are drained into plain arrays up front, before any markup is
- * emitted, because they share bbPress globals: inside a forum loop
- * bbp_get_forum_id() resolves to the looped sub-forum rather than the forum
- * being viewed (it tests forum_query->in_the_loop before bbp_is_single_forum()).
- * Hence wp_reset_postdata() after the sub-forum loop AND an explicit post_parent
- * on the topics query — either alone leaves the other loop reading a stale
- * global on a forum that has both.
+ * Every loop is drained before any markup is emitted, because they share bbPress
+ * globals: inside a forum loop bbp_get_forum_id() resolves to the looped
+ * sub-forum rather than the forum being viewed (it tests forum_query->in_the_loop
+ * before bbp_is_single_forum()). Hence wp_reset_postdata() after the sub-forum
+ * loop AND an explicit post_parent on the topics query — either alone leaves the
+ * other loop reading a stale global on a forum that has both.
  *
  * @package JTZL\Bulletin
  */
@@ -24,8 +22,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 $bltn_container = \JTZL\Bulletin\Plugin::get_container();
 $bltn_appbar    = $bltn_container->get( \JTZL\Bulletin\View\AppBar::class );
-$bltn_threadrow = $bltn_container->get( \JTZL\Bulletin\View\ThreadRow::class );
+$bltn_threads   = $bltn_container->get( \JTZL\Bulletin\View\ThreadList::class );
+$bltn_loadmore  = $bltn_container->get( \JTZL\Bulletin\View\LoadMore::class );
 $bltn_forumrow  = $bltn_container->get( \JTZL\Bulletin\View\ForumRow::class );
+$bltn_query     = $bltn_container->get( \JTZL\Bulletin\Query\TopicQuery::class );
 $bltn_ctx       = $bltn_container->get( \JTZL\Bulletin\WordPress\ContextInterface::class );
 
 $bltn_forum_id = bbp_get_forum_id();
@@ -58,30 +58,27 @@ if ( bbp_has_forums( array( 'post_parent' => $bltn_forum_id ) ) ) {
 	wp_reset_postdata();
 }
 
-// Topics. Categories usually hold none; ordinary forums with children may hold both.
-$bltn_pinned = array();
-$bltn_rest   = array();
-if ( bbp_has_topics( array( 'post_parent' => $bltn_forum_id ) ) ) {
-	while ( bbp_topics() ) {
-		bbp_the_topic();
-
-		$bltn_topic_id = bbp_get_topic_id();
-		$bltn_row      = array(
-			'permalink' => bbp_get_topic_permalink( $bltn_topic_id ),
-			'title'     => bbp_get_topic_title( $bltn_topic_id ),
-			'author'    => bbp_get_topic_author_display_name( $bltn_topic_id ),
-			'active'    => bbp_get_topic_last_active_time( $bltn_topic_id ),
-			'replies'   => (int) bbp_get_topic_reply_count( $bltn_topic_id, true ),
-		);
-
-		if ( bbp_is_topic_sticky( $bltn_topic_id, false ) ) {
-			$bltn_pinned[] = $bltn_row;
-		} else {
-			$bltn_rest[] = $bltn_row;
-		}
-	}
+/*
+ * Topics. Categories usually hold none; ordinary forums with children may hold
+ * both. Pinned and unpinned are two queries rather than one loop sorted
+ * afterwards, because paging demands it: bbPress prepends stickies to the first
+ * page alone and never excludes them from the page they naturally fall on, so a
+ * single query would serve a pinned thread again when that page loads. TopicQuery
+ * keeps stickies out of the paginated set entirely and lists them here instead.
+ *
+ * bbPress pins on the first page only, and so do we — a reader who arrived at
+ * ?paged=3 is past the top of the list.
+ */
+$bltn_page   = $bltn_ctx->get_paged();
+$bltn_pinned = '';
+if ( 1 === $bltn_page && array() !== $bltn_ctx->get_sticky_topic_ids( $bltn_forum_id ) ) {
+	$bltn_pinned = $bltn_threads->capture( $bltn_query->pinned_args( $bltn_forum_id ) );
 	wp_reset_postdata();
 }
+
+$bltn_rest = $bltn_threads->capture( $bltn_query->args( $bltn_forum_id, $bltn_page ) );
+$bltn_more = $bltn_page < $bltn_ctx->get_max_topic_pages();
+wp_reset_postdata();
 
 /*
  * A sub-forum's back link returns to its parent, not the index — otherwise
@@ -148,22 +145,44 @@ $bltn_back_text = $bltn_parent_id
 			?>
 		<?php endif; ?>
 
-		<?php if ( ! empty( $bltn_pinned ) ) : ?>
+		<?php if ( '' !== $bltn_pinned ) : ?>
 			<p class="bltn-section-label"><?php esc_html_e( 'Pinned', 'jtzl-bulletin' ); ?></p>
 			<?php
-			foreach ( $bltn_pinned as $bltn_row ) {
-				$bltn_threadrow->render( $bltn_row );
-			}
+			// Rows are built by View\ThreadRow, which escapes every field.
+			echo $bltn_pinned; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			?>
 		<?php endif; ?>
 
-		<?php if ( ! empty( $bltn_rest ) ) : ?>
+		<?php if ( '' !== $bltn_rest ) : ?>
 			<p class="bltn-section-label">
-				<?php echo empty( $bltn_pinned ) ? esc_html__( 'Threads', 'jtzl-bulletin' ) : esc_html__( 'All threads', 'jtzl-bulletin' ); ?>
+				<?php echo '' === $bltn_pinned ? esc_html__( 'Threads', 'jtzl-bulletin' ) : esc_html__( 'All threads', 'jtzl-bulletin' ); ?>
 			</p>
 			<?php
-			foreach ( $bltn_rest as $bltn_row ) {
-				$bltn_threadrow->render( $bltn_row );
+			/*
+			 * The appended rows land inside this element, so it wraps the
+			 * unpinned rows alone: threads loaded later belong under the same
+			 * label, not among the pinned ones.
+			 */
+			?>
+			<div id="bltn-threads-list">
+				<?php
+				// Rows are built by View\ThreadRow, which escapes every field.
+				echo $bltn_rest; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				?>
+			</div>
+
+			<?php
+			if ( $bltn_more ) {
+				$bltn_loadmore->render(
+					array(
+						'action' => 'bulletin_load_topics',
+						'param'  => 'forum',
+						'id'     => $bltn_forum_id,
+						'target' => 'bltn-threads-list',
+						'next'   => $bltn_page + 1,
+						'label'  => __( 'Load more threads', 'jtzl-bulletin' ),
+					)
+				);
 			}
 			?>
 		<?php endif; ?>
@@ -177,7 +196,7 @@ $bltn_back_text = $bltn_parent_id
 		 * where a populated category announced "No threads yet".
 		 */
 		?>
-		<?php if ( empty( $bltn_subforums ) && empty( $bltn_pinned ) && empty( $bltn_rest ) ) : ?>
+		<?php if ( empty( $bltn_subforums ) && '' === $bltn_pinned && '' === $bltn_rest ) : ?>
 
 			<div class="bltn-empty">
 				<p class="bltn-empty__title"><?php esc_html_e( 'No threads yet', 'jtzl-bulletin' ); ?></p>

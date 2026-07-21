@@ -22,6 +22,7 @@ $bltn_query      = $bltn_container->get( \JTZL\Bulletin\Query\ReplyQuery::class 
 $bltn_reply_view = $bltn_container->get( \JTZL\Bulletin\View\ReplyView::class );
 $bltn_navigator  = $bltn_container->get( \JTZL\Bulletin\Navigation\ThreadNavigator::class );
 $bltn_navbar     = $bltn_container->get( \JTZL\Bulletin\View\ThreadNavBar::class );
+$bltn_loadmore   = $bltn_container->get( \JTZL\Bulletin\View\LoadMore::class );
 
 $bltn_topic_id = bbp_get_topic_id();
 $bltn_forum_id = bbp_get_topic_forum_id( $bltn_topic_id );
@@ -78,13 +79,19 @@ $bltn_replies  = (int) bbp_get_topic_reply_count( $bltn_topic_id, true );
 
 			<?php
 			// Inline load-more when the topic runs past one page of replies.
-			$bltn_max_pages = $bltn_ctx->get_max_reply_pages();
-			if ( $bltn_max_pages > 1 ) :
-				?>
-				<div class="bltn-loadmore" data-topic="<?php echo esc_attr( (string) $bltn_topic_id ); ?>" data-next="2" data-max="<?php echo esc_attr( (string) $bltn_max_pages ); ?>">
-					<button type="button" class="bltn-loadmore__btn"><?php esc_html_e( 'Load more replies', 'jtzl-bulletin' ); ?></button>
-				</div>
-			<?php endif; ?>
+			if ( $bltn_ctx->get_max_reply_pages() > 1 ) {
+				$bltn_loadmore->render(
+					array(
+						'action' => 'bulletin_load_replies',
+						'param'  => 'topic',
+						'id'     => $bltn_topic_id,
+						'target' => 'bltn-replies',
+						'next'   => 2,
+						'label'  => __( 'Load more replies', 'jtzl-bulletin' ),
+					)
+				);
+			}
+			?>
 
 		</article>
 	</div>

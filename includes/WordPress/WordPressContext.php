@@ -258,6 +258,55 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * ID of the topic currently in the loop.
+	 *
+	 * @return int
+	 */
+	public function get_topic_id(): int {
+		return (int) bbp_get_topic_id();
+	}
+
+	/**
+	 * A topic's title.
+	 *
+	 * @param int $topic_id Topic ID.
+	 * @return string
+	 */
+	public function get_topic_title( int $topic_id ): string {
+		return (string) bbp_get_topic_title( $topic_id );
+	}
+
+	/**
+	 * Display name of a topic's author.
+	 *
+	 * @param int $topic_id Topic ID.
+	 * @return string
+	 */
+	public function get_topic_author_name( int $topic_id ): string {
+		return (string) bbp_get_topic_author_display_name( $topic_id );
+	}
+
+	/**
+	 * Human-readable time of a topic's last activity.
+	 *
+	 * @param int $topic_id Topic ID.
+	 * @return string
+	 */
+	public function get_topic_last_active_time( int $topic_id ): string {
+		return (string) bbp_get_topic_last_active_time( $topic_id );
+	}
+
+	/**
+	 * A topic's reply count.
+	 *
+	 * @param int $topic_id Topic ID.
+	 * @return int
+	 */
+	public function get_topic_reply_count( int $topic_id ): int {
+		return (int) bbp_get_topic_reply_count( $topic_id, true );
+	}
+
+	/**
 	 * The forum ID a topic belongs to.
 	 *
 	 * @param int $topic_id Topic ID.
@@ -333,6 +382,33 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * The forum post type key.
+	 *
+	 * @return string
+	 */
+	public function get_forum_post_type(): string {
+		return (string) bbp_get_forum_post_type();
+	}
+
+	/**
+	 * Topics shown per page.
+	 *
+	 * @return int
+	 */
+	public function get_topics_per_page(): int {
+		return (int) bbp_get_topics_per_page();
+	}
+
+	/**
+	 * The page number the current request asks for (1 when unpaged).
+	 *
+	 * @return int
+	 */
+	public function get_paged(): int {
+		return max( 1, (int) bbp_get_paged() );
+	}
+
+	/**
 	 * A post's type.
 	 *
 	 * @param int $post_id Post ID.
@@ -401,8 +477,14 @@ class WordPressContext implements ContextInterface {
 				'post_status'      => $statuses,
 				'posts_per_page'   => -1,
 				'meta_key'         => '_bbp_last_active_time', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
-				'orderby'          => 'meta_value',
-				'order'            => 'DESC',
+				// Same (last-active, ID) order the thread list pages on, so the
+				// bar walks threads in the order the list showed them. Without the
+				// tiebreak, topics sharing a timestamp can order differently here
+				// than there, and Next would revisit a thread or skip one.
+				'orderby'          => array(
+					'meta_value' => 'DESC',
+					'ID'         => 'DESC',
+				),
 				'fields'           => 'ids',
 				'no_found_rows'    => true,
 				'suppress_filters' => true,
@@ -410,6 +492,61 @@ class WordPressContext implements ContextInterface {
 		);
 
 		return array_map( 'intval', $query->posts );
+	}
+
+	/**
+	 * IDs of a forum's sticky topics, super stickies included.
+	 *
+	 * @param int $forum_id Forum ID.
+	 * @return int[]
+	 */
+	public function get_sticky_topic_ids( int $forum_id ): array {
+		// The same union bbp_add_sticky_topics() pins to page 1: site-wide super
+		// stickies first, then this forum's own. Both are stored as ID arrays in
+		// options/meta, so duplicates and empty slots are filtered out here.
+		$stickies = array_merge(
+			(array) bbp_get_super_stickies(),
+			(array) bbp_get_stickies( $forum_id )
+		);
+
+		return array_values( array_filter( array_unique( array_map( 'intval', $stickies ) ) ) );
+	}
+
+	/**
+	 * Prime the topics loop.
+	 *
+	 * @param array<string,mixed> $args Query args.
+	 * @return bool Whether any topics matched.
+	 */
+	public function has_topics( array $args ): bool {
+		return (bool) bbp_has_topics( $args );
+	}
+
+	/**
+	 * Advance the topics loop.
+	 *
+	 * @return bool Whether a topic remains.
+	 */
+	public function the_topics_loop(): bool {
+		return (bool) bbp_topics();
+	}
+
+	/**
+	 * Set up the current topic in the loop.
+	 */
+	public function the_topic(): void {
+		bbp_the_topic();
+	}
+
+	/**
+	 * The number of topic pages from the last topics query.
+	 *
+	 * @return int
+	 */
+	public function get_max_topic_pages(): int {
+		// topic_query is always primed by a has_topics() call before this runs
+		// (the forum screen and the AJAX handler both do so).
+		return (int) bbpress()->topic_query->max_num_pages;
 	}
 
 	/**

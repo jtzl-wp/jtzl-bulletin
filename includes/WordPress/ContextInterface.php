@@ -210,6 +210,45 @@ interface ContextInterface {
 	public function the_reply_content( int $reply_id ): void;
 
 	/**
+	 * ID of the topic currently in the loop.
+	 *
+	 * @return int
+	 */
+	public function get_topic_id(): int;
+
+	/**
+	 * A topic's title.
+	 *
+	 * @param int $topic_id Topic ID.
+	 * @return string
+	 */
+	public function get_topic_title( int $topic_id ): string;
+
+	/**
+	 * Display name of a topic's author.
+	 *
+	 * @param int $topic_id Topic ID.
+	 * @return string
+	 */
+	public function get_topic_author_name( int $topic_id ): string;
+
+	/**
+	 * Human-readable time of a topic's last activity.
+	 *
+	 * @param int $topic_id Topic ID.
+	 * @return string
+	 */
+	public function get_topic_last_active_time( int $topic_id ): string;
+
+	/**
+	 * A topic's reply count.
+	 *
+	 * @param int $topic_id Topic ID.
+	 * @return int
+	 */
+	public function get_topic_reply_count( int $topic_id ): int;
+
+	/**
 	 * The forum ID a topic belongs to.
 	 *
 	 * @param int $topic_id Topic ID.
@@ -230,6 +269,13 @@ interface ContextInterface {
 	public function user_can_view_forum( int $forum_id ): bool;
 
 	// --- bbPress types & statuses ------------------------------------------
+
+	/**
+	 * The forum post type key.
+	 *
+	 * @return string
+	 */
+	public function get_forum_post_type(): string;
 
 	/**
 	 * The topic post type key.
@@ -265,6 +311,20 @@ interface ContextInterface {
 	 * @return int
 	 */
 	public function get_replies_per_page(): int;
+
+	/**
+	 * Topics shown per page.
+	 *
+	 * @return int
+	 */
+	public function get_topics_per_page(): int;
+
+	/**
+	 * The page number the current request asks for (1 when unpaged).
+	 *
+	 * @return int
+	 */
+	public function get_paged(): int;
 
 	// --- WordPress post / meta / transients --------------------------------
 
@@ -320,6 +380,41 @@ interface ContextInterface {
 	 * @return int[]
 	 */
 	public function get_forum_topic_ids( int $forum_id, array $statuses ): array;
+
+	/**
+	 * IDs of a forum's sticky topics, super stickies included.
+	 *
+	 * @param int $forum_id Forum ID.
+	 * @return int[]
+	 */
+	public function get_sticky_topic_ids( int $forum_id ): array;
+
+	/**
+	 * Prime the topics loop.
+	 *
+	 * @param array<string,mixed> $args Query args.
+	 * @return bool Whether any topics matched.
+	 */
+	public function has_topics( array $args ): bool;
+
+	/**
+	 * Advance the topics loop.
+	 *
+	 * @return bool Whether a topic remains.
+	 */
+	public function the_topics_loop(): bool;
+
+	/**
+	 * Set up the current topic in the loop.
+	 */
+	public function the_topic(): void;
+
+	/**
+	 * The number of topic pages from the last topics query.
+	 *
+	 * @return int
+	 */
+	public function get_max_topic_pages(): int;
 
 	/**
 	 * Prime the replies loop.

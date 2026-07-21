@@ -1,9 +1,15 @@
 /**
- * Bulletin — reading-view behaviour (DOM entry).
+ * Bulletin — reading behaviour (DOM entry).
  *
- * Two jobs: the inline "load more replies" control, and resolving a deep-link to
- * a reply that lives past the first page (the initial DOM only holds page 1, so
- * we load forward until the target exists, then scroll to it).
+ * Two jobs: the inline "load more" control, and resolving a deep-link to a reply
+ * that lives past the first page (the initial DOM only holds page 1, so we load
+ * forward until the target exists, then scroll to it).
+ *
+ * The control serves both paginated lists — more replies inside a thread, more
+ * threads inside a forum — and says which it is: the endpoint, the subject, and
+ * the element to append to all ride on its data attributes (see View\LoadMore).
+ * So this file holds no per-screen knowledge, and its idle label is read back
+ * from the button the server already rendered rather than localised twice.
  *
  * Plain navigation (tapping a forum or thread, Prev/Next) needs no JavaScript —
  * those are ordinary links.
@@ -31,23 +37,43 @@ function initReading(): void {
 	// Resolve labels once. Spreading an absent i18n object is a no-op, so any key
 	// the server didn't localise keeps its default.
 	const labels = {
-		loadMore: 'Load more replies',
 		loading: 'Loading…',
 		error: 'Could not load more. Tap to retry.',
 		...config.i18n,
 	};
 	const ajaxUrl = config.ajaxUrl;
-	const action = config.action;
-	const container = document.getElementById('bltn-replies');
 	let loadmore = document.querySelector<HTMLElement>('.bltn-loadmore');
 	let loading = false;
+
+	// The label the server rendered, kept so the idle state can be restored
+	// verbatim after loading or an error — including which list it names.
+	const idleLabel =
+		loadmore
+			?.querySelector<HTMLButtonElement>('.bltn-loadmore__btn')
+			?.textContent?.trim() ?? '';
+
+	// A control the server rendered carries all of these; one that somehow does
+	// not still yields a well-formed request the server can refuse, rather than a
+	// null that would throw on the way out.
+	const attr = (el: Element, name: string): string =>
+		el.getAttribute(name) ?? '';
+
+	// Where rows land. Resolved from the control so the same script serves the
+	// replies container on one screen and the thread list on another.
+	const container = loadmore
+		? document.getElementById(attr(loadmore, 'data-target'))
+		: null;
 
 	function fetchPage(
 		control: HTMLElement,
 		page: number
 	): Promise<LoadMoreData> {
-		const topic = control.getAttribute('data-topic') ?? '';
-		const body = buildRequestBody(action, topic, page);
+		const body = buildRequestBody(
+			attr(control, 'data-action'),
+			attr(control, 'data-param'),
+			attr(control, 'data-id'),
+			page
+		);
 
 		return fetch(ajaxUrl, {
 			method: 'POST',
@@ -67,7 +93,7 @@ function initReading(): void {
 			.then((payload) => parseLoadMoreResponse(payload));
 	}
 
-	function appendReplies(html: string): void {
+	function appendRows(html: string): void {
 		if (!html || !container) {
 			return;
 		}
@@ -96,7 +122,7 @@ function initReading(): void {
 			btn.textContent = labels.error;
 			btn.disabled = false;
 		} else {
-			btn.textContent = labels.loadMore;
+			btn.textContent = idleLabel;
 			btn.disabled = false;
 		}
 	}
@@ -112,7 +138,7 @@ function initReading(): void {
 
 		return fetchPage(control, next)
 			.then((data) => {
-				appendReplies(data.html);
+				appendRows(data.html);
 				loading = false;
 				if (data.hasMore) {
 					control.setAttribute('data-next', String(data.nextPage));
@@ -163,6 +189,15 @@ function initReading(): void {
 		const present = document.getElementById(id);
 		if (present) {
 			scrollToTarget(present);
+			return;
+		}
+
+		// Nothing on this page is a post anchor, so walking forward could never
+		// produce one — the rows this list loads are threads, not posts. Without
+		// this, a stale or crafted '#post-' fragment on a forum URL would page the
+		// whole forum into the DOM, unasked. The reading view always renders the
+		// opening post's anchor, so a genuine deep-link is never turned away.
+		if (!document.querySelector('[id^="post-"]')) {
 			return;
 		}
 

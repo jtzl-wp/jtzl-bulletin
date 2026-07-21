@@ -94,21 +94,23 @@ class AssetManager {
 		if ( '' !== $script ) {
 			$this->wp->enqueue_script( 'jtzl-bulletin', $script, array(), $this->version, true );
 
-			// No nonce: this endpoint serves only already-public reply content and
-			// changes no state, so there's no CSRF surface — and a per-page nonce
-			// would break under full-page caching (a cached page would ship an
-			// already-expired nonce). Access is gated on forum visibility
-			// server-side instead (see Ajax\LoadRepliesController).
+			// No nonce: these endpoints serve only already-public forum content
+			// and change no state, so there's no CSRF surface — and a per-page
+			// nonce would break under full-page caching (a cached page would ship
+			// an already-expired nonce). Access is gated on forum visibility
+			// server-side instead (see the Ajax controllers).
+			//
+			// Only the two transient labels are localised here. Which endpoint to
+			// call, and the idle label naming what it loads, belong to the control
+			// the screen rendered (see View\LoadMore).
 			$this->wp->localize_script(
 				'jtzl-bulletin',
 				'BLTN',
 				array(
 					'ajaxUrl' => $this->wp->get_ajax_url(),
-					'action'  => 'bulletin_load_replies',
 					'i18n'    => array(
-						'loadMore' => __( 'Load more replies', 'jtzl-bulletin' ),
-						'loading'  => __( 'Loading…', 'jtzl-bulletin' ),
-						'error'    => __( 'Could not load more. Tap to retry.', 'jtzl-bulletin' ),
+						'loading' => __( 'Loading…', 'jtzl-bulletin' ),
+						'error'   => __( 'Could not load more. Tap to retry.', 'jtzl-bulletin' ),
 					),
 				)
 			);

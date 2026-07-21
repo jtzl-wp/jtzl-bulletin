@@ -13,33 +13,37 @@ export interface LoadMoreData {
 }
 
 export interface BltnI18n {
-	loadMore?: string;
 	loading?: string;
 	error?: string;
 }
 
 export interface BltnConfig {
 	ajaxUrl: string;
-	action: string;
 	i18n?: BltnI18n;
 }
 
 /**
  * Build the form-encoded body for a load-more request.
  *
+ * The subject's parameter name is carried by the control rather than fixed here,
+ * because the same request shape serves both lists: replies within a topic, and
+ * threads within a forum.
+ *
  * @param action bbPress AJAX action name.
- * @param topic  Topic ID (as a string, straight from the DOM attribute).
+ * @param param  Name of the subject parameter ('topic' or 'forum').
+ * @param id     Subject ID (as a string, straight from the DOM attribute).
  * @param page   1-based page number.
  * @return URL-encoded request body.
  */
 export function buildRequestBody(
 	action: string,
-	topic: string,
+	param: string,
+	id: string,
 	page: number
 ): string {
 	const body = new URLSearchParams();
 	body.set('action', action);
-	body.set('topic', topic);
+	body.set(param, id);
 	body.set('paged', String(page));
 	return body.toString();
 }

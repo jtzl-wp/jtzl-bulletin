@@ -9,6 +9,7 @@ namespace JTZL\Bulletin;
 
 use DI\Container;
 use JTZL\Bulletin\Ajax\LoadRepliesController;
+use JTZL\Bulletin\Ajax\LoadTopicsController;
 use JTZL\Bulletin\Asset\AssetManager;
 use JTZL\Bulletin\Takeover\TemplateController;
 use JTZL\Bulletin\WordPress\ContextInterface;
@@ -45,8 +46,10 @@ class Bootstrap {
 		assert( $takeover instanceof TemplateController );
 		$assets = $this->container->get( AssetManager::class );
 		assert( $assets instanceof AssetManager );
-		$ajax = $this->container->get( LoadRepliesController::class );
-		assert( $ajax instanceof LoadRepliesController );
+		$replies = $this->container->get( LoadRepliesController::class );
+		assert( $replies instanceof LoadRepliesController );
+		$topics = $this->container->get( LoadTopicsController::class );
+		assert( $topics instanceof LoadTopicsController );
 
 		// Takeover: redirect single replies early, strip theme-compat, swap our doc.
 		$wp->add_action( 'template_redirect', array( $takeover, 'redirect_single_reply' ), 9 );
@@ -57,7 +60,9 @@ class Bootstrap {
 		$wp->add_action( 'wp_enqueue_scripts', array( $assets, 'enqueue' ) );
 		$wp->add_action( 'wp_enqueue_scripts', array( $assets, 'suppress_foreign_styles' ), 100 );
 
-		// Load-more replies over bbPress's front-end AJAX router.
-		$wp->add_action( 'bbp_ajax_bulletin_load_replies', array( $ajax, 'handle' ) );
+		// Load-more over bbPress's front-end AJAX router: replies inside a thread,
+		// threads inside a forum.
+		$wp->add_action( 'bbp_ajax_bulletin_load_replies', array( $replies, 'handle' ) );
+		$wp->add_action( 'bbp_ajax_bulletin_load_topics', array( $topics, 'handle' ) );
 	}
 }
