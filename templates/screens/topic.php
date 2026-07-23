@@ -49,10 +49,31 @@ $bltn_replies  = (int) bbp_get_topic_reply_count( $bltn_topic_id, true );
 			<p class="bltn-thread__label"><?php echo esc_html( $bltn_forum ); ?></p>
 			<h1 class="bltn-thread__title" data-bltn-heading tabindex="-1"><?php bbp_topic_title( $bltn_topic_id ); ?></h1>
 			<p class="bltn-thread__sub">
-				<?php
-				/* translators: %s: formatted reply count. */
-				echo esc_html( sprintf( _n( '%s reply', '%s replies', $bltn_replies, 'jtzl-bulletin' ), number_format_i18n( $bltn_replies ) ) );
-				?>
+				<span>
+					<?php
+					/* translators: %s: formatted reply count. */
+					echo esc_html( sprintf( _n( '%s reply', '%s replies', $bltn_replies, 'jtzl-bulletin' ), number_format_i18n( $bltn_replies ) ) );
+					?>
+				</span>
+				<?php if ( bbp_is_subscriptions_active() && is_user_logged_in() ) : ?>
+					<?php
+					// Subscribe to this thread, mirroring forum.php's header treatment so
+					// the control sits in the same place on both screens. bbPress owns the
+					// toggle itself; before='' drops bbp_get_topic_subscription_link()'s
+					// default " | " separator, which the forum link does not carry, so the
+					// rendered pill matches the forum screen exactly.
+					?>
+					<span class="bltn-thread__subscribe">
+						<?php
+						bbp_topic_subscription_link(
+							array(
+								'topic_id' => $bltn_topic_id,
+								'before'   => '',
+							)
+						);
+						?>
+					</span>
+				<?php endif; ?>
 			</p>
 
 			<?php // --- Opening post (the topic itself) --- ?>

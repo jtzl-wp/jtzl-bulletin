@@ -271,7 +271,8 @@ body.admin-bar .bltn-app {
 	margin-inline-start: auto;
 }
 /* Native bbPress subscribe link, quietened to match the design. */
-.bltn-fhead__sub a {
+.bltn-fhead__sub a,
+.bltn-thread__subscribe a {
 	font-size: 12px;
 	font-weight: 600;
 	color: var(--bltn-accent-ink);
@@ -313,9 +314,15 @@ body.admin-bar .bltn-app {
 	color: var(--bltn-ink);
 }
 .bltn-thread__sub {
+	display: flex;
+	align-items: center;
+	gap: 14px;
 	font-size: 12.5px;
 	color: var(--bltn-ink-3);
 	margin: 0 0 4px;
+}
+.bltn-thread__subscribe {
+	margin-inline-start: auto;
 }
 
 .bltn-post {
