@@ -13,7 +13,7 @@ use JTZL\Bulletin\WordPress\ContextInterface;
 /**
  * Enqueues Bulletin's own built CSS/JS on the reading screens, and — the
  * load-bearing half of the takeover — dequeues every other enqueued stylesheet
- * so the theme's cascade (Genesis, on JT's site) can't bleed into our minimal
+ * so the theme's cascade (GeneratePress, on JT's site) can't bleed into our minimal
  * document. The allowlist is filterable so the integration pass on the real
  * stack can add back any plugin handle that matters.
  */
