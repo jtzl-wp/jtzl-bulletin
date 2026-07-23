@@ -3,6 +3,7 @@
  * The fixed bottom bar with forum-scoped thread Prev/Next.
  *
  * @package JTZL\Bulletin
+ * @since 0.1.0
  */
 
 namespace JTZL\Bulletin\View;
@@ -14,11 +15,15 @@ use JTZL\Bulletin\Support\Icons;
  * purely about whole threads; moving between posts is the reader's own scroll,
  * and moving between reply pages is the inline "load more" control — so the bar
  * stays free of the clutter Bulletin exists to remove.
+ *
+ * @since 0.1.0
  */
 class ThreadNavBar {
 
 	/**
 	 * Echo the nav bar.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param array{prev_url:string,next_url:string,position:int,total:int} $model Navigator model.
 	 */

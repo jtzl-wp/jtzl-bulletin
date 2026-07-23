@@ -3,6 +3,7 @@
  * Asset loading and theme-style suppression.
  *
  * @package JTZL\Bulletin
+ * @since 0.1.0
  */
 
 namespace JTZL\Bulletin\Asset;
@@ -16,6 +17,8 @@ use JTZL\Bulletin\WordPress\ContextInterface;
  * so the theme's cascade (GeneratePress, on JT's site) can't bleed into our minimal
  * document. The allowlist is filterable so the integration pass on the real
  * stack can add back any plugin handle that matters.
+ *
+ * @since 0.1.0
  */
 class AssetManager {
 
@@ -57,6 +60,8 @@ class AssetManager {
 	/**
 	 * Constructor.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param ContextInterface $wp         WordPress/bbPress seam.
 	 * @param ReadingScreen    $screen     Reading-screen detector.
 	 * @param string           $plugin_dir Absolute plugin directory (trailing slash).
@@ -79,6 +84,8 @@ class AssetManager {
 
 	/**
 	 * Enqueue Bulletin's CSS/JS on the reading screens only.
+	 *
+	 * @since 0.1.0
 	 */
 	public function enqueue(): void {
 		if ( ! $this->screen->is_reading_screen() ) {
@@ -121,6 +128,8 @@ class AssetManager {
 	 * Dequeue the active theme's (and other plugins') stylesheets on our screens.
 	 *
 	 * Runs late so it sees everything the theme and plugins enqueued.
+	 *
+	 * @since 0.1.0
 	 */
 	public function suppress_foreign_styles(): void {
 		if ( ! $this->screen->is_reading_screen() ) {
@@ -153,6 +162,8 @@ class AssetManager {
 	/**
 	 * Resolved URL of the hashed reading-view script, or '' if unbuilt.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return string
 	 */
 	private function script_url(): string {
@@ -163,6 +174,8 @@ class AssetManager {
 
 	/**
 	 * Resolved URL of the built stylesheet (hashed if present), or '' if unbuilt.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return string
 	 */
@@ -177,6 +190,8 @@ class AssetManager {
 
 	/**
 	 * Read build/asset-manifest.json as a name => hashed-filename map.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return array<string,string>
 	 */

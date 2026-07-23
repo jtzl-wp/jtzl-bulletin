@@ -3,6 +3,7 @@
  * The inline "load more" control.
  *
  * @package JTZL\Bulletin
+ * @since 0.1.0
  */
 
 namespace JTZL\Bulletin\View;
@@ -17,6 +18,8 @@ namespace JTZL\Bulletin\View;
  * to call it about, and where to put the result. That keeps the script free of
  * per-screen knowledge, and lets a screen render the control without the script
  * having to be taught about it.
+ *
+ * @since 0.1.0
  */
 class LoadMore {
 
@@ -26,6 +29,8 @@ class LoadMore {
 	 * Fields: action (bbPress AJAX action), param (POST key for the subject id),
 	 * id (the subject — a topic or a forum), target (id of the element rows are
 	 * appended to), next (the page the control will request), and label.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param array<string,mixed> $control Control data.
 	 */

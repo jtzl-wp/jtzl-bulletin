@@ -3,6 +3,7 @@
  * Canonical topic-query arguments.
  *
  * @package JTZL\Bulletin
+ * @since 0.1.0
  */
 
 namespace JTZL\Bulletin\Query;
@@ -34,6 +35,8 @@ use JTZL\Bulletin\WordPress\ContextInterface;
  *    differently per query. LIMIT/OFFSET paging over an unstable sort duplicates
  *    some rows across page boundaries and drops others (see CLAUDE.md trap #4,
  *    where this bit the replies loop). The ID tiebreak makes paging deterministic.
+ *
+ * @since 0.1.0
  */
 class TopicQuery {
 
@@ -47,6 +50,8 @@ class TopicQuery {
 	/**
 	 * Constructor.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param ContextInterface $wp WordPress/bbPress seam.
 	 */
 	public function __construct( ContextInterface $wp ) {
@@ -55,6 +60,8 @@ class TopicQuery {
 
 	/**
 	 * Args for a forum's paginated, sticky-free thread list.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int $forum_id Forum to list topics for.
 	 * @param int $page     1-based page number.
@@ -76,6 +83,8 @@ class TopicQuery {
 	 * them across pages would put a "load more" inside the pinned section.
 	 * Callers must skip this query when the sticky list is empty, since post__in
 	 * with an empty array is ignored by WP_Query and would return every topic.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int $forum_id Forum to list pinned topics for.
 	 * @return array<string,mixed>
@@ -106,6 +115,8 @@ class TopicQuery {
 	 * Post_status is absent for a different reason — bbPress fills it from the
 	 * reader's capabilities (or falls back to perm => readable), which is the same
 	 * visibility logic the forums index gets.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return array<string,mixed>
 	 */

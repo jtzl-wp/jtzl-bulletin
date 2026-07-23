@@ -3,6 +3,7 @@
  * Theme takeover on the reading screens.
  *
  * @package JTZL\Bulletin
+ * @since 0.1.0
  */
 
 namespace JTZL\Bulletin\Takeover;
@@ -15,6 +16,8 @@ use JTZL\Bulletin\WordPress\ContextInterface;
  * active theme, through bbPress's own `bbp_template_include` filter (which sits
  * on WordPress core's `template_include`) — so wp_head()/wp_footer() still fire
  * and core plus other plugins keep working.
+ *
+ * @since 0.1.0
  */
 class TemplateController {
 
@@ -42,6 +45,8 @@ class TemplateController {
 	/**
 	 * Constructor.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param ContextInterface $wp            WordPress/bbPress seam.
 	 * @param ReadingScreen    $screen        Reading-screen detector.
 	 * @param string           $templates_dir Absolute templates directory (trailing slash).
@@ -59,6 +64,8 @@ class TemplateController {
 	 * would render in the site's theme. bbp_get_reply_url() resolves to the
 	 * parent topic with the correct page and #post-N anchor, so there's no
 	 * redirect loop, and our JS resolves the anchor even past page 1.
+	 *
+	 * @since 0.1.0
 	 */
 	public function redirect_single_reply(): void {
 		if ( ! $this->wp->is_bbpress() || ! $this->wp->is_single_reply() ) {
@@ -79,6 +86,8 @@ class TemplateController {
 	 * at priority 4 — before our priority-20 override — removing it from inside
 	 * our override would be too late. We strip it here on template_redirect, which
 	 * runs before the template_include chain. (bbPress's own code sanctions this.)
+	 *
+	 * @since 0.1.0
 	 */
 	public function prime_takeover(): void {
 		if ( ! $this->screen->is_reading_screen() ) {
@@ -89,6 +98,8 @@ class TemplateController {
 
 	/**
 	 * Swap in our own document on the reading screens.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param string $template Template path WordPress/bbPress resolved.
 	 * @return string

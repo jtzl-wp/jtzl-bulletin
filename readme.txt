@@ -5,7 +5,7 @@ Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.2
 Requires Plugins: bbpress
-Stable tag: 0.1.0
+Stable tag: 0.2.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -58,6 +58,9 @@ Developed and tested against bbPress 2.6.x, the current stable release line.
 Yes. Bulletin defers to bbPress's own access control, including forums nested under a restricted parent.
 
 == Changelog ==
+
+= 0.2.0 =
+* Added: reading-view Subscribe control — subscribe to the thread you are reading, matching the native forum-level subscribe. Gated on active subscriptions and a logged-in user.
 
 = 0.1.0 =
 * Initial release: mobile reading layer for the forums index, single forum, and thread views.

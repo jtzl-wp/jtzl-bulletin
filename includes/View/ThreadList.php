@@ -3,6 +3,7 @@
  * A run of thread rows.
  *
  * @package JTZL\Bulletin
+ * @since 0.1.0
  */
 
 namespace JTZL\Bulletin\View;
@@ -18,6 +19,8 @@ use JTZL\Bulletin\WordPress\ContextInterface;
  * whether a section is empty before it can decide whether to print that
  * section's label at all, and re-running the query to find out would risk the
  * two runs disagreeing.
+ *
+ * @since 0.1.0
  */
 class ThreadList {
 
@@ -38,6 +41,8 @@ class ThreadList {
 	/**
 	 * Constructor.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param ContextInterface $wp  WordPress/bbPress seam.
 	 * @param ThreadRow        $row Thread row renderer.
 	 */
@@ -48,6 +53,8 @@ class ThreadList {
 
 	/**
 	 * Render a topics query's rows and return them as markup.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param array<string,mixed> $args Topic query args (see Query\TopicQuery).
 	 * @return string Markup, or '' when the query matched nothing.

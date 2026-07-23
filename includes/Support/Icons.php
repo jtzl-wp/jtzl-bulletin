@@ -3,6 +3,7 @@
  * Inline SVG icons.
  *
  * @package JTZL\Bulletin
+ * @since 0.1.0
  */
 
 namespace JTZL\Bulletin\Support;
@@ -12,11 +13,15 @@ namespace JTZL\Bulletin\Support;
  *
  * These use `stroke="currentColor"` — never `stroke="var(--x)"`, which iOS
  * Safari silently drops inside SVG presentation attributes (see CLAUDE.md).
+ *
+ * @since 0.1.0
  */
 class Icons {
 
 	/**
 	 * Account glyph.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return string
 	 */
@@ -27,6 +32,8 @@ class Icons {
 	/**
 	 * Back chevron (large).
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return string
 	 */
 	public static function chevron_left(): string {
@@ -36,6 +43,8 @@ class Icons {
 	/**
 	 * Prev chevron (small, for the thread nav bar).
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return string
 	 */
 	public static function nav_prev(): string {
@@ -44,6 +53,8 @@ class Icons {
 
 	/**
 	 * Next chevron (small, for the thread nav bar).
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return string
 	 */

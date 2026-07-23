@@ -3,6 +3,7 @@
  * Load-more replies endpoint.
  *
  * @package JTZL\Bulletin
+ * @since 0.1.0
  */
 
 namespace JTZL\Bulletin\Ajax;
@@ -17,6 +18,8 @@ use JTZL\Bulletin\WordPress\ContextInterface;
  * inside bbPress's request lifecycle. Paging matches the reading view exactly:
  * page 1 ships with the document, so load-more starts at page 2, and every page
  * is replies-only (see Query\ReplyQuery).
+ *
+ * @since 0.1.0
  */
 class LoadRepliesController {
 
@@ -44,6 +47,8 @@ class LoadRepliesController {
 	/**
 	 * Constructor.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param ContextInterface $wp         WordPress/bbPress seam.
 	 * @param ReplyQuery       $query      Shared reply-query builder.
 	 * @param ReplyView        $reply_view Reply renderer.
@@ -56,6 +61,8 @@ class LoadRepliesController {
 
 	/**
 	 * Return a rendered page of replies for a topic as JSON.
+	 *
+	 * @since 0.1.0
 	 */
 	public function handle(): void {
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- public read-only endpoint; see Asset\AssetManager for why there is no nonce.
@@ -112,6 +119,8 @@ class LoadRepliesController {
 	 * leak its replies, so its own status is checked — not just the forum's.
 	 * "Readable" is public OR closed: closed topics are read-only but still
 	 * publicly viewable, matching the thread-navigation query.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int $topic_id Topic ID.
 	 * @return bool

@@ -3,6 +3,7 @@
  * Forum-scoped thread Prev/Next.
  *
  * @package JTZL\Bulletin
+ * @since 0.1.0
  */
 
 namespace JTZL\Bulletin\Navigation;
@@ -16,6 +17,8 @@ use JTZL\Bulletin\WordPress\ContextInterface;
  * global, not forum-scoped), this is custom. Every topic in the current forum is
  * ordered by freshness; stepping moves one whole thread at a time and stops hard
  * at the forum's first and last thread — no silent wrap.
+ *
+ * @since 0.1.0
  */
 class ThreadNavigator {
 
@@ -28,6 +31,8 @@ class ThreadNavigator {
 
 	/**
 	 * Constructor.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param ContextInterface $wp WordPress/bbPress seam.
 	 */
@@ -43,6 +48,8 @@ class ThreadNavigator {
 	 * bumps the latter (bbPress recounts on topic status transitions). Keying on
 	 * both means a removed topic drops out of Prev/Next promptly, rather than
 	 * lingering as a dead link for up to the cache lifetime.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int $forum_id Forum ID.
 	 * @return int[]
@@ -79,6 +86,8 @@ class ThreadNavigator {
 	 *
 	 * Returns the adjacent thread URLs (empty string at a boundary) and the
 	 * 1-based position (0 when the topic isn't found in the order).
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int $topic_id Current topic.
 	 * @param int $forum_id Its forum.

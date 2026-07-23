@@ -3,7 +3,7 @@
  * Plugin Name:       Bulletin for bbPress
  * Plugin URI:        https://github.com/jtzl-wp/jtzl-bulletin
  * Description:       A mobile-first, decluttered reading layer for bbPress. The post is the hero; navigation is deliberately secondary. Renders its own minimal document on the reading screens and leaves every other page on the site's own theme.
- * Version:           0.1.0
+ * Version:           0.2.0
  * Requires at least: 6.0
  * Requires PHP:      8.2
  * Requires Plugins:  bbpress
@@ -22,6 +22,7 @@
  * are left untouched on the active theme.
  *
  * @package JTZL\Bulletin
+ * @since 0.1.0
  */
 
 // Exit if accessed directly.
@@ -29,7 +30,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'JTZL_BLTN_VERSION', '0.1.0' );
+define( 'JTZL_BLTN_VERSION', '0.2.0' );
 define( 'JTZL_BLTN_FILE', __FILE__ );
 define( 'JTZL_BLTN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'JTZL_BLTN_URL', plugin_dir_url( __FILE__ ) );
@@ -44,6 +45,8 @@ if ( file_exists( __DIR__ . '/vendor/autoload.php' ) ) {
  * present and its conditional tags (is_bbpress(), etc.) are defined.
  *
  * Priority 20 keeps us safely after bbPress's own default-priority bootstrap.
+ *
+ * @since 0.1.0
  */
 function jtzl_bltn_boot() {
 	// Companion plugin: with no bbPress there is nothing to declutter. Fail
@@ -64,6 +67,8 @@ add_action( 'plugins_loaded', 'jtzl_bltn_boot', 20 );
 
 /**
  * Admin notice shown when bbPress is not active.
+ *
+ * @since 0.1.0
  */
 function jtzl_bltn_notice_missing_bbpress() {
 	$message = __( '<strong>Bulletin for bbPress</strong> needs bbPress to be installed and active. It has no effect on its own.', 'jtzl-bulletin' );

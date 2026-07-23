@@ -3,6 +3,7 @@
  * The WordPress / bbPress seam.
  *
  * @package JTZL\Bulletin
+ * @since 0.1.0
  */
 
 namespace JTZL\Bulletin\WordPress;
@@ -16,6 +17,8 @@ namespace JTZL\Bulletin\WordPress;
  * Pure, deterministic formatting helpers (esc_*, __, number_format_i18n, …) are
  * intentionally NOT wrapped here — they are called directly and shimmed in the
  * PHPUnit bootstrap, keeping this surface to the parts that actually need faking.
+ *
+ * @since 0.1.0
  */
 interface ContextInterface {
 
@@ -23,6 +26,8 @@ interface ContextInterface {
 
 	/**
 	 * Register an action callback.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param string   $hook          Hook name.
 	 * @param callable $callback      Callback.
@@ -34,6 +39,8 @@ interface ContextInterface {
 	/**
 	 * Register a filter callback.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param string   $hook          Hook name.
 	 * @param callable $callback      Callback.
 	 * @param int      $priority      Priority.
@@ -44,6 +51,8 @@ interface ContextInterface {
 	/**
 	 * Remove a filter callback registered under a string function name.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param string $hook     Hook name.
 	 * @param string $callback Callback function name.
 	 * @param int    $priority Priority it was added with.
@@ -52,6 +61,8 @@ interface ContextInterface {
 
 	/**
 	 * Apply filters to a value.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param string $hook  Hook name.
 	 * @param mixed  $value Value to filter.
@@ -64,12 +75,16 @@ interface ContextInterface {
 	/**
 	 * Whether the main query is a bbPress page.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return bool
 	 */
 	public function is_bbpress(): bool;
 
 	/**
 	 * Whether this is the forums index (archive).
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return bool
 	 */
@@ -78,12 +93,16 @@ interface ContextInterface {
 	/**
 	 * Whether this is a single forum.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return bool
 	 */
 	public function is_single_forum(): bool;
 
 	/**
 	 * Whether this is a single topic (reading view).
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return bool
 	 */
@@ -92,12 +111,16 @@ interface ContextInterface {
 	/**
 	 * Whether this is a single reply permalink.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return bool
 	 */
 	public function is_single_reply(): bool;
 
 	/**
 	 * Whether threaded (hierarchical) replies are enabled site-wide.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return bool
 	 */
@@ -108,12 +131,16 @@ interface ContextInterface {
 	/**
 	 * Whether a user is logged in.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return bool
 	 */
 	public function is_user_logged_in(): bool;
 
 	/**
 	 * Current user ID (0 if logged out).
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return int
 	 */
@@ -122,6 +149,8 @@ interface ContextInterface {
 	/**
 	 * Login URL, optionally with a redirect target.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param string $redirect URL to return to after login.
 	 * @return string
 	 */
@@ -129,6 +158,8 @@ interface ContextInterface {
 
 	/**
 	 * A piece of site information (e.g. "name", "charset").
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param string $key Info key.
 	 * @return string
@@ -140,6 +171,8 @@ interface ContextInterface {
 	/**
 	 * A user's bbPress profile URL.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param int $user_id User ID.
 	 * @return string
 	 */
@@ -148,12 +181,16 @@ interface ContextInterface {
 	/**
 	 * The forums index URL.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return string
 	 */
 	public function get_forums_url(): string;
 
 	/**
 	 * A topic's permalink.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int $topic_id Topic ID.
 	 * @return string
@@ -163,6 +200,8 @@ interface ContextInterface {
 	/**
 	 * The reading-view URL for a reply (parent topic + page + anchor).
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param int $reply_id Reply ID.
 	 * @return string
 	 */
@@ -170,6 +209,8 @@ interface ContextInterface {
 
 	/**
 	 * Plain-text display name of a topic or reply author.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int $post_id Topic or reply ID.
 	 * @return string
@@ -181,12 +222,16 @@ interface ContextInterface {
 	/**
 	 * ID of the reply currently in the loop.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return int
 	 */
 	public function get_reply_id(): int;
 
 	/**
 	 * Display name of a reply's author.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int $reply_id Reply ID.
 	 * @return string
@@ -195,6 +240,8 @@ interface ContextInterface {
 
 	/**
 	 * A reply's post date.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int  $reply_id Reply ID.
 	 * @param bool $humanize Whether to return a human-readable diff.
@@ -205,6 +252,8 @@ interface ContextInterface {
 	/**
 	 * Echo a reply's filtered content (real post HTML).
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param int $reply_id Reply ID.
 	 */
 	public function the_reply_content( int $reply_id ): void;
@@ -212,12 +261,16 @@ interface ContextInterface {
 	/**
 	 * ID of the topic currently in the loop.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return int
 	 */
 	public function get_topic_id(): int;
 
 	/**
 	 * A topic's title.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int $topic_id Topic ID.
 	 * @return string
@@ -227,6 +280,8 @@ interface ContextInterface {
 	/**
 	 * Display name of a topic's author.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param int $topic_id Topic ID.
 	 * @return string
 	 */
@@ -234,6 +289,8 @@ interface ContextInterface {
 
 	/**
 	 * Human-readable time of a topic's last activity.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int $topic_id Topic ID.
 	 * @return string
@@ -243,6 +300,8 @@ interface ContextInterface {
 	/**
 	 * A topic's reply count.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param int $topic_id Topic ID.
 	 * @return int
 	 */
@@ -250,6 +309,8 @@ interface ContextInterface {
 
 	/**
 	 * The forum ID a topic belongs to.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int $topic_id Topic ID.
 	 * @return int
@@ -263,6 +324,8 @@ interface ContextInterface {
 	 * of a private forum is allowed, while an unauthorised visitor is refused —
 	 * including for a public forum nested beneath a restricted ancestor.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param int $forum_id Forum ID.
 	 * @return bool
 	 */
@@ -273,12 +336,16 @@ interface ContextInterface {
 	/**
 	 * The forum post type key.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return string
 	 */
 	public function get_forum_post_type(): string;
 
 	/**
 	 * The topic post type key.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return string
 	 */
@@ -287,12 +354,16 @@ interface ContextInterface {
 	/**
 	 * The reply post type key.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return string
 	 */
 	public function get_reply_post_type(): string;
 
 	/**
 	 * The "public" post status key.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return string
 	 */
@@ -301,12 +372,16 @@ interface ContextInterface {
 	/**
 	 * The "closed" post status key.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return string
 	 */
 	public function get_closed_status_id(): string;
 
 	/**
 	 * Replies shown per page.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return int
 	 */
@@ -315,12 +390,16 @@ interface ContextInterface {
 	/**
 	 * Topics shown per page.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return int
 	 */
 	public function get_topics_per_page(): int;
 
 	/**
 	 * The page number the current request asks for (1 when unpaged).
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return int
 	 */
@@ -331,6 +410,8 @@ interface ContextInterface {
 	/**
 	 * A post's type.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param int $post_id Post ID.
 	 * @return string
 	 */
@@ -339,6 +420,8 @@ interface ContextInterface {
 	/**
 	 * A post's status.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param int $post_id Post ID.
 	 * @return string
 	 */
@@ -346,6 +429,8 @@ interface ContextInterface {
 
 	/**
 	 * A single post-meta value as a string.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int    $post_id Post ID.
 	 * @param string $key     Meta key.
@@ -356,6 +441,8 @@ interface ContextInterface {
 	/**
 	 * Read a transient.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param string $key Transient key.
 	 * @return mixed The value, or false if absent.
 	 */
@@ -363,6 +450,8 @@ interface ContextInterface {
 
 	/**
 	 * Write a transient.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param string $key   Transient key.
 	 * @param mixed  $value Value to store.
@@ -375,6 +464,8 @@ interface ContextInterface {
 	/**
 	 * Topic IDs in a forum, ordered freshest first.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param int      $forum_id Forum ID.
 	 * @param string[] $statuses Post statuses to include.
 	 * @return int[]
@@ -384,6 +475,8 @@ interface ContextInterface {
 	/**
 	 * IDs of a forum's sticky topics, super stickies included.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param int $forum_id Forum ID.
 	 * @return int[]
 	 */
@@ -391,6 +484,8 @@ interface ContextInterface {
 
 	/**
 	 * Prime the topics loop.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param array<string,mixed> $args Query args.
 	 * @return bool Whether any topics matched.
@@ -400,17 +495,23 @@ interface ContextInterface {
 	/**
 	 * Advance the topics loop.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return bool Whether a topic remains.
 	 */
 	public function the_topics_loop(): bool;
 
 	/**
 	 * Set up the current topic in the loop.
+	 *
+	 * @since 0.1.0
 	 */
 	public function the_topic(): void;
 
 	/**
 	 * The number of topic pages from the last topics query.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return int
 	 */
@@ -418,6 +519,8 @@ interface ContextInterface {
 
 	/**
 	 * Prime the replies loop.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param array<string,mixed> $args Query args.
 	 * @return bool Whether any replies matched.
@@ -427,17 +530,23 @@ interface ContextInterface {
 	/**
 	 * Advance the replies loop.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return bool Whether a reply remains.
 	 */
 	public function the_replies_loop(): bool;
 
 	/**
 	 * Set up the current reply in the loop.
+	 *
+	 * @since 0.1.0
 	 */
 	public function the_reply(): void;
 
 	/**
 	 * The number of reply pages from the last replies query.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return int
 	 */
@@ -448,6 +557,8 @@ interface ContextInterface {
 	/**
 	 * Enqueue a stylesheet.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param string   $handle  Handle.
 	 * @param string   $src     URL.
 	 * @param string[] $deps    Dependencies.
@@ -457,6 +568,8 @@ interface ContextInterface {
 
 	/**
 	 * Enqueue a script.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param string   $handle    Handle.
 	 * @param string   $src       URL.
@@ -469,6 +582,8 @@ interface ContextInterface {
 	/**
 	 * Attach a localized data object to a script.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param string              $handle      Script handle.
 	 * @param string              $object_name JS global name.
 	 * @param array<string,mixed> $data        Data.
@@ -478,6 +593,8 @@ interface ContextInterface {
 	/**
 	 * The bbPress front-end AJAX endpoint URL.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return string
 	 */
 	public function get_ajax_url(): string;
@@ -485,12 +602,16 @@ interface ContextInterface {
 	/**
 	 * Handles of every currently enqueued stylesheet.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return string[]
 	 */
 	public function get_enqueued_style_handles(): array;
 
 	/**
 	 * Dequeue a stylesheet by handle.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param string $handle Handle.
 	 */
@@ -501,6 +622,8 @@ interface ContextInterface {
 	/**
 	 * Issue a safe redirect.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param string $url    Target URL.
 	 * @param int    $status HTTP status code.
 	 */
@@ -508,11 +631,15 @@ interface ContextInterface {
 
 	/**
 	 * End the request.
+	 *
+	 * @since 0.1.0
 	 */
 	public function terminate(): void;
 
 	/**
 	 * Send a JSON error response and end the request.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param array<string,mixed> $data   Payload.
 	 * @param int                 $status HTTP status code.
@@ -521,6 +648,8 @@ interface ContextInterface {
 
 	/**
 	 * Send a JSON success response and end the request.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param array<string,mixed> $data Payload.
 	 */

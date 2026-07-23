@@ -3,6 +3,7 @@
  * Reading-screen detection.
  *
  * @package JTZL\Bulletin
+ * @since 0.1.0
  */
 
 namespace JTZL\Bulletin\Screen;
@@ -13,6 +14,8 @@ use JTZL\Bulletin\WordPress\ContextInterface;
  * Decides which pages Bulletin takes over. Everything else — non-bbPress pages,
  * and the bbPress pages we have no v1 design for (profiles, topic tags, edit
  * forms, search) — is left on the active theme.
+ *
+ * @since 0.1.0
  */
 class ReadingScreen {
 
@@ -26,6 +29,8 @@ class ReadingScreen {
 	/**
 	 * Constructor.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param ContextInterface $wp WordPress/bbPress seam.
 	 */
 	public function __construct( ContextInterface $wp ) {
@@ -34,6 +39,8 @@ class ReadingScreen {
 
 	/**
 	 * Whether the current request is one of the three reading screens.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return bool
 	 */
@@ -46,6 +53,8 @@ class ReadingScreen {
 	/**
 	 * Whether the current request is the forums index (home).
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return bool
 	 */
 	public function is_forums_index(): bool {
@@ -54,6 +63,8 @@ class ReadingScreen {
 
 	/**
 	 * Whether the current request is a single forum's thread list.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return bool
 	 */
@@ -69,6 +80,8 @@ class ReadingScreen {
 	 * would load unpaginated and "load more replies" would never appear. Falling
 	 * through to the theme's own bbPress templates — which render threading
 	 * correctly — beats shipping that performance cliff (see issue #11).
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return bool
 	 */

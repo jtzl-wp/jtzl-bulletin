@@ -3,6 +3,7 @@
  * Canonical reply-query arguments.
  *
  * @package JTZL\Bulletin
+ * @since 0.1.0
  */
 
 namespace JTZL\Bulletin\Query;
@@ -24,6 +25,8 @@ use JTZL\Bulletin\WordPress\ContextInterface;
  *    returns tied rows in an undefined order, so LIMIT/OFFSET paging shuffles
  *    rows across page boundaries — duplicating some replies and dropping others.
  *    The ID tiebreak makes paging deterministic.
+ *
+ * @since 0.1.0
  */
 class ReplyQuery {
 
@@ -37,6 +40,8 @@ class ReplyQuery {
 	/**
 	 * Constructor.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param ContextInterface $wp WordPress/bbPress seam.
 	 */
 	public function __construct( ContextInterface $wp ) {
@@ -45,6 +50,8 @@ class ReplyQuery {
 
 	/**
 	 * Reply-query args for a topic and 1-based page.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int $topic_id Topic to load replies for.
 	 * @param int $page     1-based page number.

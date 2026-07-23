@@ -3,6 +3,7 @@
  * DI container factory.
  *
  * @package JTZL\Bulletin
+ * @since 0.1.0
  */
 
 namespace JTZL\Bulletin;
@@ -19,6 +20,8 @@ use function DI\autowire;
  * Builds and configures the PHP-DI container. All service definitions live in
  * one place; the composition root (Bootstrap) then resolves services and binds
  * them to WordPress hooks.
+ *
+ * @since 0.1.0
  */
 class ContainerFactory {
 
@@ -27,6 +30,8 @@ class ContainerFactory {
 	 *
 	 * Compilation is enabled in production (into var/cache) and disabled when
 	 * WP_DEBUG is on, so local development never serves a stale compiled container.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param bool|null $enable_compilation Force compilation on/off (test seam).
 	 * @return Container
@@ -55,6 +60,8 @@ class ContainerFactory {
 	 * Autowiring resolves everything that needs only other services; the few
 	 * scalar constructor arguments (plugin paths, version, template dir) are
 	 * supplied here.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return array<string,mixed>
 	 */

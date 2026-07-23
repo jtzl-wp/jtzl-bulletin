@@ -3,6 +3,7 @@
  * A single forum row.
  *
  * @package JTZL\Bulletin
+ * @since 0.1.0
  */
 
 namespace JTZL\Bulletin\View;
@@ -11,6 +12,8 @@ namespace JTZL\Bulletin\View;
  * Renders one forum row, used by both the forums index and the sub-forum
  * section of a single forum. The row data is gathered by the screen templates
  * during their forums loop.
+ *
+ * @since 0.1.0
  */
 class ForumRow {
 
@@ -20,6 +23,8 @@ class ForumRow {
 	 * Fields: permalink (forum URL), title, description (already stripped and
 	 * trimmed), topics (count, including sub-forum topics), author (plain name
 	 * of the last active post's author) and active (human "last active" time).
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param array<string,mixed> $row Row data.
 	 */

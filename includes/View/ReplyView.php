@@ -3,6 +3,7 @@
  * A single reply, rendered as a Bulletin post.
  *
  * @package JTZL\Bulletin
+ * @since 0.1.0
  */
 
 namespace JTZL\Bulletin\View;
@@ -14,6 +15,8 @@ use JTZL\Bulletin\WordPress\ContextInterface;
  * and the load-more AJAX handler so the markup is byte-identical whether a reply
  * arrives with the page or is appended later. The id="post-{reply_id}" anchor
  * matches bbp_get_reply_url(), which is what makes deep-links resolvable.
+ *
+ * @since 0.1.0
  */
 class ReplyView {
 
@@ -27,6 +30,8 @@ class ReplyView {
 	/**
 	 * Constructor.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param ContextInterface $wp WordPress/bbPress seam.
 	 */
 	public function __construct( ContextInterface $wp ) {
@@ -35,6 +40,8 @@ class ReplyView {
 
 	/**
 	 * Echo the current reply.
+	 *
+	 * @since 0.1.0
 	 */
 	public function render(): void {
 		$reply_id = $this->wp->get_reply_id();

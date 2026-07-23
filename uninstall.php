@@ -9,6 +9,7 @@
  * unbounded LIKE scan of the options table for no lasting benefit.
  *
  * @package JTZL\Bulletin
+ * @since 0.1.0
  */
 
 // Exit if not uninstalling.

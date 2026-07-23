@@ -3,6 +3,7 @@
  * The minimal top strip that replaces the theme header.
  *
  * @package JTZL\Bulletin
+ * @since 0.1.0
  */
 
 namespace JTZL\Bulletin\View;
@@ -13,6 +14,8 @@ use JTZL\Bulletin\WordPress\ContextInterface;
 /**
  * Renders the app bar: a leading back control (or spacer), the screen title
  * (which doubles as the focus heading), and a trailing account button.
+ *
+ * @since 0.1.0
  */
 class AppBar {
 
@@ -26,6 +29,8 @@ class AppBar {
 	/**
 	 * Constructor.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param ContextInterface $wp WordPress/bbPress seam.
 	 */
 	public function __construct( ContextInterface $wp ) {
@@ -38,6 +43,8 @@ class AppBar {
 	 * Recognised keys: title (plain heading text), subtitle (small line under it),
 	 * back_url (leading back control; omit for a spacer), back_label (its label),
 	 * and heading (whether the title is the screen's focus h1).
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param array<string,mixed> $args Bar arguments.
 	 */
@@ -99,6 +106,8 @@ class AppBar {
 	 * Public-read v1 forums have no account screen: logged-out users go to
 	 * wp-login.php; logged-in users go to their bbPress profile.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return string
 	 */
 	private function account_url(): string {
@@ -113,6 +122,8 @@ class AppBar {
 
 	/**
 	 * Accessible label for the account button, reflecting auth state.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return string
 	 */

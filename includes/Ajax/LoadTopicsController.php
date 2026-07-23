@@ -3,6 +3,7 @@
  * Load-more threads endpoint.
  *
  * @package JTZL\Bulletin
+ * @since 0.1.0
  */
 
 namespace JTZL\Bulletin\Ajax;
@@ -16,6 +17,8 @@ use JTZL\Bulletin\WordPress\ContextInterface;
  * bbPress AJAX router (bbp_get_ajax_url() dispatches to `bbp_ajax_{action}`),
  * same paging contract — page 1 ships with the document, so load-more starts at
  * page 2 — and the same rows, rendered through View\ThreadList.
+ *
+ * @since 0.1.0
  */
 class LoadTopicsController {
 
@@ -43,6 +46,8 @@ class LoadTopicsController {
 	/**
 	 * Constructor.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param ContextInterface $wp      WordPress/bbPress seam.
 	 * @param TopicQuery       $query   Shared topic-query builder.
 	 * @param ThreadList       $threads Thread list renderer.
@@ -55,6 +60,8 @@ class LoadTopicsController {
 
 	/**
 	 * Return a rendered page of a forum's threads as JSON.
+	 *
+	 * @since 0.1.0
 	 */
 	public function handle(): void {
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- public read-only endpoint; see Asset\AssetManager for why there is no nonce.

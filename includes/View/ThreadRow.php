@@ -3,6 +3,7 @@
  * A single thread row in a forum's list.
  *
  * @package JTZL\Bulletin
+ * @since 0.1.0
  */
 
 namespace JTZL\Bulletin\View;
@@ -10,6 +11,8 @@ namespace JTZL\Bulletin\View;
 /**
  * Renders one thread row, used for both the pinned and the all-threads sections.
  * The row data is gathered by the forum screen template during the topics loop.
+ *
+ * @since 0.1.0
  */
 class ThreadRow {
 
@@ -18,6 +21,8 @@ class ThreadRow {
 	 *
 	 * Fields: permalink (topic URL), title, author (plain name), active (human
 	 * "last active" time), and replies (count).
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param array<string,mixed> $row Row data.
 	 */

@@ -3,6 +3,7 @@
  * Runtime hook registration (composition root).
  *
  * @package JTZL\Bulletin
+ * @since 0.1.0
  */
 
 namespace JTZL\Bulletin;
@@ -17,6 +18,8 @@ use JTZL\Bulletin\WordPress\ContextInterface;
 /**
  * Resolves services from the container and binds them to WordPress/bbPress
  * hooks through the context seam. This is the only place hooks are registered.
+ *
+ * @since 0.1.0
  */
 class Bootstrap {
 
@@ -30,6 +33,8 @@ class Bootstrap {
 	/**
 	 * Constructor.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param Container $container The DI container.
 	 */
 	public function __construct( Container $container ) {
@@ -38,6 +43,8 @@ class Bootstrap {
 
 	/**
 	 * Register every runtime hook.
+	 *
+	 * @since 0.1.0
 	 */
 	public function register_hooks(): void {
 		$wp = $this->container->get( ContextInterface::class );

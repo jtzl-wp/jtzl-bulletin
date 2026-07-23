@@ -3,6 +3,7 @@
  * Live WordPress / bbPress implementation of the context seam.
  *
  * @package JTZL\Bulletin
+ * @since 0.1.0
  */
 
 namespace JTZL\Bulletin\WordPress;
@@ -13,11 +14,15 @@ use WP_Query;
  * Thin one-line delegations to WordPress and bbPress globals. This is the only
  * class in the plugin that calls those globals directly; everything else depends
  * on ContextInterface so it can be faked in tests.
+ *
+ * @since 0.1.0
  */
 class WordPressContext implements ContextInterface {
 
 	/**
 	 * Register an action callback.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param string   $hook          Hook name.
 	 * @param callable $callback      Callback.
@@ -31,6 +36,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * Register a filter callback.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param string   $hook          Hook name.
 	 * @param callable $callback      Callback.
 	 * @param int      $priority      Priority.
@@ -43,6 +50,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * Remove a filter callback registered under a string function name.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param string $hook     Hook name.
 	 * @param string $callback Callback function name.
 	 * @param int    $priority Priority it was added with.
@@ -53,6 +62,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * Apply filters to a value.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param string $hook  Hook name.
 	 * @param mixed  $value Value to filter.
@@ -65,6 +76,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * Whether the main query is a bbPress page.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return bool
 	 */
 	public function is_bbpress(): bool {
@@ -73,6 +86,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * Whether this is the forums index (archive).
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return bool
 	 */
@@ -83,6 +98,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * Whether this is a single forum.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return bool
 	 */
 	public function is_single_forum(): bool {
@@ -91,6 +108,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * Whether this is a single topic (reading view).
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return bool
 	 */
@@ -101,6 +120,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * Whether this is a single reply permalink.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return bool
 	 */
 	public function is_single_reply(): bool {
@@ -109,6 +130,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * Whether threaded (hierarchical) replies are enabled site-wide.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return bool
 	 */
@@ -119,6 +142,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * Whether a user is logged in.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return bool
 	 */
 	public function is_user_logged_in(): bool {
@@ -128,6 +153,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * Current user ID (0 if logged out).
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return int
 	 */
 	public function get_current_user_id(): int {
@@ -136,6 +163,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * Login URL, optionally with a redirect target.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param string $redirect URL to return to after login.
 	 * @return string
@@ -147,6 +176,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * A piece of site information (e.g. "name", "charset").
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param string $key Info key.
 	 * @return string
 	 */
@@ -156,6 +187,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * A user's bbPress profile URL.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int $user_id User ID.
 	 * @return string
@@ -167,6 +200,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * The forums index URL.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return string
 	 */
 	public function get_forums_url(): string {
@@ -175,6 +210,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * A topic's permalink.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int $topic_id Topic ID.
 	 * @return string
@@ -185,6 +222,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * The reading-view URL for a reply (parent topic + page + anchor).
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int $reply_id Reply ID.
 	 * @return string
@@ -200,6 +239,8 @@ class WordPressContext implements ContextInterface {
 	 * reply, since bbPress's freshness "last active id" can point at either — then
 	 * strips the profile link, as the reading UI never sends readers into themed
 	 * profile pages.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int $post_id Topic or reply ID.
 	 * @return string
@@ -221,6 +262,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * ID of the reply currently in the loop.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return int
 	 */
 	public function get_reply_id(): int {
@@ -229,6 +272,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * Display name of a reply's author.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int $reply_id Reply ID.
 	 * @return string
@@ -239,6 +284,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * A reply's post date.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int  $reply_id Reply ID.
 	 * @param bool $humanize Whether to return a human-readable diff.
@@ -251,6 +298,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * Echo a reply's filtered content (real post HTML).
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param int $reply_id Reply ID.
 	 */
 	public function the_reply_content( int $reply_id ): void {
@@ -260,6 +309,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * ID of the topic currently in the loop.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return int
 	 */
 	public function get_topic_id(): int {
@@ -268,6 +319,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * A topic's title.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int $topic_id Topic ID.
 	 * @return string
@@ -279,6 +332,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * Display name of a topic's author.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param int $topic_id Topic ID.
 	 * @return string
 	 */
@@ -288,6 +343,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * Human-readable time of a topic's last activity.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int $topic_id Topic ID.
 	 * @return string
@@ -299,6 +356,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * A topic's reply count.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param int $topic_id Topic ID.
 	 * @return int
 	 */
@@ -308,6 +367,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * The forum ID a topic belongs to.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int $topic_id Topic ID.
 	 * @return int
@@ -324,6 +385,8 @@ class WordPressContext implements ContextInterface {
 	 * — with check_ancestors — refuses a public forum nested under a restricted
 	 * parent. Its deny-by-default fallthrough also covers draft/trashed forums.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param int $forum_id Forum ID.
 	 * @return bool
 	 */
@@ -339,6 +402,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * The topic post type key.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return string
 	 */
 	public function get_topic_post_type(): string {
@@ -347,6 +412,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * The reply post type key.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return string
 	 */
@@ -357,6 +424,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * The "public" post status key.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return string
 	 */
 	public function get_public_status_id(): string {
@@ -365,6 +434,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * The "closed" post status key.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return string
 	 */
@@ -375,6 +446,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * Replies shown per page.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return int
 	 */
 	public function get_replies_per_page(): int {
@@ -383,6 +456,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * The forum post type key.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return string
 	 */
@@ -393,6 +468,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * Topics shown per page.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return int
 	 */
 	public function get_topics_per_page(): int {
@@ -402,6 +479,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * The page number the current request asks for (1 when unpaged).
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return int
 	 */
 	public function get_paged(): int {
@@ -410,6 +489,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * A post's type.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int $post_id Post ID.
 	 * @return string
@@ -421,6 +502,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * A post's status.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param int $post_id Post ID.
 	 * @return string
 	 */
@@ -430,6 +513,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * A single post-meta value as a string.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int    $post_id Post ID.
 	 * @param string $key     Meta key.
@@ -442,6 +527,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * Read a transient.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param string $key Transient key.
 	 * @return mixed The value, or false if absent.
 	 */
@@ -451,6 +538,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * Write a transient.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param string $key   Transient key.
 	 * @param mixed  $value Value to store.
@@ -464,6 +553,8 @@ class WordPressContext implements ContextInterface {
 	 * Topic IDs in a forum, ordered freshest first.
 	 *
 	 * Immediate forum only — topics in sub-forums are not folded in.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param int      $forum_id Forum ID.
 	 * @param string[] $statuses Post statuses to include.
@@ -497,6 +588,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * IDs of a forum's sticky topics, super stickies included.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param int $forum_id Forum ID.
 	 * @return int[]
 	 */
@@ -515,6 +608,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * Prime the topics loop.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param array<string,mixed> $args Query args.
 	 * @return bool Whether any topics matched.
 	 */
@@ -525,6 +620,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * Advance the topics loop.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return bool Whether a topic remains.
 	 */
 	public function the_topics_loop(): bool {
@@ -533,6 +630,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * Set up the current topic in the loop.
+	 *
+	 * @since 0.1.0
 	 */
 	public function the_topic(): void {
 		bbp_the_topic();
@@ -540,6 +639,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * The number of topic pages from the last topics query.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return int
 	 */
@@ -552,6 +653,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * Prime the replies loop.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param array<string,mixed> $args Query args.
 	 * @return bool Whether any replies matched.
 	 */
@@ -562,6 +665,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * Advance the replies loop.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return bool Whether a reply remains.
 	 */
 	public function the_replies_loop(): bool {
@@ -570,6 +675,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * Set up the current reply in the loop.
+	 *
+	 * @since 0.1.0
 	 */
 	public function the_reply(): void {
 		bbp_the_reply();
@@ -577,6 +684,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * The number of reply pages from the last replies query.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return int
 	 */
@@ -589,6 +698,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * Enqueue a stylesheet.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param string   $handle  Handle.
 	 * @param string   $src     URL.
 	 * @param string[] $deps    Dependencies.
@@ -600,6 +711,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * Enqueue a script.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param string   $handle    Handle.
 	 * @param string   $src       URL.
@@ -614,6 +727,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * Attach a localized data object to a script.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param string              $handle      Script handle.
 	 * @param string              $object_name JS global name.
 	 * @param array<string,mixed> $data        Data.
@@ -625,6 +740,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * The bbPress front-end AJAX endpoint URL.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @return string
 	 */
 	public function get_ajax_url(): string {
@@ -633,6 +750,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * Handles of every currently enqueued stylesheet.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @return string[]
 	 */
@@ -644,6 +763,8 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * Dequeue a stylesheet by handle.
 	 *
+	 * @since 0.1.0
+	 *
 	 * @param string $handle Handle.
 	 */
 	public function dequeue_style( string $handle ): void {
@@ -652,6 +773,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * Issue a safe redirect.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param string $url    Target URL.
 	 * @param int    $status HTTP status code.
@@ -670,6 +793,8 @@ class WordPressContext implements ContextInterface {
 	 * TemplateControllerTest).
 	 *
 	 * @codeCoverageIgnore
+	 *
+	 * @since 0.1.0
 	 */
 	public function terminate(): void {
 		exit;
@@ -677,6 +802,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * Send a JSON error response and end the request.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param array<string,mixed> $data   Payload.
 	 * @param int                 $status HTTP status code.
@@ -687,6 +814,8 @@ class WordPressContext implements ContextInterface {
 
 	/**
 	 * Send a JSON success response and end the request.
+	 *
+	 * @since 0.1.0
 	 *
 	 * @param array<string,mixed> $data Payload.
 	 */
