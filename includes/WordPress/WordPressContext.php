@@ -140,6 +140,39 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * Whether this is the edit-topic form.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool
+	 */
+	public function is_topic_edit(): bool {
+		return (bool) bbp_is_topic_edit();
+	}
+
+	/**
+	 * Whether this is the edit-reply form.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool
+	 */
+	public function is_reply_edit(): bool {
+		return (bool) bbp_is_reply_edit();
+	}
+
+	/**
+	 * Whether this is the create/edit-forum form (keymaster administration).
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool
+	 */
+	public function is_forum_edit(): bool {
+		return (bool) bbp_is_forum_edit();
+	}
+
+	/**
 	 * Whether a user is logged in.
 	 *
 	 * @since 0.1.0
@@ -785,6 +818,46 @@ class WordPressContext implements ContextInterface {
 	 */
 	public function dequeue_style( string $handle ): void {
 		wp_dequeue_style( $handle );
+	}
+
+	/**
+	 * The registered source URL of an enqueued stylesheet, or '' if unknown.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param string $handle Handle.
+	 * @return string
+	 */
+	public function get_style_src( string $handle ): string {
+		$styles = wp_styles();
+		if ( ! isset( $styles->registered[ $handle ] ) ) {
+			return '';
+		}
+		$src = $styles->registered[ $handle ]->src;
+		return is_string( $src ) ? $src : '';
+	}
+
+	/**
+	 * The active (parent) theme's directory URL, no trailing slash.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return string
+	 */
+	public function get_template_directory_uri(): string {
+		return (string) get_template_directory_uri();
+	}
+
+	/**
+	 * The active theme's directory URL (child theme's when one is active), no
+	 * trailing slash.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return string
+	 */
+	public function get_stylesheet_directory_uri(): string {
+		return (string) get_stylesheet_directory_uri();
 	}
 
 	/**

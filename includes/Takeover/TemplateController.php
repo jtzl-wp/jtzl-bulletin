@@ -8,14 +8,16 @@
 
 namespace JTZL\Bulletin\Takeover;
 
-use JTZL\Bulletin\Screen\ReadingScreen;
+use JTZL\Bulletin\Screen\ScreenClassifier;
+use JTZL\Bulletin\Screen\ScreenTier;
 use JTZL\Bulletin\WordPress\ContextInterface;
 
 /**
- * On the three reading screens we render our own minimal document instead of the
- * active theme, through bbPress's own `bbp_template_include` filter (which sits
- * on WordPress core's `template_include`) — so wp_head()/wp_footer() still fire
- * and core plus other plugins keep working.
+ * Swaps the template on bbPress screens through bbPress's own `bbp_template_include`
+ * filter (which sits on WordPress core's `template_include`): a takeover screen gets
+ * our own minimal document (app.php), a reskin screen gets a chrome wrapper around
+ * bbPress's own markup (reskin.php). Either way wp_head()/wp_footer() still fire, so
+ * core plus other plugins keep working. Screens we don't own are returned untouched.
  *
  * @since 0.1.0
  */
@@ -29,11 +31,11 @@ class TemplateController {
 	private ContextInterface $wp;
 
 	/**
-	 * Reading-screen detector.
+	 * Screen-tier classifier.
 	 *
-	 * @var ReadingScreen
+	 * @var ScreenClassifier
 	 */
-	private ReadingScreen $screen;
+	private ScreenClassifier $screen;
 
 	/**
 	 * Absolute templates directory (trailing slash).
@@ -48,10 +50,10 @@ class TemplateController {
 	 * @since 0.1.0
 	 *
 	 * @param ContextInterface $wp            WordPress/bbPress seam.
-	 * @param ReadingScreen    $screen        Reading-screen detector.
+	 * @param ScreenClassifier $screen        Screen-tier classifier.
 	 * @param string           $templates_dir Absolute templates directory (trailing slash).
 	 */
-	public function __construct( ContextInterface $wp, ReadingScreen $screen, string $templates_dir ) {
+	public function __construct( ContextInterface $wp, ScreenClassifier $screen, string $templates_dir ) {
 		$this->wp            = $wp;
 		$this->screen        = $screen;
 		$this->templates_dir = $templates_dir;
@@ -87,17 +89,23 @@ class TemplateController {
 	 * our override would be too late. We strip it here on template_redirect, which
 	 * runs before the template_include chain. (bbPress's own code sanctions this.)
 	 *
+	 * Only takeover screens strip theme-compat: they build their content from our
+	 * own loops, so bbPress's content injection is redundant. Reskin screens rely
+	 * on it — it is what buffers bbPress's own content-*.php part into the post
+	 * that reskin.php then prints — so it must stay.
+	 *
 	 * @since 0.1.0
 	 */
 	public function prime_takeover(): void {
-		if ( ! $this->screen->is_reading_screen() ) {
+		if ( ScreenTier::Takeover !== $this->screen->tier() ) {
 			return;
 		}
 		$this->wp->remove_filter( 'bbp_template_include', 'bbp_template_include_theme_compat', 4 );
 	}
 
 	/**
-	 * Swap in our own document on the reading screens.
+	 * Swap the template per tier: our own document on takeover screens, a chrome
+	 * wrapper around bbPress's markup on reskin screens, untouched otherwise.
 	 *
 	 * @since 0.1.0
 	 *
@@ -105,9 +113,10 @@ class TemplateController {
 	 * @return string
 	 */
 	public function filter_template_include( string $template ): string {
-		if ( ! $this->screen->is_reading_screen() ) {
-			return $template;
-		}
-		return $this->templates_dir . 'app.php';
+		return match ( $this->screen->tier() ) {
+			ScreenTier::Takeover => $this->templates_dir . 'app.php',
+			ScreenTier::Reskin   => $this->templates_dir . 'reskin.php',
+			ScreenTier::None     => $template,
+		};
 	}
 }

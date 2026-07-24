@@ -7,9 +7,8 @@
  * admin bar, and other plugins keep working — the theme's *chrome and styles*
  * are what we leave out (styles are dequeued in Asset\AssetManager).
  *
- * The explicit <meta charset> is line 1 of the document on purpose: a server
- * without a declared charset makes browsers fall back to Latin-1 and mojibake
- * every dash and glyph. (See CLAUDE.md — this bit us once already.)
+ * The document <head> — charset, viewport, and the buffered wp_head() — is shared
+ * with the reskin document; see templates/partials/head.php.
  *
  * @package JTZL\Bulletin
  */
@@ -21,26 +20,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 <!doctype html>
 <html <?php language_attributes(); ?>>
 <head>
-<meta charset="<?php bloginfo( 'charset' ); ?>">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<?php
-// wp_head() prints the <title>, enqueued assets, and core/plugin head output.
-// It also lets the active theme (and core, for block themes) inject a second
-// viewport meta that would clobber ours — GeneratePress and block themes both do this.
-// Buffer the output and strip any viewport meta so ours, with viewport-fit=cover
-// for safe-area insets, stays the only one.
-ob_start();
-wp_head();
-$bltn_head = preg_replace( '#[\t ]*<meta[^>]*name=(["\'])viewport\1[^>]*>\s*#i', '', (string) ob_get_clean() );
-
-// Guarantee exactly one <title>: modern themes (block themes, GeneratePress) emit one
-// through wp_head; if the active theme doesn't, add ours so the tab is labelled.
-if ( false === stripos( (string) $bltn_head, '<title' ) ) {
-	$bltn_head = '<title>' . esc_html( wp_get_document_title() ) . '</title>' . "\n" . $bltn_head;
-}
-
-echo $bltn_head; // phpcs:ignore WordPress.Security.EscapeOutput -- wp_head() output; only viewport metas stripped, title added.
-?>
+<?php require JTZL_BLTN_DIR . 'templates/partials/head.php'; ?>
 </head>
 <body <?php body_class( 'bltn' ); ?>>
 <div class="bltn-app">

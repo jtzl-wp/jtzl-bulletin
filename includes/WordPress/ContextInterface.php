@@ -126,6 +126,36 @@ interface ContextInterface {
 	 */
 	public function is_thread_replies_active(): bool;
 
+	/**
+	 * Whether this is the edit-topic form.
+	 *
+	 * One of the posting/edit forms the reskin tier excludes (owned by the posting
+	 * phase, P4), so a request for it is left to the active theme.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool
+	 */
+	public function is_topic_edit(): bool;
+
+	/**
+	 * Whether this is the edit-reply form.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool
+	 */
+	public function is_reply_edit(): bool;
+
+	/**
+	 * Whether this is the create/edit-forum form (keymaster administration).
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool
+	 */
+	public function is_forum_edit(): bool;
+
 	// --- Auth & site state --------------------------------------------------
 
 	/**
@@ -632,6 +662,38 @@ interface ContextInterface {
 	 * @param string $handle Handle.
 	 */
 	public function dequeue_style( string $handle ): void;
+
+	/**
+	 * The registered source URL of an enqueued stylesheet, or '' if unknown.
+	 *
+	 * Used by the reskin-tier suppression to tell theme stylesheets apart from
+	 * bbPress's and ours by where they load from.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param string $handle Handle.
+	 * @return string
+	 */
+	public function get_style_src( string $handle ): string;
+
+	/**
+	 * The active (parent) theme's directory URL, no trailing slash.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return string
+	 */
+	public function get_template_directory_uri(): string;
+
+	/**
+	 * The active theme's directory URL — the child theme's when one is active,
+	 * else the same as the template directory — no trailing slash.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return string
+	 */
+	public function get_stylesheet_directory_uri(): string;
 
 	// --- Output control -----------------------------------------------------
 
