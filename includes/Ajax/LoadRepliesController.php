@@ -75,21 +75,9 @@ class LoadRepliesController {
 			$page = 2;
 		}
 
-		// Validate the topic itself (type + its own visibility), then its forum.
-		// send_json_error() ends the request, so there is nothing to return to.
-		if ( ! $this->topic_is_readable( $topic_id ) ) {
-			$this->wp->send_json_error( array( 'message' => 'bad_topic' ), 400 );
-		}
-
-		// Gate on what the *user* may view, not on the forum's status label:
-		// a keymaster, moderator, or member of a private forum must still get their
-		// replies, while an unauthorised visitor is refused — including for a public
-		// forum nested under a restricted ancestor. bbPress applies this check on
-		// its own singular views but not on this AJAX route.
-		$forum_id = $this->wp->get_topic_forum_id( $topic_id );
-		if ( ! $this->wp->user_can_view_forum( $forum_id ) ) {
-			$this->wp->send_json_error( array( 'message' => 'forbidden' ), 403 );
-		}
+		// Refuse the request unless the topic may be read; a passing check falls
+		// through to serving. send_json_error() ends the request from inside.
+		$this->guard_access( $topic_id );
 
 		ob_start();
 		if ( $this->wp->has_replies( $this->query->args( $topic_id, $page ) ) ) {
@@ -110,6 +98,44 @@ class LoadRepliesController {
 				'hasMore'  => $page < $max,
 			)
 		);
+	}
+
+	/**
+	 * Refuse the request unless this topic's replies may be served.
+	 *
+	 * Each gate ends the request through send_json_error() (which never returns),
+	 * so returning normally is the single "allowed" outcome: the topic is a
+	 * readable topic, its forum is one the reader may view, and no unmet password
+	 * stands in the way. bbPress applies these on its own singular views but not
+	 * on this AJAX route, so the continuation must apply them itself.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $topic_id Topic ID.
+	 */
+	private function guard_access( int $topic_id ): void {
+		// The topic itself: a real topic whose own status is public or closed, so a
+		// private/trashed topic in a public forum cannot leak its replies.
+		if ( ! $this->topic_is_readable( $topic_id ) ) {
+			$this->wp->send_json_error( array( 'message' => 'bad_topic' ), 400 );
+		}
+
+		// Gate on what the *user* may view, not on the forum's status label: a
+		// keymaster, moderator, or member of a private forum must still get their
+		// replies, while an unauthorised visitor is refused — including for a public
+		// forum nested under a restricted ancestor.
+		$forum_id = $this->wp->get_topic_forum_id( $topic_id );
+		if ( ! $this->wp->user_can_view_forum( $forum_id ) ) {
+			$this->wp->send_json_error( array( 'message' => 'forbidden' ), 403 );
+		}
+
+		// A password-protected topic masks its content behind the password form on
+		// bbPress's own view, so the reading view declines takeover there (see
+		// ReadingScreen). This continuation refuses the same way rather than stream
+		// the replies bbPress withholds until the password is supplied.
+		if ( $this->wp->is_password_required( $topic_id ) ) {
+			$this->wp->send_json_error( array( 'message' => 'protected' ), 403 );
+		}
 	}
 
 	/**

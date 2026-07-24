@@ -88,6 +88,14 @@ class LoadTopicsController {
 			$this->wp->send_json_error( array( 'message' => 'forbidden' ), 403 );
 		}
 
+		// A password-protected forum masks its listing behind the password form on
+		// bbPress's own view, so the forum screen declines takeover there (see
+		// ReadingScreen). This continuation must refuse the same way rather than
+		// stream the threads bbPress withholds until the password is supplied.
+		if ( $this->wp->is_password_required( $forum_id ) ) {
+			$this->wp->send_json_error( array( 'message' => 'protected' ), 403 );
+		}
+
 		$html = $this->threads->capture( $this->query->args( $forum_id, $page ) );
 		$max  = $this->wp->get_max_topic_pages();
 

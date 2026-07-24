@@ -587,6 +587,71 @@ body.admin-bar .bltn-app {
 	margin: 0;
 }
 
+/* ---- password-protected forum/topic (issue #18) ---- */
+/* WordPress's own password form (form.post-password-form), wrapped in our shell
+   and restyled here so the field and button read as Bulletin, not the theme. */
+.bltn-protected {
+	padding: 40px 24px 48px;
+	max-inline-size: 34rem;
+	margin-inline: auto;
+}
+.bltn-protected__title {
+	font-family: var(--bltn-serif);
+	font-size: 22px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+	margin: 0 0 16px;
+}
+.bltn-protected .post-password-form {
+	margin: 0;
+}
+.bltn-protected .post-password-form p {
+	font-size: 13.5px;
+	color: var(--bltn-ink-2);
+	margin: 0 0 14px;
+}
+.bltn-protected .post-password-form label {
+	display: block;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--bltn-ink-3);
+}
+.bltn-protected .post-password-form input[type="password"] {
+	appearance: none;
+	display: block;
+	inline-size: 100%;
+	box-sizing: border-box;
+	font: inherit;
+	font-size: 15px;
+	color: var(--bltn-ink);
+	background: var(--bltn-surface);
+	border: 1px solid var(--bltn-line-soft);
+	border-radius: 10px;
+	padding: 11px 13px;
+	margin-block: 6px 12px;
+}
+.bltn-protected .post-password-form input[type="password"]:focus-visible {
+	outline: 2px solid var(--bltn-accent);
+	outline-offset: 1px;
+	border-color: transparent;
+}
+.bltn-protected .post-password-form input[type="submit"] {
+	appearance: none;
+	cursor: pointer;
+	font: inherit;
+	font-size: 13.5px;
+	font-weight: 600;
+	color: var(--bltn-accent-ink);
+	background: var(--bltn-wash);
+	border: 0;
+	border-radius: 11px;
+	padding: 11px 18px;
+	transition: background 0.15s ease;
+}
+.bltn-protected .post-password-form input[type="submit"]:hover {
+	background: color-mix(in srgb, var(--bltn-accent) 12%, var(--bltn-wash));
+}
+
 /* ---- misc ---- */
 .bltn-visually-hidden {
 	position: absolute;

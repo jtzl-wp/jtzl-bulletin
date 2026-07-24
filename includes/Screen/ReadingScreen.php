@@ -64,6 +64,11 @@ class ReadingScreen {
 	/**
 	 * Whether the current request is a single forum's thread list.
 	 *
+	 * The takeover proceeds on a password-protected forum too: the screen template
+	 * renders WordPress's own password form in place of the sub-forums and threads
+	 * until the password is supplied (issue #18), so the reader stays in Bulletin's
+	 * chrome rather than dropping into the theme.
+	 *
 	 * @since 0.1.0
 	 *
 	 * @return bool
@@ -80,6 +85,10 @@ class ReadingScreen {
 	 * would load unpaginated and "load more replies" would never appear. Falling
 	 * through to the theme's own bbPress templates — which render threading
 	 * correctly — beats shipping that performance cliff (see issue #11).
+	 *
+	 * A password-protected topic still takes over: the screen template renders
+	 * WordPress's own password form in place of the opening post and replies until
+	 * the password is supplied (issue #18), keeping the reader in Bulletin's chrome.
 	 *
 	 * @since 0.1.0
 	 *

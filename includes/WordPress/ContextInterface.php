@@ -331,6 +331,22 @@ interface ContextInterface {
 	 */
 	public function user_can_view_forum( int $forum_id ): bool;
 
+	/**
+	 * Whether a post is password-protected and its password has not been supplied.
+	 *
+	 * Drives the password gate in two places (issue #18): the single-forum and
+	 * single-topic screen templates render WordPress's own password form in place
+	 * of the content when this is true, and the load-more AJAX endpoints refuse
+	 * under the same condition — mirroring the gate bbPress applies in its own
+	 * templates.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $post_id Forum or topic ID.
+	 * @return bool
+	 */
+	public function is_password_required( int $post_id ): bool;
+
 	// --- bbPress types & statuses ------------------------------------------
 
 	/**

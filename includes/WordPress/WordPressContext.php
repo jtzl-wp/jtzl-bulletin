@@ -400,6 +400,22 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * Whether a post is password-protected and its password has not been supplied.
+	 *
+	 * Delegates to WordPress core's own check on the given post, keyed by ID so it
+	 * is independent of the global `$post` — which bbPress's theme-compat resets
+	 * mid-request, so the AJAX gate and the template branch both stay correct.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $post_id Forum or topic ID.
+	 * @return bool
+	 */
+	public function is_password_required( int $post_id ): bool {
+		return (bool) post_password_required( $post_id );
+	}
+
+	/**
 	 * The topic post type key.
 	 *
 	 * @since 0.1.0

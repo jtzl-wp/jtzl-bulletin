@@ -6,6 +6,11 @@
  * then the topics as a "Pinned" section (stickies, first page only) and the rest,
  * which pages on beyond the first 15 through an inline "load more threads".
  *
+ * On a password-protected forum the whole content area is withheld and replaced
+ * by WordPress's own password form, inside our shell (issue #18) — bbPress masks
+ * the description via bbp_get_forum_content(), but the sub-forum and topic loops
+ * are not password-gated, so we skip them entirely rather than lean on that.
+ *
  * Every loop is drained before any markup is emitted, because they share bbPress
  * globals: inside a forum loop bbp_get_forum_id() resolves to the looped
  * sub-forum rather than the forum being viewed (it tests forum_query->in_the_loop
@@ -28,57 +33,65 @@ $bltn_forumrow  = $bltn_container->get( \JTZL\Bulletin\View\ForumRow::class );
 $bltn_query     = $bltn_container->get( \JTZL\Bulletin\Query\TopicQuery::class );
 $bltn_ctx       = $bltn_container->get( \JTZL\Bulletin\WordPress\ContextInterface::class );
 
-$bltn_forum_id = bbp_get_forum_id();
+$bltn_forum_id  = bbp_get_forum_id();
+$bltn_protected = $bltn_ctx->is_password_required( $bltn_forum_id );
 
-/*
- * Sub-forums. post_parent is passed explicitly rather than relying on
- * bbp_has_forums()'s default, which reads the same ambient forum ID this loop
- * is about to overwrite. Visibility is bbPress's own: the query is the one the
- * forums index uses, so a hidden or private sub-forum is filtered identically
- * in both places.
- */
+// Populated by the loops below only when the forum is not protected; on a
+// protected forum they stay empty and the password form renders instead.
 $bltn_subforums = array();
-if ( bbp_has_forums( array( 'post_parent' => $bltn_forum_id ) ) ) {
-	while ( bbp_forums() ) {
-		bbp_the_forum();
+$bltn_pinned    = '';
+$bltn_rest      = '';
+$bltn_more      = false;
+$bltn_page      = $bltn_ctx->get_paged();
 
-		$bltn_sub_id   = bbp_get_forum_id();
-		$bltn_sub_desc = wp_strip_all_tags( bbp_get_forum_content( $bltn_sub_id ) );
-		$bltn_sub_last = (int) bbp_get_forum_last_active_id( $bltn_sub_id );
+if ( ! $bltn_protected ) {
+	/*
+	 * Sub-forums. post_parent is passed explicitly rather than relying on
+	 * bbp_has_forums()'s default, which reads the same ambient forum ID this loop
+	 * is about to overwrite. Visibility is bbPress's own: the query is the one the
+	 * forums index uses, so a hidden or private sub-forum is filtered identically
+	 * in both places.
+	 */
+	if ( bbp_has_forums( array( 'post_parent' => $bltn_forum_id ) ) ) {
+		while ( bbp_forums() ) {
+			bbp_the_forum();
 
-		$bltn_subforums[] = array(
-			'permalink'   => bbp_get_forum_permalink( $bltn_sub_id ),
-			'title'       => bbp_get_forum_title( $bltn_sub_id ),
-			'description' => '' !== $bltn_sub_desc ? wp_trim_words( $bltn_sub_desc, 22, '…' ) : '',
-			'topics'      => (int) bbp_get_forum_topic_count( $bltn_sub_id, true, true ),
-			'author'      => $bltn_ctx->get_author_name( $bltn_sub_last ),
-			'active'      => $bltn_sub_last ? bbp_get_forum_last_active_time( $bltn_sub_id ) : '',
-		);
+			$bltn_sub_id   = bbp_get_forum_id();
+			$bltn_sub_desc = wp_strip_all_tags( bbp_get_forum_content( $bltn_sub_id ) );
+			$bltn_sub_last = (int) bbp_get_forum_last_active_id( $bltn_sub_id );
+
+			$bltn_subforums[] = array(
+				'permalink'   => bbp_get_forum_permalink( $bltn_sub_id ),
+				'title'       => bbp_get_forum_title( $bltn_sub_id ),
+				'description' => '' !== $bltn_sub_desc ? wp_trim_words( $bltn_sub_desc, 22, '…' ) : '',
+				'topics'      => (int) bbp_get_forum_topic_count( $bltn_sub_id, true, true ),
+				'author'      => $bltn_ctx->get_author_name( $bltn_sub_last ),
+				'active'      => $bltn_sub_last ? bbp_get_forum_last_active_time( $bltn_sub_id ) : '',
+			);
+		}
+		wp_reset_postdata();
 	}
+
+	/*
+	 * Topics. Categories usually hold none; ordinary forums with children may hold
+	 * both. Pinned and unpinned are two queries rather than one loop sorted
+	 * afterwards, because paging demands it: bbPress prepends stickies to the first
+	 * page alone and never excludes them from the page they naturally fall on, so a
+	 * single query would serve a pinned thread again when that page loads. TopicQuery
+	 * keeps stickies out of the paginated set entirely and lists them here instead.
+	 *
+	 * bbPress pins on the first page only, and so do we — a reader who arrived at
+	 * ?paged=3 is past the top of the list.
+	 */
+	if ( 1 === $bltn_page && array() !== $bltn_ctx->get_sticky_topic_ids( $bltn_forum_id ) ) {
+		$bltn_pinned = $bltn_threads->capture( $bltn_query->pinned_args( $bltn_forum_id ) );
+		wp_reset_postdata();
+	}
+
+	$bltn_rest = $bltn_threads->capture( $bltn_query->args( $bltn_forum_id, $bltn_page ) );
+	$bltn_more = $bltn_page < $bltn_ctx->get_max_topic_pages();
 	wp_reset_postdata();
 }
-
-/*
- * Topics. Categories usually hold none; ordinary forums with children may hold
- * both. Pinned and unpinned are two queries rather than one loop sorted
- * afterwards, because paging demands it: bbPress prepends stickies to the first
- * page alone and never excludes them from the page they naturally fall on, so a
- * single query would serve a pinned thread again when that page loads. TopicQuery
- * keeps stickies out of the paginated set entirely and lists them here instead.
- *
- * bbPress pins on the first page only, and so do we — a reader who arrived at
- * ?paged=3 is past the top of the list.
- */
-$bltn_page   = $bltn_ctx->get_paged();
-$bltn_pinned = '';
-if ( 1 === $bltn_page && array() !== $bltn_ctx->get_sticky_topic_ids( $bltn_forum_id ) ) {
-	$bltn_pinned = $bltn_threads->capture( $bltn_query->pinned_args( $bltn_forum_id ) );
-	wp_reset_postdata();
-}
-
-$bltn_rest = $bltn_threads->capture( $bltn_query->args( $bltn_forum_id, $bltn_page ) );
-$bltn_more = $bltn_page < $bltn_ctx->get_max_topic_pages();
-wp_reset_postdata();
 
 /*
  * A sub-forum's back link returns to its parent, not the index — otherwise
@@ -101,107 +114,126 @@ $bltn_back_text = $bltn_parent_id
 			'subtitle'   => __( 'Forum', 'jtzl-bulletin' ),
 			'back_url'   => $bltn_back_url,
 			'back_label' => $bltn_back_text,
-			'heading'    => false, // The forum header below carries the h1.
+			'heading'    => false, // The forum header (or the protected heading) below carries the h1.
 		)
 	);
 	?>
 
 	<div class="bltn-scroll" id="bltn-threads">
 
-		<div class="bltn-fhead">
-			<h1 class="bltn-fhead__name" data-bltn-heading tabindex="-1"><?php bbp_forum_title( $bltn_forum_id ); ?></h1>
+		<?php if ( $bltn_protected ) : ?>
 
-			<?php $bltn_fdesc = wp_strip_all_tags( bbp_get_forum_content( $bltn_forum_id ) ); ?>
-			<?php if ( '' !== $bltn_fdesc ) : ?>
-				<p class="bltn-fhead__desc"><?php echo esc_html( $bltn_fdesc ); ?></p>
-			<?php endif; ?>
-
-			<div class="bltn-fhead__meta">
-				<?php $bltn_tcount = (int) bbp_get_forum_topic_count( $bltn_forum_id, true, true ); ?>
-				<span>
-					<?php
-					/* translators: %s: formatted thread count. */
-					echo esc_html( sprintf( _n( '%s thread', '%s threads', $bltn_tcount, 'jtzl-bulletin' ), number_format_i18n( $bltn_tcount ) ) );
-					?>
-				</span>
-				<?php $bltn_factive = bbp_get_forum_last_active_time( $bltn_forum_id ); ?>
-				<?php if ( '' !== $bltn_factive ) : ?>
-					<?php /* translators: %s: human time, e.g. "2 days ago". */ ?>
-					<span><?php echo esc_html( sprintf( __( 'Active %s', 'jtzl-bulletin' ), $bltn_factive ) ); ?></span>
-				<?php endif; ?>
-
-				<?php if ( bbp_is_subscriptions_active() && is_user_logged_in() ) : ?>
-					<span class="bltn-fhead__sub"><?php bbp_forum_subscription_link( array( 'forum_id' => $bltn_forum_id ) ); ?></span>
-				<?php endif; ?>
-			</div>
-		</div>
-
-		<?php if ( ! empty( $bltn_subforums ) ) : ?>
-			<p class="bltn-section-label"><?php esc_html_e( 'Forums', 'jtzl-bulletin' ); ?></p>
-			<?php
-			foreach ( $bltn_subforums as $bltn_sub ) {
-				$bltn_forumrow->render( $bltn_sub );
-			}
-			?>
-		<?php endif; ?>
-
-		<?php if ( '' !== $bltn_pinned ) : ?>
-			<p class="bltn-section-label"><?php esc_html_e( 'Pinned', 'jtzl-bulletin' ); ?></p>
-			<?php
-			// Rows are built by View\ThreadRow, which escapes every field.
-			echo $bltn_pinned; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-			?>
-		<?php endif; ?>
-
-		<?php if ( '' !== $bltn_rest ) : ?>
-			<p class="bltn-section-label">
-				<?php echo '' === $bltn_pinned ? esc_html__( 'Threads', 'jtzl-bulletin' ) : esc_html__( 'All threads', 'jtzl-bulletin' ); ?>
-			</p>
-			<?php
-			/*
-			 * The appended rows land inside this element, so it wraps the
-			 * unpinned rows alone: threads loaded later belong under the same
-			 * label, not among the pinned ones.
-			 */
-			?>
-			<div id="bltn-threads-list">
+			<div class="bltn-protected">
+				<h1 class="bltn-protected__title" data-bltn-heading tabindex="-1"><?php bbp_forum_title( $bltn_forum_id ); ?></h1>
 				<?php
-				// Rows are built by View\ThreadRow, which escapes every field.
-				echo $bltn_rest; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				/*
+				 * WordPress's own password form, styled by our CSS. WordPress owns
+				 * the auth: the form posts to wp-login.php?action=postpass, which
+				 * checks the password and sets the wp-postpass cookie. We add no
+				 * custom auth — we only wrap and style what core generates.
+				 */
+				echo get_the_password_form( $bltn_forum_id ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- WordPress core markup.
 				?>
 			</div>
 
-			<?php
-			if ( $bltn_more ) {
-				$bltn_loadmore->render(
-					array(
-						'action' => 'bulletin_load_topics',
-						'param'  => 'forum',
-						'id'     => $bltn_forum_id,
-						'target' => 'bltn-threads-list',
-						'next'   => $bltn_page + 1,
-						'label'  => __( 'Load more threads', 'jtzl-bulletin' ),
-					)
-				);
-			}
-			?>
-		<?php endif; ?>
+		<?php else : ?>
 
-		<?php
-		/*
-		 * Driven by what the forum actually holds, not by its type: a category
-		 * with no children still reads as empty, and a category that does hold
-		 * topics directly (legal in bbPress) still shows them. Suppressing the
-		 * empty state whenever sub-forums exist is what closes the dead end
-		 * where a populated category announced "No threads yet".
-		 */
-		?>
-		<?php if ( empty( $bltn_subforums ) && '' === $bltn_pinned && '' === $bltn_rest ) : ?>
+			<div class="bltn-fhead">
+				<h1 class="bltn-fhead__name" data-bltn-heading tabindex="-1"><?php bbp_forum_title( $bltn_forum_id ); ?></h1>
 
-			<div class="bltn-empty">
-				<p class="bltn-empty__title"><?php esc_html_e( 'No threads yet', 'jtzl-bulletin' ); ?></p>
-				<p class="bltn-empty__body"><?php esc_html_e( 'Be the first to start one.', 'jtzl-bulletin' ); ?></p>
+				<?php $bltn_fdesc = wp_strip_all_tags( bbp_get_forum_content( $bltn_forum_id ) ); ?>
+				<?php if ( '' !== $bltn_fdesc ) : ?>
+					<p class="bltn-fhead__desc"><?php echo esc_html( $bltn_fdesc ); ?></p>
+				<?php endif; ?>
+
+				<div class="bltn-fhead__meta">
+					<?php $bltn_tcount = (int) bbp_get_forum_topic_count( $bltn_forum_id, true, true ); ?>
+					<span>
+						<?php
+						/* translators: %s: formatted thread count. */
+						echo esc_html( sprintf( _n( '%s thread', '%s threads', $bltn_tcount, 'jtzl-bulletin' ), number_format_i18n( $bltn_tcount ) ) );
+						?>
+					</span>
+					<?php $bltn_factive = bbp_get_forum_last_active_time( $bltn_forum_id ); ?>
+					<?php if ( '' !== $bltn_factive ) : ?>
+						<?php /* translators: %s: human time, e.g. "2 days ago". */ ?>
+						<span><?php echo esc_html( sprintf( __( 'Active %s', 'jtzl-bulletin' ), $bltn_factive ) ); ?></span>
+					<?php endif; ?>
+
+					<?php if ( bbp_is_subscriptions_active() && is_user_logged_in() ) : ?>
+						<span class="bltn-fhead__sub"><?php bbp_forum_subscription_link( array( 'forum_id' => $bltn_forum_id ) ); ?></span>
+					<?php endif; ?>
+				</div>
 			</div>
+
+			<?php if ( ! empty( $bltn_subforums ) ) : ?>
+				<p class="bltn-section-label"><?php esc_html_e( 'Forums', 'jtzl-bulletin' ); ?></p>
+				<?php
+				foreach ( $bltn_subforums as $bltn_sub ) {
+					$bltn_forumrow->render( $bltn_sub );
+				}
+				?>
+			<?php endif; ?>
+
+			<?php if ( '' !== $bltn_pinned ) : ?>
+				<p class="bltn-section-label"><?php esc_html_e( 'Pinned', 'jtzl-bulletin' ); ?></p>
+				<?php
+				// Rows are built by View\ThreadRow, which escapes every field.
+				echo $bltn_pinned; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				?>
+			<?php endif; ?>
+
+			<?php if ( '' !== $bltn_rest ) : ?>
+				<p class="bltn-section-label">
+					<?php echo '' === $bltn_pinned ? esc_html__( 'Threads', 'jtzl-bulletin' ) : esc_html__( 'All threads', 'jtzl-bulletin' ); ?>
+				</p>
+				<?php
+				/*
+				 * The appended rows land inside this element, so it wraps the
+				 * unpinned rows alone: threads loaded later belong under the same
+				 * label, not among the pinned ones.
+				 */
+				?>
+				<div id="bltn-threads-list">
+					<?php
+					// Rows are built by View\ThreadRow, which escapes every field.
+					echo $bltn_rest; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+					?>
+				</div>
+
+				<?php
+				if ( $bltn_more ) {
+					$bltn_loadmore->render(
+						array(
+							'action' => 'bulletin_load_topics',
+							'param'  => 'forum',
+							'id'     => $bltn_forum_id,
+							'target' => 'bltn-threads-list',
+							'next'   => $bltn_page + 1,
+							'label'  => __( 'Load more threads', 'jtzl-bulletin' ),
+						)
+					);
+				}
+				?>
+			<?php endif; ?>
+
+			<?php
+			/*
+			 * Driven by what the forum actually holds, not by its type: a category
+			 * with no children still reads as empty, and a category that does hold
+			 * topics directly (legal in bbPress) still shows them. Suppressing the
+			 * empty state whenever sub-forums exist is what closes the dead end
+			 * where a populated category announced "No threads yet".
+			 */
+			?>
+			<?php if ( empty( $bltn_subforums ) && '' === $bltn_pinned && '' === $bltn_rest ) : ?>
+
+				<div class="bltn-empty">
+					<p class="bltn-empty__title"><?php esc_html_e( 'No threads yet', 'jtzl-bulletin' ); ?></p>
+					<p class="bltn-empty__body"><?php esc_html_e( 'Be the first to start one.', 'jtzl-bulletin' ); ?></p>
+				</div>
+
+			<?php endif; ?>
 
 		<?php endif; ?>
 	</div>
