@@ -290,6 +290,84 @@ interface ContextInterface {
 	 */
 	public function get_author_name( int $post_id ): string;
 
+	// --- bbPress forum getters ----------------------------------------------
+
+	/**
+	 * ID of the forum currently in the forums loop.
+	 *
+	 * Ambient, and only meaningful inside one: bbPress resolves this from the forum
+	 * loop first and the viewed forum second, so on a screen that runs both it
+	 * answers differently before and after the loop.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return int
+	 */
+	public function get_forum_id(): int;
+
+	/**
+	 * A forum's permalink.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $forum_id Forum ID.
+	 * @return string
+	 */
+	public function get_forum_permalink( int $forum_id ): string;
+
+	/**
+	 * A forum's title.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $forum_id Forum ID.
+	 * @return string
+	 */
+	public function get_forum_title( int $forum_id ): string;
+
+	/**
+	 * A forum's description, as bbPress renders it.
+	 *
+	 * Returned with its markup intact, because bbPress masks this for a
+	 * password-protected forum and callers should strip rather than re-derive it.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $forum_id Forum ID.
+	 * @return string
+	 */
+	public function get_forum_content( int $forum_id ): string;
+
+	/**
+	 * A forum's topic count, sub-forum topics included.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $forum_id Forum ID.
+	 * @return int
+	 */
+	public function get_forum_topic_count( int $forum_id ): int;
+
+	/**
+	 * ID of the last active post in a forum (0 when it has never been posted in).
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $forum_id Forum ID.
+	 * @return int
+	 */
+	public function get_forum_last_active_id( int $forum_id ): int;
+
+	/**
+	 * Human-readable time of a forum's last activity.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $forum_id Forum ID.
+	 * @return string
+	 */
+	public function get_forum_last_active_time( int $forum_id ): string;
+
 	// --- bbPress reply / topic getters -------------------------------------
 
 	/**
@@ -468,6 +546,18 @@ interface ContextInterface {
 	public function get_closed_status_id(): string;
 
 	/**
+	 * Forums shown per page.
+	 *
+	 * Unlike topics and replies, this one has no accessor in bbPress, so the option
+	 * is read directly — with bbPress's own default and floor.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return int
+	 */
+	public function get_forums_per_page(): int;
+
+	/**
 	 * Replies shown per page.
 	 *
 	 * @since 0.1.0
@@ -549,6 +639,55 @@ interface ContextInterface {
 	public function set_transient( string $key, $value, int $ttl ): void;
 
 	// --- bbPress query & replies loop --------------------------------------
+
+	/**
+	 * Prime the forums loop.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param array<string,mixed> $args Query args (see Query\ForumQuery).
+	 * @return bool Whether any forums matched.
+	 */
+	public function has_forums( array $args ): bool;
+
+	/**
+	 * Advance the forums loop.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool Whether a forum remains.
+	 */
+	public function the_forums_loop(): bool;
+
+	/**
+	 * Set up the current forum in the loop.
+	 *
+	 * @since 0.3.0
+	 */
+	public function the_forum(): void;
+
+	/**
+	 * The number of forum pages from the last forums query.
+	 *
+	 * Only answerable because Query\ForumQuery switches bbPress's `no_found_rows`
+	 * back off — with it on, the row count is never computed and this is always 0.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return int
+	 */
+	public function get_max_forum_pages(): int;
+
+	/**
+	 * Restore the global post after a secondary loop.
+	 *
+	 * Load-bearing after a forums loop specifically: bbPress resolves the ambient
+	 * forum ID from the forum loop before the viewed forum, so a single-forum screen
+	 * that lists sub-forums reads the last sub-forum as "the forum" until this runs.
+	 *
+	 * @since 0.3.0
+	 */
+	public function reset_postdata(): void;
 
 	/**
 	 * Topic IDs in a forum, ordered freshest first.

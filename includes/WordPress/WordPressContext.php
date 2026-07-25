@@ -348,6 +348,89 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * ID of the forum currently in the forums loop.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return int
+	 */
+	public function get_forum_id(): int {
+		return (int) bbp_get_forum_id();
+	}
+
+	/**
+	 * A forum's permalink.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $forum_id Forum ID.
+	 * @return string
+	 */
+	public function get_forum_permalink( int $forum_id ): string {
+		return (string) bbp_get_forum_permalink( $forum_id );
+	}
+
+	/**
+	 * A forum's title.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $forum_id Forum ID.
+	 * @return string
+	 */
+	public function get_forum_title( int $forum_id ): string {
+		return (string) bbp_get_forum_title( $forum_id );
+	}
+
+	/**
+	 * A forum's description, as bbPress renders it.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $forum_id Forum ID.
+	 * @return string
+	 */
+	public function get_forum_content( int $forum_id ): string {
+		return (string) bbp_get_forum_content( $forum_id );
+	}
+
+	/**
+	 * A forum's topic count, sub-forum topics included.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $forum_id Forum ID.
+	 * @return int
+	 */
+	public function get_forum_topic_count( int $forum_id ): int {
+		return (int) bbp_get_forum_topic_count( $forum_id, true, true );
+	}
+
+	/**
+	 * ID of the last active post in a forum.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $forum_id Forum ID.
+	 * @return int
+	 */
+	public function get_forum_last_active_id( int $forum_id ): int {
+		return (int) bbp_get_forum_last_active_id( $forum_id );
+	}
+
+	/**
+	 * Human-readable time of a forum's last activity.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $forum_id Forum ID.
+	 * @return string
+	 */
+	public function get_forum_last_active_time( int $forum_id ): string {
+		return (string) bbp_get_forum_last_active_time( $forum_id );
+	}
+
+	/**
 	 * ID of the reply currently in the loop.
 	 *
 	 * @since 0.1.0
@@ -581,6 +664,24 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * Forums shown per page.
+	 *
+	 * Read from the option directly because bbPress ships no accessor for this one,
+	 * with the same default (50) and the same empty-means-default floor its own
+	 * bbp_get_topics_per_page() applies — so a site that blanks the setting gets a
+	 * page size rather than a query for nothing.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return int
+	 */
+	public function get_forums_per_page(): int {
+		$per_page = (int) get_option( '_bbp_forums_per_page', 50 );
+
+		return $per_page > 0 ? $per_page : 50;
+	}
+
+	/**
 	 * The page number the current request asks for (1 when unpaged).
 	 *
 	 * @since 0.1.0
@@ -707,6 +808,60 @@ class WordPressContext implements ContextInterface {
 		);
 
 		return array_values( array_filter( array_unique( array_map( 'intval', $stickies ) ) ) );
+	}
+
+	/**
+	 * Prime the forums loop.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param array<string,mixed> $args Query args.
+	 * @return bool Whether any forums matched.
+	 */
+	public function has_forums( array $args ): bool {
+		return (bool) bbp_has_forums( $args );
+	}
+
+	/**
+	 * Advance the forums loop.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool Whether a forum remains.
+	 */
+	public function the_forums_loop(): bool {
+		return (bool) bbp_forums();
+	}
+
+	/**
+	 * Set up the current forum in the loop.
+	 *
+	 * @since 0.3.0
+	 */
+	public function the_forum(): void {
+		bbp_the_forum();
+	}
+
+	/**
+	 * The number of forum pages from the last forums query.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return int
+	 */
+	public function get_max_forum_pages(): int {
+		// forum_query is always primed by a has_forums() call before this runs (both
+		// takeover forum screens and the AJAX handler do so).
+		return (int) bbpress()->forum_query->max_num_pages;
+	}
+
+	/**
+	 * Restore the global post after a secondary loop.
+	 *
+	 * @since 0.3.0
+	 */
+	public function reset_postdata(): void {
+		wp_reset_postdata();
 	}
 
 	/**

@@ -4,7 +4,8 @@
  *
  * Forum header (name, description, meta, native Subscribe), then any sub-forums,
  * then the topics as a "Pinned" section (stickies, first page only) and the rest,
- * which pages on beyond the first 15 through an inline "load more threads".
+ * which pages on beyond the first 15 through an inline "load more threads". The
+ * sub-forums page the same way past the first 50, through a second control.
  *
  * On a password-protected forum the whole content area is withheld and replaced
  * by WordPress's own password form, inside our shell (issue #18) — bbPress masks
@@ -14,9 +15,16 @@
  * Every loop is drained before any markup is emitted, because they share bbPress
  * globals: inside a forum loop bbp_get_forum_id() resolves to the looped
  * sub-forum rather than the forum being viewed (it tests forum_query->in_the_loop
- * before bbp_is_single_forum()). Hence wp_reset_postdata() after the sub-forum
- * loop AND an explicit post_parent on the topics query — either alone leaves the
- * other loop reading a stale global on a forum that has both.
+ * before bbp_is_single_forum()). Draining is what clears in_the_loop, so the
+ * ambient forum recovers on its own once a loop finishes — and $bltn_forum_id is
+ * resolved once, up front, so nothing below depends on that recovery. The topics
+ * query still passes an explicit post_parent, which is what actually scopes it:
+ * bbPress's default reads the ambient forum, and that is not the viewed forum in
+ * the AJAX continuation of this same list.
+ *
+ * The global $post is restored by View\ForumList and by bbPress's own loop
+ * teardown (bbp_forums()/bbp_topics() call wp_reset_postdata() when have_posts()
+ * comes back false), which is why the calls below are belt rather than braces.
  *
  * @package JTZL\Bulletin
  */
@@ -29,7 +37,8 @@ $bltn_container = \JTZL\Bulletin\Plugin::get_container();
 $bltn_appbar    = $bltn_container->get( \JTZL\Bulletin\View\AppBar::class );
 $bltn_threads   = $bltn_container->get( \JTZL\Bulletin\View\ThreadList::class );
 $bltn_loadmore  = $bltn_container->get( \JTZL\Bulletin\View\LoadMore::class );
-$bltn_forumrow  = $bltn_container->get( \JTZL\Bulletin\View\ForumRow::class );
+$bltn_forums    = $bltn_container->get( \JTZL\Bulletin\View\ForumList::class );
+$bltn_subquery  = $bltn_container->get( \JTZL\Bulletin\Query\ForumQuery::class );
 $bltn_query     = $bltn_container->get( \JTZL\Bulletin\Query\TopicQuery::class );
 $bltn_ctx       = $bltn_container->get( \JTZL\Bulletin\WordPress\ContextInterface::class );
 
@@ -38,7 +47,8 @@ $bltn_protected = $bltn_ctx->is_password_required( $bltn_forum_id );
 
 // Populated by the loops below only when the forum is not protected; on a
 // protected forum they stay empty and the password form renders instead.
-$bltn_subforums = array();
+$bltn_subforums = '';
+$bltn_sub_more  = false;
 $bltn_pinned    = '';
 $bltn_rest      = '';
 $bltn_more      = false;
@@ -51,26 +61,15 @@ if ( ! $bltn_protected ) {
 	 * is about to overwrite. Visibility is bbPress's own: the query is the one the
 	 * forums index uses, so a hidden or private sub-forum is filtered identically
 	 * in both places.
+	 *
+	 * Page 1 only, continued by its own inline "load more forums" — bbPress caps a
+	 * forum list at 50 with no pagination, so a parent with more children than that
+	 * used to hide the rest outright (issue #38). The page is deliberately not read
+	 * from the URL: on this screen `paged` already means the thread list, so one
+	 * ?paged=2 cannot answer for both lists.
 	 */
-	if ( bbp_has_forums( array( 'post_parent' => $bltn_forum_id ) ) ) {
-		while ( bbp_forums() ) {
-			bbp_the_forum();
-
-			$bltn_sub_id   = bbp_get_forum_id();
-			$bltn_sub_desc = wp_strip_all_tags( bbp_get_forum_content( $bltn_sub_id ) );
-			$bltn_sub_last = (int) bbp_get_forum_last_active_id( $bltn_sub_id );
-
-			$bltn_subforums[] = array(
-				'permalink'   => bbp_get_forum_permalink( $bltn_sub_id ),
-				'title'       => bbp_get_forum_title( $bltn_sub_id ),
-				'description' => '' !== $bltn_sub_desc ? wp_trim_words( $bltn_sub_desc, 22, '…' ) : '',
-				'topics'      => (int) bbp_get_forum_topic_count( $bltn_sub_id, true, true ),
-				'author'      => $bltn_ctx->get_author_name( $bltn_sub_last ),
-				'active'      => $bltn_sub_last ? bbp_get_forum_last_active_time( $bltn_sub_id ) : '',
-			);
-		}
-		wp_reset_postdata();
-	}
+	$bltn_subforums = $bltn_forums->capture( $bltn_subquery->args( $bltn_forum_id, 1 ) );
+	$bltn_sub_more  = 1 < $bltn_ctx->get_max_forum_pages();
 
 	/*
 	 * Topics. Categories usually hold none; ordinary forums with children may hold
@@ -166,11 +165,31 @@ $bltn_back_text = $bltn_parent_id
 				</div>
 			</div>
 
-			<?php if ( ! empty( $bltn_subforums ) ) : ?>
+			<?php if ( '' !== $bltn_subforums ) : ?>
 				<p class="bltn-section-label"><?php esc_html_e( 'Forums', 'jtzl-bulletin' ); ?></p>
 				<?php
-				foreach ( $bltn_subforums as $bltn_sub ) {
-					$bltn_forumrow->render( $bltn_sub );
+				// Its own append target, so later sub-forums join this section rather
+				// than landing among the threads below it.
+				?>
+				<div id="bltn-subforums-list">
+					<?php
+					// Rows are built by View\ForumRow, which escapes every field.
+					echo $bltn_subforums; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+					?>
+				</div>
+
+				<?php
+				if ( $bltn_sub_more ) {
+					$bltn_loadmore->render(
+						array(
+							'action' => 'bulletin_load_forums',
+							'param'  => 'forum',
+							'id'     => $bltn_forum_id,
+							'target' => 'bltn-subforums-list',
+							'next'   => 2,
+							'label'  => __( 'Load more forums', 'jtzl-bulletin' ),
+						)
+					);
 				}
 				?>
 			<?php endif; ?>
@@ -226,7 +245,7 @@ $bltn_back_text = $bltn_parent_id
 			 * where a populated category announced "No threads yet".
 			 */
 			?>
-			<?php if ( empty( $bltn_subforums ) && '' === $bltn_pinned && '' === $bltn_rest ) : ?>
+			<?php if ( '' === $bltn_subforums && '' === $bltn_pinned && '' === $bltn_rest ) : ?>
 
 				<div class="bltn-empty">
 					<p class="bltn-empty__title"><?php esc_html_e( 'No threads yet', 'jtzl-bulletin' ); ?></p>

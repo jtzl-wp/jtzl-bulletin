@@ -491,7 +491,7 @@ body.admin-bar .bltn-app {
 	margin: 1.2em 0;
 }
 
-/* ---- load more replies ---- */
+/* ---- load more (replies, threads, forums — one control, three lists) ---- */
 .bltn-loadmore {
 	padding: 14px 20px 24px;
 }

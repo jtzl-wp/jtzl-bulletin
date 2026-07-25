@@ -2,8 +2,13 @@
 /**
  * Screen: Forums index (home).
  *
- * A flat list of forums. Each row is an ordinary link to the forum's URL — no
+ * A flat list of root forums. Each row is an ordinary link to the forum's URL — no
  * client-side routing; tapping is a normal navigation.
+ *
+ * The list pages beyond the first `_bbp_forums_per_page` (50) through an inline
+ * "load more forums", because bbPress caps a forum list at that number and ships no
+ * pagination for one — so without this, forum 51 and everything after it is
+ * unreachable (issue #38; see Query\ForumQuery for the upstream detail).
  *
  * @package JTZL\Bulletin
  */
@@ -15,7 +20,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 $bltn_container = \JTZL\Bulletin\Plugin::get_container();
 $bltn_appbar    = $bltn_container->get( \JTZL\Bulletin\View\AppBar::class );
 $bltn_ctx       = $bltn_container->get( \JTZL\Bulletin\WordPress\ContextInterface::class );
-$bltn_forumrow  = $bltn_container->get( \JTZL\Bulletin\View\ForumRow::class );
+$bltn_forums    = $bltn_container->get( \JTZL\Bulletin\View\ForumList::class );
+$bltn_query     = $bltn_container->get( \JTZL\Bulletin\Query\ForumQuery::class );
+$bltn_loadmore  = $bltn_container->get( \JTZL\Bulletin\View\LoadMore::class );
+
+/*
+ * Root forums, page 1. The page is not read from the URL: /forums/page/2/ is a live
+ * URL that WordPress answers 200 for, and serving the tail of the list there would
+ * strand a reader on a screen with no way back to its head — the index is home, so
+ * it has no back control. Load-more grows page 1 instead, which is also how the
+ * thread and reply lists continue.
+ */
+$bltn_rows = $bltn_forums->capture( $bltn_query->args( 0, 1 ) );
+$bltn_more = 1 < $bltn_ctx->get_max_forum_pages();
 ?>
 <section class="bltn-screen">
 
@@ -29,26 +46,34 @@ $bltn_forumrow  = $bltn_container->get( \JTZL\Bulletin\View\ForumRow::class );
 	?>
 
 	<div class="bltn-scroll bltn-list" id="bltn-forums">
-		<?php if ( bbp_has_forums() ) : ?>
+		<?php if ( '' !== $bltn_rows ) : ?>
 
 			<?php
-			while ( bbp_forums() ) :
-				bbp_the_forum();
+			/*
+			 * Appended rows land inside this element, so it holds the rows alone —
+			 * otherwise a later page would arrive below the button that fetched it.
+			 */
+			?>
+			<div id="bltn-forums-list">
+				<?php
+				// Rows are built by View\ForumRow, which escapes every field.
+				echo $bltn_rows; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				?>
+			</div>
 
-				$bltn_desc    = wp_strip_all_tags( bbp_get_forum_content() );
-				$bltn_last_id = (int) bbp_get_forum_last_active_id();
-
-				$bltn_forumrow->render(
+			<?php
+			if ( $bltn_more ) {
+				$bltn_loadmore->render(
 					array(
-						'permalink'   => bbp_get_forum_permalink(),
-						'title'       => bbp_get_forum_title(),
-						'description' => '' !== $bltn_desc ? wp_trim_words( $bltn_desc, 22, '…' ) : '',
-						'topics'      => (int) bbp_get_forum_topic_count( 0, true, true ),
-						'author'      => $bltn_ctx->get_author_name( $bltn_last_id ),
-						'active'      => $bltn_last_id ? bbp_get_forum_last_active_time() : '',
+						'action' => 'bulletin_load_forums',
+						'param'  => 'forum',
+						'id'     => 0,
+						'target' => 'bltn-forums-list',
+						'next'   => 2,
+						'label'  => __( 'Load more forums', 'jtzl-bulletin' ),
 					)
 				);
-			endwhile;
+			}
 			?>
 
 		<?php else : ?>

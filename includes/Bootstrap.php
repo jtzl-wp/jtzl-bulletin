@@ -9,6 +9,7 @@
 namespace JTZL\Bulletin;
 
 use DI\Container;
+use JTZL\Bulletin\Ajax\LoadForumsController;
 use JTZL\Bulletin\Ajax\LoadRepliesController;
 use JTZL\Bulletin\Ajax\LoadTopicsController;
 use JTZL\Bulletin\Asset\AssetManager;
@@ -71,6 +72,8 @@ class Bootstrap {
 		assert( $replies instanceof LoadRepliesController );
 		$topics = $this->container->get( LoadTopicsController::class );
 		assert( $topics instanceof LoadTopicsController );
+		$forums = $this->container->get( LoadForumsController::class );
+		assert( $forums instanceof LoadForumsController );
 		$identity = $this->container->get( ProfileIdentity::class );
 		assert( $identity instanceof ProfileIdentity );
 		$admin_bar = $this->container->get( AdminBar::class );
@@ -90,9 +93,10 @@ class Bootstrap {
 		$wp->add_action( 'wp_enqueue_scripts', array( $assets, 'suppress_foreign_styles' ), 100 );
 
 		// Load-more over bbPress's front-end AJAX router: replies inside a thread,
-		// threads inside a forum.
+		// threads inside a forum, forums inside the index or a parent forum.
 		$wp->add_action( 'bbp_ajax_bulletin_load_replies', array( $replies, 'handle' ) );
 		$wp->add_action( 'bbp_ajax_bulletin_load_topics', array( $topics, 'handle' ) );
+		$wp->add_action( 'bbp_ajax_bulletin_load_forums', array( $forums, 'handle' ) );
 
 		// Reskin: give the member-profile header a coherent identity block (name +
 		// @handle + role beside the avatar). The hook fires only inside bbPress's

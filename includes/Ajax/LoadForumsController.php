@@ -1,0 +1,131 @@
+<?php
+/**
+ * Load-more forums endpoint.
+ *
+ * @package JTZL\Bulletin
+ * @since 0.3.0
+ */
+
+namespace JTZL\Bulletin\Ajax;
+
+use JTZL\Bulletin\Query\ForumQuery;
+use JTZL\Bulletin\View\ForumList;
+use JTZL\Bulletin\WordPress\ContextInterface;
+
+/**
+ * The third of the load-more endpoints, alongside LoadRepliesController and
+ * LoadTopicsController: same bbPress AJAX router (bbp_get_ajax_url() dispatches to
+ * `bbp_ajax_{action}`), same paging contract — page 1 ships with the document, so
+ * load-more starts at page 2 — and the same rows, here rendered through
+ * View\ForumList.
+ *
+ * The subject is a parent forum, and 0 is a legitimate value rather than a missing
+ * one: it is the root list the forums index shows. That is the one difference from
+ * the sibling endpoints, and it is why the guards below key off "is this zero" before
+ * "is this a forum" — asking bbPress whether the reader may view forum 0 would be a
+ * question about nothing.
+ *
+ * @since 0.3.0
+ */
+class LoadForumsController {
+
+	/**
+	 * WordPress/bbPress seam.
+	 *
+	 * @var ContextInterface
+	 */
+	private ContextInterface $wp;
+
+	/**
+	 * Shared forum-query builder.
+	 *
+	 * @var ForumQuery
+	 */
+	private ForumQuery $query;
+
+	/**
+	 * Forum list renderer.
+	 *
+	 * @var ForumList
+	 */
+	private ForumList $forums;
+
+	/**
+	 * Constructor.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param ContextInterface $wp     WordPress/bbPress seam.
+	 * @param ForumQuery       $query  Shared forum-query builder.
+	 * @param ForumList        $forums Forum list renderer.
+	 */
+	public function __construct( ContextInterface $wp, ForumQuery $query, ForumList $forums ) {
+		$this->wp     = $wp;
+		$this->query  = $query;
+		$this->forums = $forums;
+	}
+
+	/**
+	 * Return a rendered page of a forum list as JSON.
+	 *
+	 * @since 0.3.0
+	 */
+	public function handle(): void {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- public read-only endpoint; see Asset\AssetManager for why there is no nonce.
+		$parent_id = isset( $_POST['forum'] ) ? (int) $_POST['forum'] : 0;
+		$page      = isset( $_POST['paged'] ) ? (int) $_POST['paged'] : 2;
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		// Clamp: page 1 ships with the document, so load-more starts at 2.
+		if ( $page < 2 ) {
+			$page = 2;
+		}
+
+		if ( 0 !== $parent_id ) {
+			$this->guard_parent( $parent_id );
+		}
+
+		$html = $this->forums->capture( $this->query->args( $parent_id, $page ) );
+		$max  = $this->wp->get_max_forum_pages();
+
+		$this->wp->send_json_success(
+			array(
+				'html'     => $html,
+				'page'     => $page,
+				'nextPage' => $page + 1,
+				'hasMore'  => $page < $max,
+			)
+		);
+	}
+
+	/**
+	 * Refuse a continuation the reader could not have been served on the page.
+	 *
+	 * The root list needs none of this — the forums index is public, and which forums
+	 * appear in it is bbPress's own visibility pass either way (see Query\ForumQuery).
+	 * A named parent does, and for the reasons LoadTopicsController spells out: the
+	 * capability check covers a public forum nested under a restricted ancestor, and
+	 * the password check refuses what the screen itself withholds behind WordPress's
+	 * password form until the password is supplied (issue #18).
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $parent_id Parent forum the request names.
+	 */
+	private function guard_parent( int $parent_id ): void {
+		// send_json_error() ends the request, so there is nothing to return to. A
+		// negative id lands here too: it has no post type, so it fails as a bad forum
+		// rather than reaching the query.
+		if ( $this->wp->get_forum_post_type() !== $this->wp->get_post_type( $parent_id ) ) {
+			$this->wp->send_json_error( array( 'message' => 'bad_forum' ), 400 );
+		}
+
+		if ( ! $this->wp->user_can_view_forum( $parent_id ) ) {
+			$this->wp->send_json_error( array( 'message' => 'forbidden' ), 403 );
+		}
+
+		if ( $this->wp->is_password_required( $parent_id ) ) {
+			$this->wp->send_json_error( array( 'message' => 'protected' ), 403 );
+		}
+	}
+}
