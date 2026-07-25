@@ -177,6 +177,19 @@ interface ContextInterface {
 	public function get_current_user_id(): int;
 
 	/**
+	 * Whether the current user holds a capability.
+	 *
+	 * Capabilities, not role names: a site can rename or recompose roles, but the
+	 * capability a decision actually rests on stays stable.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param string $capability Capability to test.
+	 * @return bool
+	 */
+	public function current_user_can( string $capability ): bool;
+
+	/**
 	 * Login URL, optionally with a redirect target.
 	 *
 	 * @since 0.1.0

@@ -195,6 +195,18 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * Whether the current user holds a capability.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param string $capability Capability to test.
+	 * @return bool
+	 */
+	public function current_user_can( string $capability ): bool {
+		return (bool) current_user_can( $capability );
+	}
+
+	/**
 	 * Login URL, optionally with a redirect target.
 	 *
 	 * @since 0.1.0

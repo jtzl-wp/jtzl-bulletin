@@ -76,7 +76,11 @@ body.bltn {
 	}
 }
 
-/* Keep the app clear of the WordPress admin bar for logged-in staff. */
+/* Keep the app clear of the WordPress admin bar. Only an administrator still sees
+   it here — every other logged-in reader has it suppressed (JTZL\Bulletin\Chrome\
+   AdminBar), which drops the body class with it, so these rules simply stop
+   applying rather than needing a condition of their own. The two heights mirror
+   core's own bump (32px, 46px at ≤782px). */
 body.admin-bar.bltn,
 body.admin-bar .bltn-app {
 	block-size: calc(100dvh - 46px);
