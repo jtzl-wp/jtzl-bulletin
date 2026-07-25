@@ -14,6 +14,7 @@ use JTZL\Bulletin\Ajax\LoadTopicsController;
 use JTZL\Bulletin\Asset\AssetManager;
 use JTZL\Bulletin\Chrome\AdminBar;
 use JTZL\Bulletin\Query\StableOrder;
+use JTZL\Bulletin\Query\StickyHoisting;
 use JTZL\Bulletin\Takeover\TemplateController;
 use JTZL\Bulletin\View\ProfileIdentity;
 use JTZL\Bulletin\WordPress\ContextInterface;
@@ -21,6 +22,16 @@ use JTZL\Bulletin\WordPress\ContextInterface;
 /**
  * Resolves services from the container and binds them to WordPress/bbPress
  * hooks through the context seam. This is the only place hooks are registered.
+ *
+ * Coupling is exempted deliberately, the same way ContainerFactory is excluded in
+ * phpmd.xml: this is the composition root — deptrac's Root layer grants it every
+ * internal layer on purpose — so its coupling counts the services the plugin has,
+ * which is the thing it exists to wire. Honouring the cap would mean either moving
+ * hook registration out of the one place that does it, or declining to add a
+ * service. The size and complexity rules still apply, so register_hooks() cannot
+ * quietly grow into something unreadable behind this.
+ *
+ * @SuppressWarnings("PHPMD.CouplingBetweenObjects")
  *
  * @since 0.1.0
  */
@@ -66,6 +77,8 @@ class Bootstrap {
 		assert( $admin_bar instanceof AdminBar );
 		$order = $this->container->get( StableOrder::class );
 		assert( $order instanceof StableOrder );
+		$stickies = $this->container->get( StickyHoisting::class );
+		assert( $stickies instanceof StickyHoisting );
 
 		// Takeover: redirect single replies early, strip theme-compat, swap our doc.
 		$wp->add_action( 'template_redirect', array( $takeover, 'redirect_single_reply' ), 9 );
@@ -97,5 +110,9 @@ class Bootstrap {
 		// the profile tabs, which reach bbp_has_topics() with args of their own.
 		$wp->add_filter( 'bbp_after_has_topics_parse_args', array( $order, 'filter_topic_args' ) );
 		$wp->add_filter( 'bbp_after_has_replies_parse_args', array( $order, 'filter_reply_args' ) );
+
+		// And decline bbPress's sticky hoisting there, which serves a sticky twice and
+		// miscounts the page it hoisted onto. Same hook, separate decision.
+		$wp->add_filter( 'bbp_after_has_topics_parse_args', array( $stickies, 'filter_topic_args' ), 11 );
 	}
 }
