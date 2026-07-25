@@ -13,6 +13,7 @@ use JTZL\Bulletin\Ajax\LoadRepliesController;
 use JTZL\Bulletin\Ajax\LoadTopicsController;
 use JTZL\Bulletin\Asset\AssetManager;
 use JTZL\Bulletin\Chrome\AdminBar;
+use JTZL\Bulletin\Query\StableOrder;
 use JTZL\Bulletin\Takeover\TemplateController;
 use JTZL\Bulletin\View\ProfileIdentity;
 use JTZL\Bulletin\WordPress\ContextInterface;
@@ -63,6 +64,8 @@ class Bootstrap {
 		assert( $identity instanceof ProfileIdentity );
 		$admin_bar = $this->container->get( AdminBar::class );
 		assert( $admin_bar instanceof AdminBar );
+		$order = $this->container->get( StableOrder::class );
+		assert( $order instanceof StableOrder );
 
 		// Takeover: redirect single replies early, strip theme-compat, swap our doc.
 		$wp->add_action( 'template_redirect', array( $takeover, 'redirect_single_reply' ), 9 );
@@ -88,5 +91,11 @@ class Bootstrap {
 		// administrate. Late, so ours is the last word on the shell we render — an
 		// administrator's own preference still passes through (see Chrome\AdminBar).
 		$wp->add_filter( 'show_admin_bar', array( $admin_bar, 'filter_show_admin_bar' ), 100 );
+
+		// Reskin: give the loops bbPress queries for us a deterministic order. These
+		// fire in the moment before bbPress runs the query, on every call — including
+		// the profile tabs, which reach bbp_has_topics() with args of their own.
+		$wp->add_filter( 'bbp_after_has_topics_parse_args', array( $order, 'filter_topic_args' ) );
+		$wp->add_filter( 'bbp_after_has_replies_parse_args', array( $order, 'filter_reply_args' ) );
 	}
 }
