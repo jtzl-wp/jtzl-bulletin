@@ -13,6 +13,7 @@ use JTZL\Bulletin\Ajax\LoadRepliesController;
 use JTZL\Bulletin\Ajax\LoadTopicsController;
 use JTZL\Bulletin\Asset\AssetManager;
 use JTZL\Bulletin\Takeover\TemplateController;
+use JTZL\Bulletin\View\ProfileIdentity;
 use JTZL\Bulletin\WordPress\ContextInterface;
 
 /**
@@ -57,6 +58,8 @@ class Bootstrap {
 		assert( $replies instanceof LoadRepliesController );
 		$topics = $this->container->get( LoadTopicsController::class );
 		assert( $topics instanceof LoadTopicsController );
+		$identity = $this->container->get( ProfileIdentity::class );
+		assert( $identity instanceof ProfileIdentity );
 
 		// Takeover: redirect single replies early, strip theme-compat, swap our doc.
 		$wp->add_action( 'template_redirect', array( $takeover, 'redirect_single_reply' ), 9 );
@@ -71,5 +74,11 @@ class Bootstrap {
 		// threads inside a forum.
 		$wp->add_action( 'bbp_ajax_bulletin_load_replies', array( $replies, 'handle' ) );
 		$wp->add_action( 'bbp_ajax_bulletin_load_topics', array( $topics, 'handle' ) );
+
+		// Reskin: give the member-profile header a coherent identity block (name +
+		// @handle + role beside the avatar). The hook fires only inside bbPress's
+		// user-details template — i.e. the reskinned profile screens — so it never
+		// touches the takeover documents.
+		$wp->add_action( 'bbp_template_before_user_details_menu_items', array( $identity, 'render' ) );
 	}
 }

@@ -669,3 +669,682 @@ body.admin-bar .bltn-app {
 	outline-offset: 2px;
 	border-radius: 6px;
 }
+
+/* ---- reskin: member profile suite (issue #32) ----
+   On a reskin screen bbPress renders its OWN markup (IDs like #bbp-user-*) inside
+   our chrome; here we align it to Bulletin's design language — sans chrome, the one
+   teal accent, our spacing and type scale — without rebuilding the markup, the same
+   way .bltn-protected restyles WordPress's native password form. Everything is
+   scoped under .bltn-reskin so it can't reach the takeover screens or bbPress
+   outside our shell. */
+
+/* The reskin document is app bar + one scroll region. */
+.bltn-reskin .bltn-app {
+	display: grid;
+	grid-template-rows: auto 1fr;
+}
+.bltn-reskin__body {
+	background: var(--bltn-surface);
+	color: var(--bltn-ink);
+	font-family: var(--bltn-sans);
+	font-size: 14px;
+	line-height: 1.5;
+}
+.bltn-reskin__body #bbpress-forums {
+	margin: 0;
+	font-size: inherit;
+	color: inherit;
+}
+/* bbPress's own link blue gives way to the one teal accent. */
+.bltn-reskin__body a {
+	color: var(--bltn-accent-ink);
+	text-decoration: none;
+}
+.bltn-reskin__body a:hover {
+	text-decoration: underline;
+}
+
+/* Header band: the avatar and the identity block (name + @handle + role,
+   injected by JTZL\Bulletin\View\ProfileIdentity) stack as ONE unit, then the
+   section nav spans the width below them as one control. bbPress sizes the
+   avatar to 150px and floats the details column through deep
+   `#bbpress-forums #bbp-single-user-details` ID chains, so these rules mirror
+   that chain (plus .bltn-reskin__body) to out-specify it and unset the floats. */
+.bltn-reskin__body #bbpress-forums #bbp-single-user-details {
+	width: auto;
+	float: none;
+	padding: 18px 20px 14px;
+	border-bottom: 1px solid var(--bltn-line-soft);
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-body {
+	margin-left: 0;
+}
+.bltn-reskin__body #bbpress-forums #bbp-single-user-details #bbp-user-avatar {
+	width: auto;
+	float: none;
+	margin: 0 0 10px;
+}
+.bltn-reskin__body #bbpress-forums #bbp-single-user-details #bbp-user-avatar img.avatar {
+	width: 60px;
+	height: 60px;
+	margin: 0;
+	border-radius: 15px;
+	object-fit: cover;
+	display: block;
+}
+/* Identity block: the display name leads (serif, as in the reading view), with
+   @handle and role as one quiet meta line beneath — so avatar and name read as a
+   single unit, which bbPress's name-less header never did. */
+.bltn-reskin__body #bbpress-forums #bbp-single-user-details .bltn-identity {
+	margin: 0 0 16px;
+}
+.bltn-reskin__body #bbpress-forums .bltn-identity__name {
+	display: block;
+	font-family: var(--bltn-serif);
+	font-size: 20px;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+	line-height: 1.2;
+	color: var(--bltn-ink);
+}
+.bltn-reskin__body #bbpress-forums .bltn-identity__meta {
+	display: block;
+	margin-top: 3px;
+	font-family: var(--bltn-sans);
+	font-size: 12.5px;
+	color: var(--bltn-ink-3);
+}
+/* Section nav → one segmented control. Every tab is a chip on a shared track,
+   so there is no active-pill-vs-plain-text split — the active tab is simply the
+   filled teal one. The row wraps so EVERY tab stays visible (never a truncating
+   scroll strip, which was the earlier complaint). */
+.bltn-reskin__body #bbpress-forums #bbp-single-user-details #bbp-user-navigation {
+	float: none;
+	margin: 0;
+}
+.bltn-reskin__body #bbpress-forums #bbp-single-user-details #bbp-user-navigation ul {
+	list-style: none;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin: 0;
+	padding: 0;
+}
+.bltn-reskin__body #bbpress-forums #bbp-single-user-details #bbp-user-navigation li {
+	display: block;
+	margin: 0;
+	float: none;
+}
+.bltn-reskin__body #bbpress-forums #bbp-single-user-details #bbp-user-navigation li span {
+	display: inline;
+}
+.bltn-reskin__body #bbpress-forums #bbp-single-user-details #bbp-user-navigation a {
+	display: block;
+	padding: 7px 13px;
+	border-radius: 999px;
+	font-size: 12.5px;
+	font-weight: 600;
+	line-height: 1;
+	color: var(--bltn-ink-2);
+	background: var(--bltn-bg);
+	white-space: nowrap;
+}
+.bltn-reskin__body #bbpress-forums #bbp-single-user-details #bbp-user-navigation a:hover {
+	background: var(--bltn-wash);
+	text-decoration: none;
+}
+.bltn-reskin__body #bbpress-forums #bbp-single-user-details #bbp-user-navigation li.current a {
+	color: #fff;
+	background: var(--bltn-accent);
+}
+
+/* Body: the display name leads, then labelled metadata sections. */
+.bltn-reskin__body #bbp-user-body {
+	padding: 18px 20px 26px;
+}
+/* The identity block in the header now carries the @name, so bbPress's own
+   `@nicename` heading on the Profile tab is a duplicate — hide it. The loop tabs'
+   section headings ("Forum Topics Started" …) are kept but quieted to a label,
+   since the active tab already names the section. */
+.bltn-reskin__body #bbp-user-body #bbp-user-profile > .entry-title {
+	display: none;
+}
+.bltn-reskin__body #bbp-user-body #bbp-user-topics-started > .entry-title,
+.bltn-reskin__body #bbp-user-body #bbp-user-replies-created > .entry-title,
+.bltn-reskin__body #bbp-user-body #bbp-user-favorites > .entry-title,
+.bltn-reskin__body #bbp-user-body #bbp-user-subscriptions > .entry-title,
+.bltn-reskin__body #bbp-user-body #bbp-user-engagements > .entry-title {
+	font-family: var(--bltn-sans);
+	font-size: 10.5px;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	font-weight: 700;
+	color: var(--bltn-ink-3);
+	margin: 0 0 10px;
+}
+.bltn-reskin__body .bbp-user-section h3 {
+	font-family: var(--bltn-sans);
+	font-size: 10.5px;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	font-weight: 700;
+	color: var(--bltn-ink-3);
+	margin: 18px 0 8px;
+}
+.bltn-reskin__body .bbp-user-section p {
+	margin: 0 0 7px;
+	font-size: 13.5px;
+	color: var(--bltn-ink-2);
+}
+.bltn-reskin__body .bbp-user-section hr {
+	border: 0;
+	border-top: 1px solid var(--bltn-line-soft);
+	margin: 18px 0 0;
+}
+
+/* Loop-backed tabs. bbPress builds them out of three loops: the topic loop
+   (Topics Started / Favourites / Subscriptions / Engagements), the reply loop
+   (Replies Created) and the forums loop (the "Subscribed forums" section of
+   Subscriptions, which pairs it with the topic loop on one screen). All three
+   arrive as a floated <ul>-as-table; all three are reflowed into the same mobile
+   card. We keep EVERY field bbPress renders — counts, freshness, the search box,
+   sub-forums, the reply author, the subscribe/favourite row action and the admin
+   links — and only recolour and retype it. The table's column-label chrome (the
+   header and footer rows) is reflowed, not shown as a table row: its labels move
+   onto each value, so no data is lost. */
+
+/* All three loops sit inside #bbp-user-body's 20px gutter, so a card with its own
+   20px padding would inset its text to 40px and stop its divider short of both
+   edges. Each loop is pulled back out to the shell edge instead, which puts the card
+   text on the same 20px gutter as the tabs and section labels and runs the divider
+   full width — the reading view's .bltn-row, exactly. */
+
+/* Topics loop (Topics Started / Favourites / Subscriptions / Engagements): reflowed
+   from bbPress's floated <ul>-as-table into a stack of mobile cards — every field
+   kept, no horizontal data table on a phone. The column header's labels ("Voices",
+   "Posts") move onto each value via ::before, so dropping the now-columnless header
+   (and its matching empty footer spacer) loses no information. bbPress floats the
+   table and its overflow:hidden collapses the list to a sliver once the columns are
+   unfloated, so we reset width/float/overflow down the subtree (mirroring the 2-ID
+   #bbp-user-wrapper scope to win). */
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-topics {
+	width: auto;
+	margin: 0 -20px;
+	border: 0;
+	overflow: visible;
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-topics li.bbp-header,
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-topics li.bbp-footer {
+	display: none;
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-topics li.bbp-body {
+	width: auto;
+	border: 0;
+}
+/* Each topic → a card. bbPress also puts a border-top on every row, which would
+   double up against our divider, so the border is reset before the divider is set. */
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-topics li.bbp-body ul.topic {
+	display: block;
+	float: none;
+	width: auto;
+	margin: 0;
+	padding: 15px 20px;
+	border: 0;
+	border-bottom: 1px solid var(--bltn-line-soft);
+}
+/* Title block, then the counts + freshness reflowed to one inline meta line. */
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-topic-title {
+	float: none;
+	width: auto;
+	padding: 0;
+	margin: 0 0 6px;
+}
+.bltn-reskin__body #bbpress-forums a.bbp-topic-permalink {
+	font-family: var(--bltn-serif);
+	font-size: 16px;
+	font-weight: 600;
+	line-height: 1.3;
+	color: var(--bltn-ink);
+}
+/* A long thread's inline page jumps sit beside its title, so they inherit the serif
+   title face and bbPress's #ddd box. They're chrome: quiet sans chips on our line. */
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper span.bbp-topic-pagination a {
+	border: 1px solid var(--bltn-line);
+	border-radius: 4px;
+	font-family: var(--bltn-sans);
+	color: var(--bltn-ink-3);
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-topic-title p.bbp-topic-meta {
+	margin: 4px 0 0;
+	font-size: 12px;
+	color: var(--bltn-ink-3);
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-topic-voice-count,
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-topic-reply-count,
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-topic-freshness {
+	float: none;
+	display: inline;
+	width: auto;
+	padding: 0;
+	margin: 0 14px 0 0;
+	font-size: 12px;
+	text-align: start;
+	color: var(--bltn-ink-3);
+}
+/* The freshness cell carries the last poster in a nested <p>; inline, it joins the
+   meta line instead of breaking to a centred line of its own. */
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-topic-freshness p.bbp-topic-meta {
+	display: inline;
+	margin: 0 0 0 14px;
+}
+/* Restore the labels the column header used to carry, per value — as a leading
+   field label ("Voices 3", not "3 voices") so it reads correctly at a count of 1
+   (CSS can't pluralise a numeric value). */
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-topic-voice-count::before {
+	content: "Voices ";
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-topic-reply-count::before {
+	content: "Posts ";
+}
+/* No faces in the meta line. The freshness author's avatar was already dropped;
+   the topic starter's is dropped with it, because a card carrying an avatar for one
+   of its two author fields and not the other reads as a mistake — and the reading
+   view's own rows show no avatar at this size either. Both names stay. */
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper p.bbp-topic-meta .bbp-author-avatar,
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-topic-freshness .bbp-author-avatar {
+	display: none;
+}
+
+/* Reply loop (Replies Created): the same card, with one structural catch — a reply
+   is TWO sibling divs, bbPress's meta band (div.bbp-reply-header) and the reply
+   itself (div.reply), with no element wrapping the pair. So one padding box is
+   split across them and the divider hangs off the second. Everything is kept: the
+   topic the reply answers, its date, the #anchor, the admin links, the author name
+   and role, and the reply body. */
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-replies {
+	width: auto;
+	margin: 0 -20px;
+	border: 0;
+	overflow: visible;
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-replies li.bbp-header,
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-replies li.bbp-footer {
+	display: none;
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-replies li.bbp-body {
+	width: auto;
+	border: 0;
+}
+/* Top half of the card: the meta band, off bbPress's own #f4f4f4. It is re-tinted
+   further down to match the reply it belongs to, so the pair reads as one card. */
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-header {
+	padding: 15px 20px 0;
+	border: 0;
+	background: none;
+	font-family: var(--bltn-sans);
+	font-size: 12px;
+	color: var(--bltn-ink-3);
+}
+/* The topic a reply answers is the card's title, so it leads on its own line —
+   bbPress emits it after the date, hence the reorder. That costs nothing in
+   accessibility: the date is a non-focusable span, so DOM focus order (topic →
+   #anchor → admin links) already matches the reordered reading order. */
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-header div.bbp-meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: 0 12px;
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-header span.bbp-header {
+	order: -1;
+	flex: 1 1 100%;
+	margin-bottom: 3px;
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper span.bbp-reply-post-date,
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper a.bbp-reply-permalink {
+	color: var(--bltn-ink-3);
+}
+/* Bottom half: the reply. bbPress floats a 115px centred author column and
+   indents the content 130px to clear it — both unwound to a byline over a
+   full-width body. */
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-body div.reply {
+	padding: 0 20px 15px;
+	border-bottom: 1px solid var(--bltn-line-soft);
+}
+/* bbPress's own narrow-screen rule turns this into an 80px-padded relative box
+   with the avatar absolutely placed in the gutter and a hairline under it. With the
+   avatar gone, all of that has to go too or the byline sits in an empty 80px well. */
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-author {
+	position: static;
+	float: none;
+	width: auto;
+	min-height: 0;
+	padding: 0;
+	margin: 2px 0 0;
+	border: 0;
+	text-align: start;
+}
+/* The author is the profile owner on every card here, so the avatar would be the
+   same face ten times over; the name and role carry the field (cf. the topics
+   card's freshness avatar). */
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-author .bbp-author-avatar {
+	display: none;
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-author .bbp-author-name {
+	display: inline;
+	margin: 0;
+	font-family: var(--bltn-sans);
+	font-size: 12px;
+	color: var(--bltn-ink-2);
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-author .bbp-author-role {
+	display: inline;
+	font-size: 12px;
+	font-style: normal;
+	color: var(--bltn-ink-3);
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-author .bbp-author-role::before {
+	content: " \00B7  ";
+}
+/* Moderators also get the author's IP, as a block div inside the byline — inlined
+   so it joins the byline instead of orphaning under it. bbPress parenthesises it,
+   so it needs no separator of its own, and paints it bold #747474, which is neither
+   our weight nor our grey. */
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-author .bbp-reply-ip {
+	display: inline;
+	margin-inline-start: 5px;
+	font-size: 12px;
+	color: var(--bltn-ink-3);
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-author span.bbp-author-ip {
+	font-size: 12px;
+	font-weight: 400;
+	color: inherit;
+}
+/* The moderator's admin links (Edit | Move | Split | Trash | Spam …) come as one
+   wide item, so they take their own line in the meta row. bbPress's own 10px
+   uppercase reads as a quiet label row and is kept; only its greys (#707070 links
+   on #ddd separators) come into the palette. */
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper span.bbp-admin-links {
+	color: var(--bltn-line);
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper span.bbp-admin-links a {
+	color: var(--bltn-ink-3);
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-content {
+	margin: 6px 0 0;
+	padding: 0;
+	font-family: var(--bltn-serif);
+	font-size: 15px;
+	line-height: 1.55;
+	color: var(--bltn-ink);
+}
+
+/* Forums loop (the "Subscribed forums" section of Subscriptions) — the same card
+   as a topic, keeping the description, the sub-forum list with its counts, both
+   totals and the freshness line. */
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-forums {
+	width: auto;
+	margin: 0 -20px;
+	border: 0;
+	overflow: visible;
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-forums li.bbp-header,
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-forums li.bbp-footer {
+	display: none;
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-forums li.bbp-body {
+	width: auto;
+	border: 0;
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-forums li.bbp-body ul.forum {
+	display: block;
+	float: none;
+	width: auto;
+	margin: 0;
+	padding: 15px 20px;
+	border: 0;
+	border-bottom: 1px solid var(--bltn-line-soft);
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-forum-info {
+	float: none;
+	width: auto;
+	padding: 0;
+	margin: 0;
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper a.bbp-forum-title {
+	font-family: var(--bltn-serif);
+	font-size: 16px;
+	font-weight: 600;
+	line-height: 1.3;
+	color: var(--bltn-ink);
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-forum-content {
+	margin: 4px 0 0;
+	padding: 0;
+	font-size: 12.5px;
+	color: var(--bltn-ink-2);
+}
+/* Sub-forums: bbPress's inline list of children with their (topics, replies)
+   counts, quietened to a meta line. Upstream this list is indented as a nested
+   block — margin-left, padding-left and a border-left hairline, together. Dropping
+   the indent means dropping the border with it, or the hairline is left flush
+   against the text marking nothing. The list reads as subordinate from its size and
+   position under the description; it does not need a rule as well. */
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-forums-list {
+	margin: 5px 0 0;
+	padding: 0;
+	border: 0;
+	font-size: 12px;
+	color: var(--bltn-ink-3);
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-forums-list li.bbp-forum {
+	display: inline;
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-forum-topic-count,
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-forum-reply-count,
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-forum-freshness {
+	float: none;
+	display: inline;
+	width: auto;
+	padding: 0;
+	margin: 6px 14px 0 0;
+	font-size: 12px;
+	text-align: start;
+	color: var(--bltn-ink-3);
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-forum-topic-count::before {
+	content: "Topics ";
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-forum-reply-count::before {
+	content: "Posts ";
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-forum-freshness p.bbp-topic-meta {
+	display: inline;
+	margin: 0 0 0 14px;
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-forum-freshness .bbp-author-avatar {
+	display: none;
+}
+
+/* Row action: the +/× that subscribes or favourites from the list. bbPress floats
+   it right and paints it a green or pink mini-button; kept in place, restyled as a
+   quiet square chip — teal to add, neutral to remove. */
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper #subscription-toggle,
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper #favorite-toggle {
+	margin-inline-start: 10px;
+	font-size: 12px;
+}
+.bltn-reskin__body #bbpress-forums .bbp-row-actions #subscription-toggle a,
+.bltn-reskin__body #bbpress-forums .bbp-row-actions #favorite-toggle a {
+	display: inline-block;
+	min-width: 24px;
+	padding: 2px 0;
+	border: 1px solid var(--bltn-accent);
+	border-radius: 7px;
+	background: var(--bltn-wash);
+	color: var(--bltn-accent-ink);
+	font-family: var(--bltn-sans);
+	font-size: 13px;
+	font-weight: 600;
+	line-height: 1.2;
+	text-align: center;
+}
+.bltn-reskin__body #bbpress-forums .bbp-row-actions #subscription-toggle span.is-subscribed a,
+.bltn-reskin__body #bbpress-forums .bbp-row-actions #favorite-toggle span.is-favorite a {
+	border-color: var(--bltn-line);
+	background: var(--bltn-surface);
+	color: var(--bltn-ink-3);
+}
+
+/* Empty state: bbPress's notice is a loud yellow box. The plain notice is only
+   ever "no topics/replies/forums were found here", so it takes our quiet centred
+   empty-state voice; the .error/.warning/.info variants carry real meaning and
+   keep a tinted band, recoloured off the yellow. */
+.bltn-reskin__body #bbpress-forums div.bbp-template-notice {
+	margin: 0;
+	padding: 30px 4px;
+	border: 0;
+	border-radius: 0;
+	background: none;
+	color: var(--bltn-ink-3);
+	text-align: center;
+}
+.bltn-reskin__body #bbpress-forums div.bbp-template-notice ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.bltn-reskin__body #bbpress-forums div.bbp-template-notice li {
+	margin: 0;
+	padding: 0;
+	font-family: var(--bltn-serif);
+	font-size: 15px;
+	color: var(--bltn-ink-3);
+}
+.bltn-reskin__body #bbpress-forums div.bbp-template-notice.info,
+.bltn-reskin__body #bbpress-forums div.bbp-template-notice.important,
+.bltn-reskin__body #bbpress-forums div.bbp-template-notice.error,
+.bltn-reskin__body #bbpress-forums div.bbp-template-notice.warning {
+	padding: 12px 14px;
+	border-radius: 10px;
+	background: var(--bltn-bg);
+	color: var(--bltn-ink-2);
+	text-align: start;
+}
+.bltn-reskin__body #bbpress-forums div.bbp-template-notice.info li,
+.bltn-reskin__body #bbpress-forums div.bbp-template-notice.important li,
+.bltn-reskin__body #bbpress-forums div.bbp-template-notice.error li,
+.bltn-reskin__body #bbpress-forums div.bbp-template-notice.warning li {
+	font-family: var(--bltn-sans);
+	font-size: 13px;
+	color: var(--bltn-ink-2);
+}
+.bltn-reskin__body #bbpress-forums div.bbp-template-notice.error,
+.bltn-reskin__body #bbpress-forums div.bbp-template-notice.warning {
+	border-inline-start: 3px solid var(--bltn-unread);
+}
+/* Per-tab search (loop tabs): off bbPress's float:right, a full-width field
+   below the tabs and above the list, in our input styling — no longer squeezed
+   beside the section heading. */
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-search-form {
+	float: none;
+	margin: 0 0 16px;
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper .bbp-search-form form > div {
+	display: flex;
+	gap: 8px;
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper .bbp-search-form input[type="text"],
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper .bbp-search-form input[type="search"] {
+	flex: 1 1 auto;
+	width: 100%;
+	min-width: 0;
+	border: 1px solid var(--bltn-line);
+	border-radius: 9px;
+	padding: 9px 12px;
+	font-family: var(--bltn-sans);
+	font-size: 13.5px;
+	background: var(--bltn-surface);
+	color: var(--bltn-ink);
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper .bbp-search-form input.button {
+	flex: 0 0 auto;
+	border: 0;
+	border-radius: 9px;
+	padding: 9px 16px;
+	background: var(--bltn-accent);
+	color: #fff;
+	font-weight: 600;
+	font-size: 13px;
+	cursor: pointer;
+}
+
+/* Pagination, quietened. It already sits inside the section's 20px gutter, so it
+   takes vertical padding only. */
+.bltn-reskin__body #bbpress-forums .bbp-pagination {
+	padding: 12px 0;
+	border: 0;
+	font-size: 12px;
+	color: var(--bltn-ink-3);
+}
+.bltn-reskin__body #bbpress-forums .bbp-pagination-links a,
+.bltn-reskin__body #bbpress-forums .bbp-pagination-links span.current {
+	padding: 4px 9px;
+	border-radius: 7px;
+	text-decoration: none;
+	color: var(--bltn-ink-2);
+}
+.bltn-reskin__body #bbpress-forums .bbp-pagination-links span.current {
+	color: var(--bltn-accent-ink);
+	background: var(--bltn-wash);
+	font-weight: 600;
+}
+
+/* bbPress's own row emphasis, recoloured into the palette rather than dropped.
+
+   even/odd striping softens from bbPress's #fbfbfb to our paper/surface pair
+   (Yoren's call — it reads as a card boundary now the rows are full-bleed).
+
+   The reply loop needs one extra rule to join in. bbp_reply_class() classes only
+   div.reply, and a reply's meta band is an unclassed *preceding* sibling, so the
+   stripe would paint the bottom half of every card and leave the top half white.
+   :has() reaches back for it — the band takes the tint of the reply it belongs to,
+   off bbPress's own even/odd rather than a fragile :nth-child count of the two-divs-
+   per-reply sequence. Where :has() is unsupported the band simply stays white, which
+   is the untinted state, not a broken layout.
+
+   Sticky is not marked here at all, and a pinned row simply takes its turn in the
+   alternation. "Pinned" is a property of a topic *within its forum*, and a reskin list
+   has no forum: a profile tab's rows come from several, so there is nothing for "first"
+   to be relative to, and a moderator's pin in one forum has no claim over a member's own
+   record of what they started. bbPress agrees — bbp_has_topics() hoists stickies only on
+   a single forum or the topic archive — so the signal lives where it is true: the
+   takeover's forum screen, which queries its pinned topics separately under a "Pinned"
+   section label. (Reverted, Yoren 2026-07-25: a label here promised a position the list
+   never had, and hoisting to deliver it put housekeeping threads at the top of a member's
+   profile in place of what they'd actually been discussing.)
+
+   Two rules still have to answer bbPress, though, since it keeps painting pinned rows:
+   parity is `!important` because its yellow is (both important, so specificity decides
+   and ours is the more specific), and the 1.1em bump is reset so "pinned" cannot quietly
+   mean "bigger". */
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper .even {
+	background: var(--bltn-bg) !important;
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper .odd {
+	background: var(--bltn-surface) !important;
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-header:has(+ div.reply.even) {
+	background: var(--bltn-bg);
+}
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-header:has(+ div.reply.odd) {
+	background: var(--bltn-surface);
+}
+/* The 1.1em reset. Every card field happens to override it with an explicit size
+   already, so this only guards the ones that don't; the selector matches the card rule's
+   shape so it out-specifies it. */
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-topics li.bbp-body ul.topic.sticky,
+.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-topics li.bbp-body ul.topic.super-sticky {
+	font-size: inherit;
+}

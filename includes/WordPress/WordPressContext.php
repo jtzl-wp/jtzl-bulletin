@@ -231,6 +231,49 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * Display name of the user whose profile is being viewed, as plain text.
+	 *
+	 * WordPress stores display names HTML-encoded (e.g. "Mara &amp; Co"), and
+	 * bbPress returns them so under every filter. We decode to a plain string here
+	 * so the presenter escapes it exactly once (matching the reading view, where
+	 * the view owns escaping) — without this it would render double-encoded as
+	 * "Mara &amp;amp; Co". Decoding is correct whichever way storage encodes it.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return string
+	 */
+	public function get_displayed_user_name(): string {
+		return html_entity_decode(
+			(string) bbp_get_displayed_user_field( 'display_name', 'raw' ),
+			ENT_QUOTES,
+			'UTF-8'
+		);
+	}
+
+	/**
+	 * Nicename (the URL slug, shown as the @handle) of the displayed user.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return string
+	 */
+	public function get_displayed_user_nicename(): string {
+		return (string) bbp_get_displayed_user_field( 'user_nicename', 'raw' );
+	}
+
+	/**
+	 * Forum-role label of the displayed user (e.g. "Participant").
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return string
+	 */
+	public function get_displayed_user_role(): string {
+		return (string) bbp_get_user_display_role( bbp_get_displayed_user_id() );
+	}
+
+	/**
 	 * The forums index URL.
 	 *
 	 * @since 0.1.0

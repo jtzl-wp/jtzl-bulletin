@@ -209,6 +209,36 @@ interface ContextInterface {
 	public function get_user_profile_url( int $user_id ): string;
 
 	/**
+	 * Display name of the user whose profile is being viewed.
+	 *
+	 * Drives the reskinned profile header's identity block (name + @handle +
+	 * role beside the avatar), which bbPress otherwise renders name-less.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return string
+	 */
+	public function get_displayed_user_name(): string;
+
+	/**
+	 * Nicename (the URL slug, shown as the @handle) of the displayed user.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return string
+	 */
+	public function get_displayed_user_nicename(): string;
+
+	/**
+	 * Forum-role label of the displayed user (e.g. "Participant", "Keymaster").
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return string
+	 */
+	public function get_displayed_user_role(): string;
+
+	/**
 	 * The forums index URL.
 	 *
 	 * @since 0.1.0
