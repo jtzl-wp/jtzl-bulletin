@@ -674,13 +674,34 @@ body.admin-bar .bltn-app {
 	border-radius: 6px;
 }
 
-/* ---- reskin: member profile suite (issue #32) ----
-   On a reskin screen bbPress renders its OWN markup (IDs like #bbp-user-*) inside
-   our chrome; here we align it to Bulletin's design language — sans chrome, the one
-   teal accent, our spacing and type scale — without rebuilding the markup, the same
-   way .bltn-protected restyles WordPress's native password form. Everything is
-   scoped under .bltn-reskin so it can't reach the takeover screens or bbPress
-   outside our shell. */
+/* ---- reskin (issues #32, #43) ----
+   On a reskin screen bbPress renders its OWN markup inside our chrome; here we align
+   it to Bulletin's design language — sans chrome, the one teal accent, our spacing
+   and type scale — without rebuilding the markup, the same way .bltn-protected
+   restyles WordPress's native password form. Everything is scoped under .bltn-reskin
+   so it can't reach the takeover screens or bbPress outside our shell.
+
+   TWO LAYERS, and the distinction is load-bearing:
+
+   1. The SHARED layer — `.bltn-reskin .bltn-reskin__body #bbpress-forums …` — is
+      every rule about markup bbPress reuses across screens: the three loops and
+      their card, notices, pagination, the search form, row actions. It applies to
+      any reskin screen that renders one.
+   2. The PROFILE layer keeps a `#bbp-*` ID of its own (#bbp-single-user-details,
+      #bbp-user-body) and so is by definition only the member-profile screens: the
+      avatar and identity band, the tab bar, the labelled metadata sections.
+
+   Issue #32 shipped the loop card under `#bbpress-forums #bbp-user-wrapper`, which
+   made it invisible to every other reskin screen — the topic archive rendered a raw
+   floated <ul>-as-table on a phone (#43). The shared layer drops that wrapper.
+   Because that costs an ID of specificity against bbPress's own chains, the prefix
+   carries `.bltn-reskin` as well: (1 id, 3 classes) beats every bbPress selector on
+   this markup, whose worst case is `#bbpress-forums li.bbp-body li.bbp-topic-title`
+   (1 id, 2 classes, 2 types) inside its ≤480px block. Do not shorten the prefix
+   without re-checking that; the profile suite is screenshot-regression-gated on it.
+   Adding a rule? Ask which layer it belongs to, and make the *reason* fit — a rule
+   justified by "the author is always the profile owner here" cannot live in the
+   shared layer, because off the profile it isn't true. */
 
 /* The reskin document is app bar + one scroll region. */
 .bltn-reskin .bltn-app {
@@ -806,6 +827,17 @@ body.admin-bar .bltn-app {
 .bltn-reskin__body #bbp-user-body {
 	padding: 18px 20px 26px;
 }
+/* The one place the shared loop card needs adjusting for its surroundings. A card
+   carries its own 20px gutter and the loop runs full-bleed, but here the loop sits
+   inside the tab body's 20px padding — which would inset the text to 40px and stop
+   the divider short of both edges — so each loop is pulled back out to the shell
+   edge. Nothing else about the card changes, and no other reskin screen needs it,
+   because no other one pads the box the loop lands in. */
+.bltn-reskin .bltn-reskin__body #bbpress-forums #bbp-user-body ul.bbp-topics,
+.bltn-reskin .bltn-reskin__body #bbpress-forums #bbp-user-body ul.bbp-replies,
+.bltn-reskin .bltn-reskin__body #bbpress-forums #bbp-user-body ul.bbp-forums {
+	margin-inline: -20px;
+}
 /* The identity block in the header now carries the @name, so bbPress's own
    `@nicename` heading on the Profile tab is a duplicate — hide it. The loop tabs'
    section headings ("Forum Topics Started" …) are kept but quieted to a label,
@@ -846,22 +878,24 @@ body.admin-bar .bltn-app {
 	margin: 18px 0 0;
 }
 
-/* Loop-backed tabs. bbPress builds them out of three loops: the topic loop
-   (Topics Started / Favourites / Subscriptions / Engagements), the reply loop
-   (Replies Created) and the forums loop (the "Subscribed forums" section of
-   Subscriptions, which pairs it with the topic loop on one screen). All three
-   arrive as a floated <ul>-as-table; all three are reflowed into the same mobile
-   card. We keep EVERY field bbPress renders — counts, freshness, the search box,
-   sub-forums, the reply author, the subscribe/favourite row action and the admin
-   links — and only recolour and retype it. The table's column-label chrome (the
-   header and footer rows) is reflowed, not shown as a table row: its labels move
-   onto each value, so no data is lost. */
+/* ==== SHARED LAYER: the three loops and one card ====
 
-/* All three loops sit inside #bbp-user-body's 20px gutter, so a card with its own
-   20px padding would inset its text to 40px and stop its divider short of both
-   edges. Each loop is pulled back out to the shell edge instead, which puts the card
-   text on the same 20px gutter as the tabs and section labels and runs the divider
-   full width — the reading view's .bltn-row, exactly. */
+   bbPress renders every list from one of three loops: the topic loop (a forum's
+   threads, the topic archive, a tag archive, a registered view, and the profile's
+   Topics Started / Favourites / Subscriptions / Engagements tabs), the reply loop
+   (Replies Created) and the forums loop (a forum's children, the "Subscribed forums"
+   section). All three arrive as a floated <ul>-as-table; all three are reflowed into
+   the same mobile card. We keep EVERY field bbPress renders — counts, freshness, the
+   search box, sub-forums, the reply author, the subscribe/favourite row action and
+   the admin links — and only recolour and retype it. The table's column-label chrome
+   (the header and footer rows) is reflowed, not shown as a table row: its labels move
+   onto each value, so no data is lost.
+
+   The card owns the 20px gutter (padding: 15px 20px) and the loop runs full-bleed to
+   the shell edge, so its divider spans the whole width — the reading view's
+   .bltn-row, exactly. Where a loop sits inside a section that already pads (the
+   profile's #bbp-user-body), the profile layer pulls it back out; see the one
+   margin-inline override there. */
 
 /* Topics loop (Topics Started / Favourites / Subscriptions / Engagements): reflowed
    from bbPress's floated <ul>-as-table into a stack of mobile cards — every field
@@ -869,25 +903,24 @@ body.admin-bar .bltn-app {
    "Posts") move onto each value via ::before, so dropping the now-columnless header
    (and its matching empty footer spacer) loses no information. bbPress floats the
    table and its overflow:hidden collapses the list to a sliver once the columns are
-   unfloated, so we reset width/float/overflow down the subtree (mirroring the 2-ID
-   #bbp-user-wrapper scope to win). */
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-topics {
+   unfloated, so we reset width/float/overflow down the subtree. */
+.bltn-reskin .bltn-reskin__body #bbpress-forums ul.bbp-topics {
 	width: auto;
-	margin: 0 -20px;
+	margin: 0;
 	border: 0;
 	overflow: visible;
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-topics li.bbp-header,
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-topics li.bbp-footer {
+.bltn-reskin .bltn-reskin__body #bbpress-forums ul.bbp-topics li.bbp-header,
+.bltn-reskin .bltn-reskin__body #bbpress-forums ul.bbp-topics li.bbp-footer {
 	display: none;
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-topics li.bbp-body {
+.bltn-reskin .bltn-reskin__body #bbpress-forums ul.bbp-topics li.bbp-body {
 	width: auto;
 	border: 0;
 }
 /* Each topic → a card. bbPress also puts a border-top on every row, which would
    double up against our divider, so the border is reset before the divider is set. */
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-topics li.bbp-body ul.topic {
+.bltn-reskin .bltn-reskin__body #bbpress-forums ul.bbp-topics li.bbp-body ul.topic {
 	display: block;
 	float: none;
 	width: auto;
@@ -897,7 +930,7 @@ body.admin-bar .bltn-app {
 	border-bottom: 1px solid var(--bltn-line-soft);
 }
 /* Title block, then the counts + freshness reflowed to one inline meta line. */
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-topic-title {
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-topic-title {
 	float: none;
 	width: auto;
 	padding: 0;
@@ -912,20 +945,20 @@ body.admin-bar .bltn-app {
 }
 /* A long thread's inline page jumps sit beside its title, so they inherit the serif
    title face and bbPress's #ddd box. They're chrome: quiet sans chips on our line. */
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper span.bbp-topic-pagination a {
+.bltn-reskin .bltn-reskin__body #bbpress-forums span.bbp-topic-pagination a {
 	border: 1px solid var(--bltn-line);
 	border-radius: 4px;
 	font-family: var(--bltn-sans);
 	color: var(--bltn-ink-3);
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-topic-title p.bbp-topic-meta {
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-topic-title p.bbp-topic-meta {
 	margin: 4px 0 0;
 	font-size: 12px;
 	color: var(--bltn-ink-3);
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-topic-voice-count,
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-topic-reply-count,
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-topic-freshness {
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-topic-voice-count,
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-topic-reply-count,
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-topic-freshness {
 	float: none;
 	display: inline;
 	width: auto;
@@ -937,25 +970,26 @@ body.admin-bar .bltn-app {
 }
 /* The freshness cell carries the last poster in a nested <p>; inline, it joins the
    meta line instead of breaking to a centred line of its own. */
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-topic-freshness p.bbp-topic-meta {
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-topic-freshness p.bbp-topic-meta {
 	display: inline;
 	margin: 0 0 0 14px;
 }
 /* Restore the labels the column header used to carry, per value — as a leading
    field label ("Voices 3", not "3 voices") so it reads correctly at a count of 1
    (CSS can't pluralise a numeric value). */
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-topic-voice-count::before {
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-topic-voice-count::before {
 	content: "Voices ";
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-topic-reply-count::before {
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-topic-reply-count::before {
 	content: "Posts ";
 }
-/* No faces in the meta line. The freshness author's avatar was already dropped;
-   the topic starter's is dropped with it, because a card carrying an avatar for one
-   of its two author fields and not the other reads as a mistake — and the reading
-   view's own rows show no avatar at this size either. Both names stay. */
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper p.bbp-topic-meta .bbp-author-avatar,
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-topic-freshness .bbp-author-avatar {
+/* No faces in a list row — anywhere. The takeover's own thread and forum rows show
+   none, so a reskinned list that did would read as a different product on the screen
+   next door. Within the card it also has to be all or nothing: one avatar for the
+   freshness author and none for the topic starter read as a mistake. Both names stay,
+   which is the field's actual content. (Parked for review with Yoren, 2026-07-25.) */
+.bltn-reskin .bltn-reskin__body #bbpress-forums p.bbp-topic-meta .bbp-author-avatar,
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-topic-freshness .bbp-author-avatar {
 	display: none;
 }
 
@@ -965,23 +999,23 @@ body.admin-bar .bltn-app {
    split across them and the divider hangs off the second. Everything is kept: the
    topic the reply answers, its date, the #anchor, the admin links, the author name
    and role, and the reply body. */
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-replies {
+.bltn-reskin .bltn-reskin__body #bbpress-forums ul.bbp-replies {
 	width: auto;
-	margin: 0 -20px;
+	margin: 0;
 	border: 0;
 	overflow: visible;
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-replies li.bbp-header,
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-replies li.bbp-footer {
+.bltn-reskin .bltn-reskin__body #bbpress-forums ul.bbp-replies li.bbp-header,
+.bltn-reskin .bltn-reskin__body #bbpress-forums ul.bbp-replies li.bbp-footer {
 	display: none;
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-replies li.bbp-body {
+.bltn-reskin .bltn-reskin__body #bbpress-forums ul.bbp-replies li.bbp-body {
 	width: auto;
 	border: 0;
 }
 /* Top half of the card: the meta band, off bbPress's own #f4f4f4. It is re-tinted
    further down to match the reply it belongs to, so the pair reads as one card. */
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-header {
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-reply-header {
 	padding: 15px 20px 0;
 	border: 0;
 	background: none;
@@ -993,32 +1027,32 @@ body.admin-bar .bltn-app {
    bbPress emits it after the date, hence the reorder. That costs nothing in
    accessibility: the date is a non-focusable span, so DOM focus order (topic →
    #anchor → admin links) already matches the reordered reading order. */
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-header div.bbp-meta {
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-reply-header div.bbp-meta {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: baseline;
 	gap: 0 12px;
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-header span.bbp-header {
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-reply-header span.bbp-header {
 	order: -1;
 	flex: 1 1 100%;
 	margin-bottom: 3px;
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper span.bbp-reply-post-date,
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper a.bbp-reply-permalink {
+.bltn-reskin .bltn-reskin__body #bbpress-forums span.bbp-reply-post-date,
+.bltn-reskin .bltn-reskin__body #bbpress-forums a.bbp-reply-permalink {
 	color: var(--bltn-ink-3);
 }
 /* Bottom half: the reply. bbPress floats a 115px centred author column and
    indents the content 130px to clear it — both unwound to a byline over a
    full-width body. */
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-body div.reply {
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-body div.reply {
 	padding: 0 20px 15px;
 	border-bottom: 1px solid var(--bltn-line-soft);
 }
 /* bbPress's own narrow-screen rule turns this into an 80px-padded relative box
    with the avatar absolutely placed in the gutter and a hairline under it. With the
    avatar gone, all of that has to go too or the byline sits in an empty 80px well. */
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-author {
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-reply-author {
 	position: static;
 	float: none;
 	width: auto;
@@ -1028,39 +1062,40 @@ body.admin-bar .bltn-app {
 	border: 0;
 	text-align: start;
 }
-/* The author is the profile owner on every card here, so the avatar would be the
-   same face ten times over; the name and role carry the field (cf. the topics
-   card's freshness avatar). */
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-author .bbp-author-avatar {
+/* Same rule as the topics card: no faces in a list row. It reads most obviously on
+   the profile, where every card has the same author and the avatar would be one face
+   ten times over, but that is not the reason — the reason is that the takeover's rows
+   carry no avatar either. The name and role carry the field. */
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-reply-author .bbp-author-avatar {
 	display: none;
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-author .bbp-author-name {
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-reply-author .bbp-author-name {
 	display: inline;
 	margin: 0;
 	font-family: var(--bltn-sans);
 	font-size: 12px;
 	color: var(--bltn-ink-2);
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-author .bbp-author-role {
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-reply-author .bbp-author-role {
 	display: inline;
 	font-size: 12px;
 	font-style: normal;
 	color: var(--bltn-ink-3);
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-author .bbp-author-role::before {
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-reply-author .bbp-author-role::before {
 	content: " \00B7  ";
 }
 /* Moderators also get the author's IP, as a block div inside the byline — inlined
    so it joins the byline instead of orphaning under it. bbPress parenthesises it,
    so it needs no separator of its own, and paints it bold #747474, which is neither
    our weight nor our grey. */
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-author .bbp-reply-ip {
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-reply-author .bbp-reply-ip {
 	display: inline;
 	margin-inline-start: 5px;
 	font-size: 12px;
 	color: var(--bltn-ink-3);
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-author span.bbp-author-ip {
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-reply-author span.bbp-author-ip {
 	font-size: 12px;
 	font-weight: 400;
 	color: inherit;
@@ -1069,13 +1104,13 @@ body.admin-bar .bltn-app {
    wide item, so they take their own line in the meta row. bbPress's own 10px
    uppercase reads as a quiet label row and is kept; only its greys (#707070 links
    on #ddd separators) come into the palette. */
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper span.bbp-admin-links {
+.bltn-reskin .bltn-reskin__body #bbpress-forums span.bbp-admin-links {
 	color: var(--bltn-line);
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper span.bbp-admin-links a {
+.bltn-reskin .bltn-reskin__body #bbpress-forums span.bbp-admin-links a {
 	color: var(--bltn-ink-3);
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-content {
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-reply-content {
 	margin: 6px 0 0;
 	padding: 0;
 	font-family: var(--bltn-serif);
@@ -1087,21 +1122,21 @@ body.admin-bar .bltn-app {
 /* Forums loop (the "Subscribed forums" section of Subscriptions) — the same card
    as a topic, keeping the description, the sub-forum list with its counts, both
    totals and the freshness line. */
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-forums {
+.bltn-reskin .bltn-reskin__body #bbpress-forums ul.bbp-forums {
 	width: auto;
-	margin: 0 -20px;
+	margin: 0;
 	border: 0;
 	overflow: visible;
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-forums li.bbp-header,
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-forums li.bbp-footer {
+.bltn-reskin .bltn-reskin__body #bbpress-forums ul.bbp-forums li.bbp-header,
+.bltn-reskin .bltn-reskin__body #bbpress-forums ul.bbp-forums li.bbp-footer {
 	display: none;
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-forums li.bbp-body {
+.bltn-reskin .bltn-reskin__body #bbpress-forums ul.bbp-forums li.bbp-body {
 	width: auto;
 	border: 0;
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-forums li.bbp-body ul.forum {
+.bltn-reskin .bltn-reskin__body #bbpress-forums ul.bbp-forums li.bbp-body ul.forum {
 	display: block;
 	float: none;
 	width: auto;
@@ -1110,20 +1145,20 @@ body.admin-bar .bltn-app {
 	border: 0;
 	border-bottom: 1px solid var(--bltn-line-soft);
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-forum-info {
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-forum-info {
 	float: none;
 	width: auto;
 	padding: 0;
 	margin: 0;
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper a.bbp-forum-title {
+.bltn-reskin .bltn-reskin__body #bbpress-forums a.bbp-forum-title {
 	font-family: var(--bltn-serif);
 	font-size: 16px;
 	font-weight: 600;
 	line-height: 1.3;
 	color: var(--bltn-ink);
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-forum-content {
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-forum-content {
 	margin: 4px 0 0;
 	padding: 0;
 	font-size: 12.5px;
@@ -1135,19 +1170,19 @@ body.admin-bar .bltn-app {
    the indent means dropping the border with it, or the hairline is left flush
    against the text marking nothing. The list reads as subordinate from its size and
    position under the description; it does not need a rule as well. */
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-forums-list {
+.bltn-reskin .bltn-reskin__body #bbpress-forums ul.bbp-forums-list {
 	margin: 5px 0 0;
 	padding: 0;
 	border: 0;
 	font-size: 12px;
 	color: var(--bltn-ink-3);
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-forums-list li.bbp-forum {
+.bltn-reskin .bltn-reskin__body #bbpress-forums ul.bbp-forums-list li.bbp-forum {
 	display: inline;
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-forum-topic-count,
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-forum-reply-count,
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-forum-freshness {
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-forum-topic-count,
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-forum-reply-count,
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-forum-freshness {
 	float: none;
 	display: inline;
 	width: auto;
@@ -1157,25 +1192,25 @@ body.admin-bar .bltn-app {
 	text-align: start;
 	color: var(--bltn-ink-3);
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-forum-topic-count::before {
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-forum-topic-count::before {
 	content: "Topics ";
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-forum-reply-count::before {
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-forum-reply-count::before {
 	content: "Posts ";
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-forum-freshness p.bbp-topic-meta {
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-forum-freshness p.bbp-topic-meta {
 	display: inline;
 	margin: 0 0 0 14px;
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper li.bbp-forum-freshness .bbp-author-avatar {
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-forum-freshness .bbp-author-avatar {
 	display: none;
 }
 
 /* Row action: the +/× that subscribes or favourites from the list. bbPress floats
    it right and paints it a green or pink mini-button; kept in place, restyled as a
    quiet square chip — teal to add, neutral to remove. */
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper #subscription-toggle,
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper #favorite-toggle {
+.bltn-reskin .bltn-reskin__body #bbpress-forums #subscription-toggle,
+.bltn-reskin .bltn-reskin__body #bbpress-forums #favorite-toggle {
 	margin-inline-start: 10px;
 	font-size: 12px;
 }
@@ -1248,19 +1283,19 @@ body.admin-bar .bltn-app {
 .bltn-reskin__body #bbpress-forums div.bbp-template-notice.warning {
 	border-inline-start: 3px solid var(--bltn-unread);
 }
-/* Per-tab search (loop tabs): off bbPress's float:right, a full-width field
-   below the tabs and above the list, in our input styling — no longer squeezed
-   beside the section heading. */
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-search-form {
+/* Search: off bbPress's float:right, a full-width field in our input styling — no
+   longer squeezed beside the section heading. Shared, because the profile's per-tab
+   search and the topic archive's own field are the same markup. */
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-search-form {
 	float: none;
 	margin: 0 0 16px;
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper .bbp-search-form form > div {
+.bltn-reskin .bltn-reskin__body #bbpress-forums .bbp-search-form form > div {
 	display: flex;
 	gap: 8px;
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper .bbp-search-form input[type="text"],
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper .bbp-search-form input[type="search"] {
+.bltn-reskin .bltn-reskin__body #bbpress-forums .bbp-search-form input[type="text"],
+.bltn-reskin .bltn-reskin__body #bbpress-forums .bbp-search-form input[type="search"] {
 	flex: 1 1 auto;
 	width: 100%;
 	min-width: 0;
@@ -1272,7 +1307,7 @@ body.admin-bar .bltn-app {
 	background: var(--bltn-surface);
 	color: var(--bltn-ink);
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper .bbp-search-form input.button {
+.bltn-reskin .bltn-reskin__body #bbpress-forums .bbp-search-form input.button {
 	flex: 0 0 auto;
 	border: 0;
 	border-radius: 9px;
@@ -1284,8 +1319,9 @@ body.admin-bar .bltn-app {
 	cursor: pointer;
 }
 
-/* Pagination, quietened. It already sits inside the section's 20px gutter, so it
-   takes vertical padding only. */
+/* Pagination, quietened. Vertical padding only: on the profile it already sits in
+   the tab body's gutter, and on a screen where it doesn't, the archive block below
+   gives it one. */
 .bltn-reskin__body #bbpress-forums .bbp-pagination {
 	padding: 12px 0;
 	border: 0;
@@ -1319,36 +1355,122 @@ body.admin-bar .bltn-app {
    is the untinted state, not a broken layout.
 
    Sticky is not marked here at all, and a pinned row simply takes its turn in the
-   alternation. "Pinned" is a property of a topic *within its forum*, and a reskin list
-   has no forum: a profile tab's rows come from several, so there is nothing for "first"
-   to be relative to, and a moderator's pin in one forum has no claim over a member's own
-   record of what they started. bbPress agrees — bbp_has_topics() hoists stickies only on
-   a single forum or the topic archive — so the signal lives where it is true: the
+   alternation. On a profile tab, "pinned" is a property of a topic *within its forum*
+   and the list has no forum: its rows come from several, so there is nothing for
+   "first" to be relative to, and a moderator's pin in one forum has no claim over a
+   member's own record of what they started. So the signal lives where it is true: the
    takeover's forum screen, which queries its pinned topics separately under a "Pinned"
    section label. (Reverted, Yoren 2026-07-25: a label here promised a position the list
    never had, and hoisting to deliver it put housekeeping threads at the top of a member's
    profile in place of what they'd actually been discussing.)
 
+   ⚠ The topic archive is the one place this is UNSETTLED (#43). bbp_has_topics()
+   hoists stickies when bbp_is_single_forum() || bbp_is_topic_archive(), and of those
+   two only the archive is a reskin screen — so there, a row at the top genuinely is
+   pinned. But only SUPER-stickies hoist on the archive; a forum-level sticky keeps
+   the .sticky class in its ordinary date position, which is precisely the "promises a
+   position the list never had" problem again, for the majority of pinned rows. The
+   parity rules below meanwhile strip the yellow bbPress used to say anything at all.
+   Unmarked is therefore the shipped treatment and the defensible one; Yoren has the
+   screenshots if she wants the other reading.
+
    Two rules still have to answer bbPress, though, since it keeps painting pinned rows:
    parity is `!important` because its yellow is (both important, so specificity decides
    and ours is the more specific), and the 1.1em bump is reset so "pinned" cannot quietly
    mean "bigger". */
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper .even {
+.bltn-reskin .bltn-reskin__body #bbpress-forums .even {
 	background: var(--bltn-bg) !important;
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper .odd {
+.bltn-reskin .bltn-reskin__body #bbpress-forums .odd {
 	background: var(--bltn-surface) !important;
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-header:has(+ div.reply.even) {
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-reply-header:has(+ div.reply.even) {
 	background: var(--bltn-bg);
 }
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper div.bbp-reply-header:has(+ div.reply.odd) {
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-reply-header:has(+ div.reply.odd) {
 	background: var(--bltn-surface);
 }
 /* The 1.1em reset. Every card field happens to override it with an explicit size
    already, so this only guards the ones that don't; the selector matches the card rule's
    shape so it out-specifies it. */
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-topics li.bbp-body ul.topic.sticky,
-.bltn-reskin__body #bbpress-forums #bbp-user-wrapper ul.bbp-topics li.bbp-body ul.topic.super-sticky {
+.bltn-reskin .bltn-reskin__body #bbpress-forums ul.bbp-topics li.bbp-body ul.topic.sticky,
+.bltn-reskin .bltn-reskin__body #bbpress-forums ul.bbp-topics li.bbp-body ul.topic.super-sticky {
 	font-size: inherit;
+}
+
+/* ==== ARCHIVE LAYER: the topic archive's own furniture (issue #43) ====
+
+   The topic archive (`/topics/`), and the tag archive and registered views that share
+   its shape. The loop is the shared card above; what is particular to these screens
+   is the chrome around it, which arrives as direct children of #bbpress-forums with
+   nothing padding them. Hence `>`: it gives them the 20px gutter the card already
+   has, and cannot reach the profile's nested copies of the same classes. */
+.bltn-reskin .bltn-reskin__body #bbpress-forums > div.bbp-search-form,
+.bltn-reskin .bltn-reskin__body #bbpress-forums > div.bbp-breadcrumb,
+.bltn-reskin .bltn-reskin__body #bbpress-forums > div.bbp-pagination {
+	padding-inline: 20px;
+}
+/* bbPress emits the search field FIRST, so the screen opened on an input and a teal
+   button — a navigational control in the most expensive position, on a screen whose
+   job is the list. Reordered to read title → list → pager → search: you browse, you
+   page, and only then do you search. The field keeps its function and its markup; it
+   just stops going first.
+
+   `:has(> ul.bbp-topics)` is the whole condition — a loop as a direct child is what
+   an archive-shaped screen looks like, and the profile's loops are nested under
+   #bbp-user-wrapper, so they cannot match. The registered views match it too and were
+   verified (#34); the tag archive shares the template and should, but the fixture
+   carries no terms, so check it under #33. When the archive is EMPTY there is no loop,
+   nothing matches, and the field stays at the top — which is the one case where it is
+   the most useful thing on the screen.
+
+   ONE `order` only, on the field being moved. Numbering the others as well would have
+   pushed every child we DIDN'T enumerate to the top of the screen (default `order: 0`
+   sorts above `order: 1`), so a heading or notice in a template we haven't opened
+   would silently jump the breadcrumb. Equal-order items keep DOM order, so leaving
+   everything else at 0 preserves bbPress's own sequence and moves exactly one box. */
+.bltn-reskin .bltn-reskin__body #bbpress-forums:has(> ul.bbp-topics) {
+	display: flex;
+	flex-direction: column;
+}
+.bltn-reskin .bltn-reskin__body #bbpress-forums > div.bbp-search-form {
+	order: 1;
+	margin: 18px 0 4px;
+}
+/* The breadcrumb stays, which is the one piece of bbPress chrome kept for a reason
+   rather than out of thrift: this archive renders no heading, and the reskin app bar
+   carries the site name, so "Topics" here is the only thing naming the screen. Styled
+   as a quiet label line — small sans, our greys, the current segment a shade darker —
+   so it reads as a title with its trail attached, not as navigation competing with the
+   app bar's own back control. */
+.bltn-reskin .bltn-reskin__body #bbpress-forums > div.bbp-breadcrumb {
+	float: none;
+	margin: 0;
+	font-family: var(--bltn-sans);
+	font-size: 11.5px;
+	color: var(--bltn-ink-3);
+}
+.bltn-reskin .bltn-reskin__body #bbpress-forums > div.bbp-breadcrumb p {
+	margin: 0 0 4px;
+}
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-breadcrumb a {
+	color: var(--bltn-ink-3);
+}
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-breadcrumb span.bbp-breadcrumb-sep {
+	margin: 0 5px;
+	color: var(--bltn-line);
+}
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-breadcrumb span.bbp-breadcrumb-current {
+	font-weight: 600;
+	color: var(--bltn-ink-2);
+}
+/* bbPress prints the pager twice, above and below the list. The top copy is dropped:
+   two lines of "Viewing 15 topics - 1 through 15 (of 27 total)" and page chips before
+   any content is exactly the clutter in the most expensive position, and the takeover
+   screens put nothing above their lists either. Paging stays reachable at the end of
+   the list, where you arrive wanting it. :has() picks the copy that leads the loop
+   rather than counting siblings; where it is unsupported both simply show, which is
+   bbPress's own behaviour and not a broken screen. */
+.bltn-reskin .bltn-reskin__body #bbpress-forums > div.bbp-pagination:has(+ ul.bbp-topics) {
+	display: none;
 }
