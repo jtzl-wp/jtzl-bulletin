@@ -55,7 +55,18 @@ $bltn_replies   = (int) bbp_get_topic_reply_count( $bltn_topic_id, true );
 
 		<div class="bltn-scroll" id="bltn-reading">
 			<div class="bltn-protected">
-				<h1 class="bltn-protected__title" data-bltn-heading tabindex="-1"><?php bbp_topic_title( $bltn_topic_id ); ?></h1>
+				<?php
+				/*
+				 * Escaped rather than echoed through bbp_topic_title(), which prints a
+				 * filtered get_the_title() with no contextual escaping (issue #51,
+				 * item 4). bbPress's own create and edit flows sanitise a title, so
+				 * this is defence in depth rather than a known hole: an import writes
+				 * straight to wp_posts, and `bbp_get_topic_title` is a filter any
+				 * plugin may answer. A heading is text, and text should not be able to
+				 * become markup.
+				 */
+				?>
+				<h1 class="bltn-protected__title" data-bltn-heading tabindex="-1"><?php echo esc_html( bbp_get_topic_title( $bltn_topic_id ) ); ?></h1>
 				<?php
 				/*
 				 * WordPress's own password form, styled by our CSS. WordPress owns
@@ -74,7 +85,8 @@ $bltn_replies   = (int) bbp_get_topic_reply_count( $bltn_topic_id, true );
 			<article class="bltn-thread">
 
 				<p class="bltn-thread__label"><?php echo esc_html( $bltn_forum ); ?></p>
-				<h1 class="bltn-thread__title" data-bltn-heading tabindex="-1"><?php bbp_topic_title( $bltn_topic_id ); ?></h1>
+				<?php // Escaped for the reason the protected heading above gives. ?>
+				<h1 class="bltn-thread__title" data-bltn-heading tabindex="-1"><?php echo esc_html( bbp_get_topic_title( $bltn_topic_id ) ); ?></h1>
 				<p class="bltn-thread__sub">
 					<?php
 					/*

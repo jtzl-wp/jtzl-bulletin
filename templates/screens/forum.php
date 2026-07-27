@@ -145,7 +145,18 @@ $bltn_back_text = $bltn_parent_id
 		<?php if ( $bltn_protected ) : ?>
 
 			<div class="bltn-protected">
-				<h1 class="bltn-protected__title" data-bltn-heading tabindex="-1"><?php bbp_forum_title( $bltn_forum_id ); ?></h1>
+				<?php
+				/*
+				 * Escaped rather than echoed through bbp_forum_title(), which prints a
+				 * filtered get_the_title() with no contextual escaping (issue #51,
+				 * item 4). bbPress's own create and edit flows sanitise a title, so
+				 * this is defence in depth rather than a known hole: an import writes
+				 * straight to wp_posts, and `bbp_get_forum_title` is a filter any
+				 * plugin may answer. A heading is text, and text should not be able to
+				 * become markup.
+				 */
+				?>
+				<h1 class="bltn-protected__title" data-bltn-heading tabindex="-1"><?php echo esc_html( bbp_get_forum_title( $bltn_forum_id ) ); ?></h1>
 				<?php
 				/*
 				 * WordPress's own password form, styled by our CSS. WordPress owns
@@ -160,7 +171,8 @@ $bltn_back_text = $bltn_parent_id
 		<?php else : ?>
 
 			<div class="bltn-fhead">
-				<h1 class="bltn-fhead__name" data-bltn-heading tabindex="-1"><?php bbp_forum_title( $bltn_forum_id ); ?></h1>
+				<?php // Escaped for the reason the protected heading above gives. ?>
+				<h1 class="bltn-fhead__name" data-bltn-heading tabindex="-1"><?php echo esc_html( bbp_get_forum_title( $bltn_forum_id ) ); ?></h1>
 
 				<?php $bltn_fdesc = wp_strip_all_tags( bbp_get_forum_content( $bltn_forum_id ) ); ?>
 				<?php if ( '' !== $bltn_fdesc ) : ?>
