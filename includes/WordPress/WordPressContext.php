@@ -431,6 +431,20 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * Whether a forum is closed to new content.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $forum_id Forum ID.
+	 * @return bool
+	 */
+	public function is_forum_closed( int $forum_id ): bool {
+		// Second argument is bbPress's own default, spelled out because it is the
+		// load-bearing half: a forum inside a closed category is closed as well.
+		return (bool) bbp_is_forum_closed( $forum_id, true );
+	}
+
+	/**
 	 * ID of the reply currently in the loop.
 	 *
 	 * @since 0.1.0
@@ -546,6 +560,18 @@ class WordPressContext implements ContextInterface {
 	 */
 	public function get_topic_forum_id( int $topic_id ): int {
 		return (int) bbp_get_topic_forum_id( $topic_id );
+	}
+
+	/**
+	 * Whether a topic is closed to new replies.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $topic_id Topic ID.
+	 * @return bool
+	 */
+	public function is_topic_closed( int $topic_id ): bool {
+		return (bool) bbp_is_topic_closed( $topic_id );
 	}
 
 	/**
@@ -808,6 +834,17 @@ class WordPressContext implements ContextInterface {
 		);
 
 		return array_values( array_filter( array_unique( array_map( 'intval', $stickies ) ) ) );
+	}
+
+	/**
+	 * IDs of the site-wide super stickies.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return int[]
+	 */
+	public function get_super_sticky_ids(): array {
+		return array_values( array_filter( array_unique( array_map( 'intval', (array) bbp_get_super_stickies() ) ) ) );
 	}
 
 	/**

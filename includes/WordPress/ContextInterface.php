@@ -368,6 +368,20 @@ interface ContextInterface {
 	 */
 	public function get_forum_last_active_time( int $forum_id ): string;
 
+	/**
+	 * Whether a forum is closed to new content.
+	 *
+	 * Ancestors count, which is bbPress's own default: a forum inside a closed
+	 * category is closed too, and answering otherwise would call a forum open
+	 * that nothing can be posted to.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $forum_id Forum ID.
+	 * @return bool
+	 */
+	public function is_forum_closed( int $forum_id ): bool;
+
 	// --- bbPress reply / topic getters -------------------------------------
 
 	/**
@@ -467,6 +481,20 @@ interface ContextInterface {
 	 * @return int
 	 */
 	public function get_topic_forum_id( int $topic_id ): int;
+
+	/**
+	 * Whether a topic is closed to new replies.
+	 *
+	 * The topic's own status only. A topic in a closed forum takes no replies
+	 * either, but bbPress reports that against the forum, and so do we — the
+	 * forum row and forum header carry it (issue #38).
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $topic_id Topic ID.
+	 * @return bool
+	 */
+	public function is_topic_closed( int $topic_id ): bool;
 
 	/**
 	 * Whether the current user may view a forum, ancestors taken into account.
@@ -709,6 +737,19 @@ interface ContextInterface {
 	 * @return int[]
 	 */
 	public function get_sticky_topic_ids( int $forum_id ): array;
+
+	/**
+	 * IDs of the site-wide super stickies, which are pinned into every forum.
+	 *
+	 * Returned separately from the union above because they outrank a forum's own
+	 * stickies: bbPress renders supers first (bbp_add_sticky_topics partitions the
+	 * two after sorting), and the pinned section does the same.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return int[]
+	 */
+	public function get_super_sticky_ids(): array;
 
 	/**
 	 * Prime the topics loop.

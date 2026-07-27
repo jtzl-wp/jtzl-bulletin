@@ -7,6 +7,11 @@
  * which pages on beyond the first 15 through an inline "load more threads". The
  * sub-forums page the same way past the first 50, through a second control.
  *
+ * One "Pinned" label over two queries: site-wide super stickies rank above the
+ * forum's own, so they are fetched and rendered in that order. Two labels would be
+ * chrome for a distinction only a moderator makes — bbPress renders them as one
+ * contiguous run too.
+ *
  * On a password-protected forum the whole content area is withheld and replaced
  * by WordPress's own password form, inside our shell (issue #18) — bbPress masks
  * the description via bbp_get_forum_content(), but the sub-forum and topic loops
@@ -44,6 +49,7 @@ $bltn_ctx       = $bltn_container->get( \JTZL\Bulletin\WordPress\ContextInterfac
 
 $bltn_forum_id  = bbp_get_forum_id();
 $bltn_protected = $bltn_ctx->is_password_required( $bltn_forum_id );
+$bltn_closed    = $bltn_ctx->is_forum_closed( $bltn_forum_id );
 
 // Populated by the loops below only when the forum is not protected; on a
 // protected forum they stay empty and the password form renders instead.
@@ -82,8 +88,24 @@ if ( ! $bltn_protected ) {
 	 * bbPress pins on the first page only, and so do we — a reader who arrived at
 	 * ?paged=3 is past the top of the list.
 	 */
-	if ( 1 === $bltn_page && array() !== $bltn_ctx->get_sticky_topic_ids( $bltn_forum_id ) ) {
-		$bltn_pinned = $bltn_threads->capture( $bltn_query->pinned_args( $bltn_forum_id ) );
+	if ( 1 === $bltn_page ) {
+		/*
+		 * Site-wide super stickies lead the section, then this forum's own —
+		 * bbPress's order, which one query cannot express (see Query\TopicQuery).
+		 * Each is skipped when its set is empty rather than run and discarded:
+		 * WP_Query ignores an empty post__in and would answer with every topic.
+		 * The guard reads the args back, so it tests the exact list the query would
+		 * use rather than a second derivation that could drift from it.
+		 */
+		$bltn_pin_queries = array(
+			$bltn_query->super_pinned_args(),
+			$bltn_query->forum_pinned_args( $bltn_forum_id ),
+		);
+		foreach ( $bltn_pin_queries as $bltn_pin_args ) {
+			if ( array() !== $bltn_pin_args['post__in'] ) {
+				$bltn_pinned .= $bltn_threads->capture( $bltn_pin_args );
+			}
+		}
 		wp_reset_postdata();
 	}
 
@@ -146,6 +168,17 @@ $bltn_back_text = $bltn_parent_id
 				<?php endif; ?>
 
 				<div class="bltn-fhead__meta">
+					<?php
+					/*
+					 * Closed leads the line rather than trailing it: it qualifies
+					 * everything after, and the field it contradicts — freshness —
+					 * is at the other end. Stated, never a demotion: a closed forum
+					 * is fully readable, so nothing here is dimmed (issue #38).
+					 */
+					?>
+					<?php if ( $bltn_closed ) : ?>
+						<span class="bltn-closed"><?php esc_html_e( 'Closed', 'jtzl-bulletin' ); ?></span>
+					<?php endif; ?>
 					<?php $bltn_tcount = (int) bbp_get_forum_topic_count( $bltn_forum_id, true, true ); ?>
 					<span>
 						<?php

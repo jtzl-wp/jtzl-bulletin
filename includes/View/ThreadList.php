@@ -74,6 +74,10 @@ class ThreadList {
 						'author'    => $this->wp->get_topic_author_name( $topic_id ),
 						'active'    => $this->wp->get_topic_last_active_time( $topic_id ),
 						'replies'   => $this->wp->get_topic_reply_count( $topic_id ),
+
+						// The topic's own status. A thread inside a closed forum is
+						// marked on the forum, not on every one of its threads.
+						'closed'    => $this->wp->is_topic_closed( $topic_id ),
 					)
 				);
 			}

@@ -138,6 +138,11 @@ class ForumList {
 			// They can disagree, and a freshness time with nobody attached to it reads
 			// worse than no freshness at all.
 			'active'      => $last_id > 0 ? $this->wp->get_forum_last_active_time( $forum_id ) : '',
+
+			// Shown on a password-protected forum too, on the same reasoning as the
+			// count and freshness beside it: a password gates what a forum holds,
+			// not whether it is open.
+			'closed'      => $this->wp->is_forum_closed( $forum_id ),
 		);
 	}
 }

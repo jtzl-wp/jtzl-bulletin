@@ -34,6 +34,7 @@ $bltn_topic_id  = bbp_get_topic_id();
 $bltn_forum_id  = bbp_get_topic_forum_id( $bltn_topic_id );
 $bltn_forum     = bbp_get_forum_title( $bltn_forum_id );
 $bltn_protected = $bltn_ctx->is_password_required( $bltn_topic_id );
+$bltn_closed    = $bltn_ctx->is_topic_closed( $bltn_topic_id );
 $bltn_replies   = (int) bbp_get_topic_reply_count( $bltn_topic_id, true );
 ?>
 <section class="bltn-screen">
@@ -75,6 +76,18 @@ $bltn_replies   = (int) bbp_get_topic_reply_count( $bltn_topic_id, true );
 				<p class="bltn-thread__label"><?php echo esc_html( $bltn_forum ); ?></p>
 				<h1 class="bltn-thread__title" data-bltn-heading tabindex="-1"><?php bbp_topic_title( $bltn_topic_id ); ?></h1>
 				<p class="bltn-thread__sub">
+					<?php
+					/*
+					 * In the header, not at the foot where bbPress puts its "closed to
+					 * new replies" notice — that notice stands in for a reply form, and
+					 * this app has none on any thread, so at the foot it would announce
+					 * a restriction that is not one. Here it is what it actually is: a
+					 * property of the thread you are about to read (issue #38).
+					 */
+					?>
+					<?php if ( $bltn_closed ) : ?>
+						<span class="bltn-closed"><?php esc_html_e( 'Closed', 'jtzl-bulletin' ); ?></span>
+					<?php endif; ?>
 					<span>
 						<?php
 						/* translators: %s: formatted reply count. */

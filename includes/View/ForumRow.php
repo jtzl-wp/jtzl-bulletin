@@ -22,21 +22,18 @@ class ForumRow {
 	 *
 	 * Fields: permalink (forum URL), title, description (already stripped and
 	 * trimmed), topics (count, including sub-forum topics), author (plain name
-	 * of the last active post's author) and active (human "last active" time).
+	 * of the last active post's author), active (human "last active" time) and
+	 * closed (whether the forum takes no new content).
 	 *
 	 * @since 0.1.0
 	 *
 	 * @param array<string,mixed> $row Row data.
 	 */
 	public function render( array $row ): void {
-		$permalink   = (string) ( $row['permalink'] ?? '' );
 		$title       = (string) ( $row['title'] ?? '' );
 		$description = (string) ( $row['description'] ?? '' );
-		$author      = (string) ( $row['author'] ?? '' );
-		$active      = (string) ( $row['active'] ?? '' );
-		$topics      = (int) ( $row['topics'] ?? 0 );
 
-		printf( '<a class="bltn-row" href="%s">', esc_url( $permalink ) );
+		printf( '<a class="bltn-row" href="%s">', esc_url( (string) ( $row['permalink'] ?? '' ) ) );
 
 		echo '<div class="bltn-row__top">';
 		printf( '<h2 class="bltn-forum__name">%s</h2>', esc_html( $title ) );
@@ -47,7 +44,31 @@ class ForumRow {
 			printf( '<p class="bltn-row__desc">%s</p>', esc_html( $description ) );
 		}
 
+		$this->render_meta( $row );
+		echo '</a>';
+	}
+
+	/**
+	 * Echo the row's meta line: closed, thread count, author, freshness.
+	 *
+	 * Closed leads it, for the reasons View\ThreadRow gives.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param array<string,mixed> $row Row data.
+	 */
+	private function render_meta( array $row ): void {
+		$author = (string) ( $row['author'] ?? '' );
+		$active = (string) ( $row['active'] ?? '' );
+		$topics = (int) ( $row['topics'] ?? 0 );
+
 		echo '<p class="bltn-row__meta">';
+		if ( (bool) ( $row['closed'] ?? false ) ) {
+			printf(
+				'<span class="bltn-closed">%s</span> &middot; ',
+				esc_html__( 'Closed', 'jtzl-bulletin' )
+			);
+		}
 		echo esc_html(
 			sprintf(
 				/* translators: %s: formatted thread count. */
@@ -61,6 +82,6 @@ class ForumRow {
 		if ( '' !== $active ) {
 			printf( ' &middot; %s', esc_html( $active ) );
 		}
-		echo '</p></a>';
+		echo '</p>';
 	}
 }

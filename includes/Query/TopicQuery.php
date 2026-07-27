@@ -29,6 +29,14 @@ use JTZL\Bulletin\WordPress\ContextInterface;
  *    loads. Excluding them from every page instead keeps LIMIT/OFFSET boundaries
  *    consistent and makes the page count honest about what is left to load.
  *
+ *  - Two pinned queries, not one. A site-wide super sticky outranks a forum's
+ *    own: bbPress sorts the whole sticky set by freshness and only then splits it
+ *    into supers and forum stickies, merging supers first
+ *    (bbp_add_sticky_topics's $ordered_stickies). One query cannot express that —
+ *    'orderby' => 'post__in' would give the ID array's order inside each group
+ *    rather than freshness — so the section runs the two in turn, each ordered
+ *    the same way as the list below it.
+ *
  *  - A (last-active, ID) order. Topics sort by _bbp_last_active_time, which is a
  *    DATETIME with no sub-second resolution: an import, or a burst of activity in
  *    the same second, ties rows whose relative order MySQL may then return
@@ -77,31 +85,66 @@ class TopicQuery {
 	}
 
 	/**
-	 * Args for a forum's pinned topics — the stickies args() excludes.
+	 * Args for the site-wide super stickies, which lead the pinned section.
 	 *
-	 * Returned unpaginated: stickies are a handful by definition, and splitting
-	 * them across pages would put a "load more" inside the pinned section.
-	 * Callers must skip this query when the sticky list is empty, since post__in
-	 * with an empty array is ignored by WP_Query and would return every topic.
+	 * A super sticky is pinned into every forum, so it usually lives under a
+	 * different parent — scoping this query to the forum would drop it. bbPress
+	 * still filters by forum visibility either way
+	 * (bbp_pre_get_posts_normalize_forum_visibility excludes topics whose
+	 * _bbp_forum_id the reader may not see), so widening the parent here does not
+	 * widen what is readable.
 	 *
-	 * @since 0.1.0
+	 * @since 0.3.0
+	 *
+	 * @return array<string,mixed>
+	 */
+	public function super_pinned_args(): array {
+		return $this->pinned_base() + array(
+			'post__in'    => $this->wp->get_super_sticky_ids(),
+			'post_parent' => 'any',
+		);
+	}
+
+	/**
+	 * Args for a forum's own stickies, which follow the supers.
+	 *
+	 * Supers are subtracted rather than merely ordered after: a topic can be both
+	 * (a keymaster stickies it in its forum, then promotes it site-wide), and
+	 * without the subtraction it would render in the pinned section twice.
+	 *
+	 * @since 0.3.0
 	 *
 	 * @param int $forum_id Forum to list pinned topics for.
 	 * @return array<string,mixed>
 	 */
-	public function pinned_args( int $forum_id ): array {
+	public function forum_pinned_args( int $forum_id ): array {
+		return $this->pinned_base() + array(
+			'post__in'    => array_values(
+				array_diff(
+					$this->wp->get_sticky_topic_ids( $forum_id ),
+					$this->wp->get_super_sticky_ids()
+				)
+			),
+			'post_parent' => $forum_id,
+		);
+	}
+
+	/**
+	 * The parts both pinned queries share.
+	 *
+	 * Returned unpaginated: stickies are a handful by definition, and splitting
+	 * them across pages would put a "load more" inside the pinned section.
+	 * Callers must skip a pinned query whose post__in came back empty, since
+	 * WP_Query ignores an empty post__in and would return every topic.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return array<string,mixed>
+	 */
+	private function pinned_base(): array {
 		return $this->base() + array(
 			'posts_per_page' => -1,
 			'paged'          => 1,
-			'post__in'       => $this->wp->get_sticky_topic_ids( $forum_id ),
-
-			// A super sticky is pinned into every forum, so it usually lives under
-			// a different parent — scoping this query to the forum would drop it.
-			// bbPress still filters by forum visibility either way
-			// (bbp_pre_get_posts_normalize_forum_visibility excludes topics whose
-			// _bbp_forum_id the reader may not see), so widening the parent here
-			// does not widen what is readable.
-			'post_parent'    => 'any',
 		);
 	}
 
