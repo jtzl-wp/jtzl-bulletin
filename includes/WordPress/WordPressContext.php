@@ -173,6 +173,17 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * Whether this is a member profile's Subscriptions tab.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool
+	 */
+	public function is_subscriptions(): bool {
+		return (bool) bbp_is_subscriptions();
+	}
+
+	/**
 	 * Whether a user is logged in.
 	 *
 	 * @since 0.1.0
@@ -204,6 +215,18 @@ class WordPressContext implements ContextInterface {
 	 */
 	public function current_user_can( string $capability ): bool {
 		return (bool) current_user_can( $capability );
+	}
+
+	/**
+	 * Whether the current user may edit a given user.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $user_id Subject user ID.
+	 * @return bool
+	 */
+	public function current_user_can_edit_user( int $user_id ): bool {
+		return (bool) current_user_can( 'edit_user', $user_id );
 	}
 
 	/**
@@ -261,6 +284,17 @@ class WordPressContext implements ContextInterface {
 			ENT_QUOTES,
 			'UTF-8'
 		);
+	}
+
+	/**
+	 * ID of the user whose profile is being viewed (0 when none is).
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return int
+	 */
+	public function get_displayed_user_id(): int {
+		return (int) bbp_get_displayed_user_id();
 	}
 
 	/**
@@ -860,6 +894,18 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * Prime the forums loop with a user's subscribed forums.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param array<string,mixed> $args Query args.
+	 * @return bool Whether any subscribed forums matched.
+	 */
+	public function has_forum_subscriptions( array $args ): bool {
+		return (bool) bbp_get_user_forum_subscriptions( $args );
+	}
+
+	/**
 	 * Advance the forums loop.
 	 *
 	 * @since 0.3.0
@@ -890,6 +936,42 @@ class WordPressContext implements ContextInterface {
 		// forum_query is always primed by a has_forums() call before this runs (both
 		// takeover forum screens and the AJAX handler do so).
 		return (int) bbpress()->forum_query->max_num_pages;
+	}
+
+	/**
+	 * Render bbPress's own row for the forum the loop is on.
+	 *
+	 * @since 0.3.0
+	 */
+	public function render_forum_row(): void {
+		bbp_get_template_part( 'loop', 'single-forum' );
+	}
+
+	/**
+	 * IDs of the forums a user subscribes to.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $user_id User ID.
+	 * @return int[]
+	 */
+	public function get_subscribed_forum_ids( int $user_id ): array {
+		return array_values(
+			array_filter(
+				array_unique( array_map( 'intval', (array) bbp_get_user_subscribed_forum_ids( $user_id ) ) )
+			)
+		);
+	}
+
+	/**
+	 * Whether subscriptions are switched on site-wide.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool
+	 */
+	public function is_subscriptions_active(): bool {
+		return (bool) bbp_is_subscriptions_active();
 	}
 
 	/**

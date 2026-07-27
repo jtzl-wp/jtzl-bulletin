@@ -26,11 +26,16 @@ export interface BltnConfig {
  * Build the form-encoded body for a load-more request.
  *
  * The subject's parameter name is carried by the control rather than fixed here,
- * because the same request shape serves both lists: replies within a topic, and
- * threads within a forum.
+ * because the same request shape serves several lists: replies within a topic,
+ * threads within a forum, forums within a forum.
+ *
+ * A control may also have no subject, and then none is sent. The subscribed-forums
+ * list on a profile belongs to a user, and which user is already settled by the URL
+ * the request goes to — bbPress's AJAX URL is the current page's own. Sending an
+ * empty parameter would put a subject in the body that means nothing.
  *
  * @param action bbPress AJAX action name.
- * @param param  Name of the subject parameter ('topic' or 'forum').
+ * @param param  Name of the subject parameter ('topic', 'forum'), or '' for none.
  * @param id     Subject ID (as a string, straight from the DOM attribute).
  * @param page   1-based page number.
  * @return URL-encoded request body.
@@ -43,7 +48,9 @@ export function buildRequestBody(
 ): string {
 	const body = new URLSearchParams();
 	body.set('action', action);
-	body.set(param, id);
+	if (param !== '') {
+		body.set(param, id);
+	}
 	body.set('paged', String(page));
 	return body.toString();
 }

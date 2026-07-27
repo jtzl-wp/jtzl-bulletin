@@ -11,13 +11,16 @@ namespace JTZL\Bulletin;
 use DI\Container;
 use JTZL\Bulletin\Ajax\LoadForumsController;
 use JTZL\Bulletin\Ajax\LoadRepliesController;
+use JTZL\Bulletin\Ajax\LoadSubscribedForumsController;
 use JTZL\Bulletin\Ajax\LoadTopicsController;
 use JTZL\Bulletin\Asset\AssetManager;
 use JTZL\Bulletin\Chrome\AdminBar;
 use JTZL\Bulletin\Query\StableOrder;
 use JTZL\Bulletin\Query\StickyHoisting;
+use JTZL\Bulletin\Query\SubscribedForumQuery;
 use JTZL\Bulletin\Takeover\TemplateController;
 use JTZL\Bulletin\View\ProfileIdentity;
+use JTZL\Bulletin\View\SubscribedForumsMore;
 use JTZL\Bulletin\WordPress\ContextInterface;
 
 /**
@@ -59,64 +62,144 @@ class Bootstrap {
 	/**
 	 * Register every runtime hook.
 	 *
+	 * Grouped by what each set of hooks is for rather than kept in one run: the list
+	 * grows with every feature, and one method that registers all of it eventually
+	 * says nothing about which hooks belong together. The groups are private and
+	 * called from here alone, so this is still the one place hooks are registered.
+	 *
 	 * @since 0.1.0
 	 */
 	public function register_hooks(): void {
-		$wp = $this->container->get( ContextInterface::class );
-		assert( $wp instanceof ContextInterface );
+		$this->register_takeover();
+		$this->register_assets();
+		$this->register_ajax();
+		$this->register_reskin();
+		$this->register_chrome();
+	}
+
+	/**
+	 * Takeover: redirect single replies early, strip theme-compat, swap our document.
+	 *
+	 * @since 0.3.0
+	 */
+	private function register_takeover(): void {
+		$wp       = $this->wp();
 		$takeover = $this->container->get( TemplateController::class );
 		assert( $takeover instanceof TemplateController );
+
+		$wp->add_action( 'template_redirect', array( $takeover, 'redirect_single_reply' ), 9 );
+		$wp->add_action( 'template_redirect', array( $takeover, 'prime_takeover' ) );
+		$wp->add_filter( 'bbp_template_include', array( $takeover, 'filter_template_include' ), 20 );
+	}
+
+	/**
+	 * Assets: enqueue ours, then suppress foreign styles late.
+	 *
+	 * @since 0.3.0
+	 */
+	private function register_assets(): void {
+		$wp     = $this->wp();
 		$assets = $this->container->get( AssetManager::class );
 		assert( $assets instanceof AssetManager );
+
+		$wp->add_action( 'wp_enqueue_scripts', array( $assets, 'enqueue' ) );
+		$wp->add_action( 'wp_enqueue_scripts', array( $assets, 'suppress_foreign_styles' ), 100 );
+	}
+
+	/**
+	 * Load-more over bbPress's front-end AJAX router: replies inside a thread,
+	 * threads inside a forum, forums inside the index or a parent forum — and the
+	 * first continuation on a reskin screen, the Subscribed Forums list on a member
+	 * profile, which bbPress renders in its own markup and truncates at the same
+	 * 50-forum ceiling (issue #50).
+	 *
+	 * @since 0.3.0
+	 */
+	private function register_ajax(): void {
+		$wp      = $this->wp();
 		$replies = $this->container->get( LoadRepliesController::class );
 		assert( $replies instanceof LoadRepliesController );
 		$topics = $this->container->get( LoadTopicsController::class );
 		assert( $topics instanceof LoadTopicsController );
 		$forums = $this->container->get( LoadForumsController::class );
 		assert( $forums instanceof LoadForumsController );
+		$subscribed = $this->container->get( LoadSubscribedForumsController::class );
+		assert( $subscribed instanceof LoadSubscribedForumsController );
+
+		$wp->add_action( 'bbp_ajax_bulletin_load_replies', array( $replies, 'handle' ) );
+		$wp->add_action( 'bbp_ajax_bulletin_load_topics', array( $topics, 'handle' ) );
+		$wp->add_action( 'bbp_ajax_bulletin_load_forums', array( $forums, 'handle' ) );
+		$wp->add_action( 'bbp_ajax_bulletin_load_subscribed_forums', array( $subscribed, 'handle' ) );
+	}
+
+	/**
+	 * Reskin: what we add to, or correct in, the markup bbPress renders itself.
+	 *
+	 * @since 0.3.0
+	 */
+	private function register_reskin(): void {
+		$wp       = $this->wp();
 		$identity = $this->container->get( ProfileIdentity::class );
 		assert( $identity instanceof ProfileIdentity );
-		$admin_bar = $this->container->get( AdminBar::class );
-		assert( $admin_bar instanceof AdminBar );
 		$order = $this->container->get( StableOrder::class );
 		assert( $order instanceof StableOrder );
 		$stickies = $this->container->get( StickyHoisting::class );
 		assert( $stickies instanceof StickyHoisting );
+		$subscriptions = $this->container->get( SubscribedForumQuery::class );
+		assert( $subscriptions instanceof SubscribedForumQuery );
+		$subscribed_more = $this->container->get( SubscribedForumsMore::class );
+		assert( $subscribed_more instanceof SubscribedForumsMore );
 
-		// Takeover: redirect single replies early, strip theme-compat, swap our doc.
-		$wp->add_action( 'template_redirect', array( $takeover, 'redirect_single_reply' ), 9 );
-		$wp->add_action( 'template_redirect', array( $takeover, 'prime_takeover' ) );
-		$wp->add_filter( 'bbp_template_include', array( $takeover, 'filter_template_include' ), 20 );
-
-		// Assets: enqueue ours, then suppress foreign styles late.
-		$wp->add_action( 'wp_enqueue_scripts', array( $assets, 'enqueue' ) );
-		$wp->add_action( 'wp_enqueue_scripts', array( $assets, 'suppress_foreign_styles' ), 100 );
-
-		// Load-more over bbPress's front-end AJAX router: replies inside a thread,
-		// threads inside a forum, forums inside the index or a parent forum.
-		$wp->add_action( 'bbp_ajax_bulletin_load_replies', array( $replies, 'handle' ) );
-		$wp->add_action( 'bbp_ajax_bulletin_load_topics', array( $topics, 'handle' ) );
-		$wp->add_action( 'bbp_ajax_bulletin_load_forums', array( $forums, 'handle' ) );
-
-		// Reskin: give the member-profile header a coherent identity block (name +
-		// @handle + role beside the avatar). The hook fires only inside bbPress's
-		// user-details template — i.e. the reskinned profile screens — so it never
-		// touches the takeover documents.
+		// Give the member-profile header a coherent identity block (name + @handle +
+		// role beside the avatar). The hook fires only inside bbPress's user-details
+		// template — i.e. the reskinned profile screens — so it never touches the
+		// takeover documents.
 		$wp->add_action( 'bbp_template_before_user_details_menu_items', array( $identity, 'render' ) );
 
-		// Chrome: keep WordPress's admin bar off our screens for readers who cannot
-		// administrate. Late, so ours is the last word on the shell we render — an
-		// administrator's own preference still passes through (see Chrome\AdminBar).
-		$wp->add_filter( 'show_admin_bar', array( $admin_bar, 'filter_show_admin_bar' ), 100 );
+		// Hang a continuation off the Subscribed Forums list, the one reskin loop
+		// bbPress leaves with no way past its first page. Both halves are scoped to
+		// the subscriptions tab: the control by the hook and the conditional (see
+		// View\SubscribedForumsMore), the query by the conditional alone, since
+		// bbPress's own template is what calls it and passes no arguments to intercept.
+		$wp->add_action( 'bbp_template_after_forums_loop', array( $subscribed_more, 'render' ) );
+		$wp->add_filter( 'bbp_after_has_forums_parse_args', array( $subscriptions, 'filter_forum_args' ) );
 
-		// Reskin: give the loops bbPress queries for us a deterministic order. These
-		// fire in the moment before bbPress runs the query, on every call — including
-		// the profile tabs, which reach bbp_has_topics() with args of their own.
+		// Give the loops bbPress queries for us a deterministic order. These fire in
+		// the moment before bbPress runs the query, on every call — including the
+		// profile tabs, which reach bbp_has_topics() with args of their own.
 		$wp->add_filter( 'bbp_after_has_topics_parse_args', array( $order, 'filter_topic_args' ) );
 		$wp->add_filter( 'bbp_after_has_replies_parse_args', array( $order, 'filter_reply_args' ) );
 
 		// And decline bbPress's sticky hoisting there, which serves a sticky twice and
 		// miscounts the page it hoisted onto. Same hook, separate decision.
 		$wp->add_filter( 'bbp_after_has_topics_parse_args', array( $stickies, 'filter_topic_args' ), 11 );
+	}
+
+	/**
+	 * Chrome: keep WordPress's admin bar off our screens for readers who cannot
+	 * administrate. Late, so ours is the last word on the shell we render — an
+	 * administrator's own preference still passes through (see Chrome\AdminBar).
+	 *
+	 * @since 0.3.0
+	 */
+	private function register_chrome(): void {
+		$admin_bar = $this->container->get( AdminBar::class );
+		assert( $admin_bar instanceof AdminBar );
+
+		$this->wp()->add_filter( 'show_admin_bar', array( $admin_bar, 'filter_show_admin_bar' ), 100 );
+	}
+
+	/**
+	 * The WordPress/bbPress seam every group binds through.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return ContextInterface
+	 */
+	private function wp(): ContextInterface {
+		$wp = $this->container->get( ContextInterface::class );
+		assert( $wp instanceof ContextInterface );
+
+		return $wp;
 	}
 }

@@ -46,18 +46,11 @@ class AssetManager {
 	private ScreenClassifier $screen;
 
 	/**
-	 * Absolute plugin directory path (trailing slash).
+	 * Where the built files are.
 	 *
-	 * @var string
+	 * @var BuiltAssets
 	 */
-	private string $plugin_dir;
-
-	/**
-	 * Plugin base URL (trailing slash).
-	 *
-	 * @var string
-	 */
-	private string $plugin_url;
+	private BuiltAssets $assets;
 
 	/**
 	 * Asset version.
@@ -71,34 +64,34 @@ class AssetManager {
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param ContextInterface $wp         WordPress/bbPress seam.
-	 * @param ScreenClassifier $screen     Screen-tier classifier.
-	 * @param string           $plugin_dir Absolute plugin directory (trailing slash).
-	 * @param string           $plugin_url Plugin base URL (trailing slash).
-	 * @param string           $version    Asset version.
+	 * @param ContextInterface $wp      WordPress/bbPress seam.
+	 * @param ScreenClassifier $screen  Screen-tier classifier.
+	 * @param BuiltAssets      $assets  Where the built files are.
+	 * @param string           $version Asset version.
 	 */
 	public function __construct(
 		ContextInterface $wp,
 		ScreenClassifier $screen,
-		string $plugin_dir,
-		string $plugin_url,
+		BuiltAssets $assets,
 		string $version
 	) {
-		$this->wp         = $wp;
-		$this->screen     = $screen;
-		$this->plugin_dir = $plugin_dir;
-		$this->plugin_url = $plugin_url;
-		$this->version    = $version;
+		$this->wp      = $wp;
+		$this->screen  = $screen;
+		$this->assets  = $assets;
+		$this->version = $version;
 	}
 
 	/**
 	 * Enqueue Bulletin's CSS/JS on the screens we own.
 	 *
 	 * Our stylesheet loads on both takeover and reskin screens — it styles the
-	 * chrome (app bar) common to both. The reading-view script, though, only drives
-	 * the inline load-more controls that the takeover screens render; a reskin
-	 * screen shows bbPress's own markup, which has nothing for it to bind, so the
-	 * script and its localisation are scoped to takeover.
+	 * chrome (app bar) common to both. The script goes wherever a load-more control
+	 * is: the three takeover screens, and one reskin screen — a profile's
+	 * Subscriptions tab, whose Subscribed Forums list is the one bbPress loop with no
+	 * way past its first page (issue #50, View\SubscribedForumsMore). Whether that tab
+	 * renders a control turns on a page count nothing knows until the loop runs, long
+	 * after assets are enqueued, so the screen is the finest scope here — as it is on
+	 * a single-page takeover screen, where the script also wires nothing.
 	 *
 	 * @since 0.1.0
 	 */
@@ -108,24 +101,25 @@ class AssetManager {
 			return;
 		}
 
-		$style = $this->style_url();
+		$style = $this->assets->style_url();
 		if ( '' !== $style ) {
 			$this->wp->enqueue_style( 'jtzl-bulletin', $style, array(), $this->version );
 		}
 
-		if ( ScreenTier::Takeover !== $tier ) {
+		if ( ScreenTier::Takeover !== $tier && ! $this->wp->is_subscriptions() ) {
 			return;
 		}
 
-		$script = $this->script_url();
+		$script = $this->assets->script_url();
 		if ( '' !== $script ) {
 			$this->wp->enqueue_script( 'jtzl-bulletin', $script, array(), $this->version, true );
 
-			// No nonce: these endpoints serve only already-public forum content
-			// and change no state, so there's no CSRF surface — and a per-page
-			// nonce would break under full-page caching (a cached page would ship
-			// an already-expired nonce). Access is gated on forum visibility
-			// server-side instead (see the Ajax controllers).
+			// No nonce: every one of these endpoints is read-only, so there is no
+			// CSRF surface — and a per-page nonce would break under full-page
+			// caching (a cached page would ship an already-expired nonce). What a
+			// request may see is gated server-side instead: forum visibility and
+			// password on the three public lists, and on the subscription list,
+			// which is not public, the profile's owner or an editor of that user.
 			//
 			// Only the two transient labels are localised here. Which endpoint to
 			// call, and the idle label naming what it loads, belong to the control
@@ -312,66 +306,5 @@ class AssetManager {
 		}
 		$path = wp_parse_url( $url, PHP_URL_PATH );
 		return is_string( $path ) ? $path : '';
-	}
-
-	/**
-	 * Resolved URL of the hashed reading-view script, or '' if unbuilt.
-	 *
-	 * @since 0.1.0
-	 *
-	 * @return string
-	 */
-	private function script_url(): string {
-		$manifest = $this->read_manifest();
-		$file     = $manifest['jtzl-bltn-reading.js'] ?? '';
-		return '' !== $file ? $this->plugin_url . 'build/' . $file : '';
-	}
-
-	/**
-	 * Resolved URL of the built stylesheet (hashed if present), or '' if unbuilt.
-	 *
-	 * @since 0.1.0
-	 *
-	 * @return string
-	 */
-	private function style_url(): string {
-		$hashed = glob( $this->plugin_dir . 'build/jtzl-bltn.*.css' );
-		if ( is_array( $hashed ) && array() !== $hashed ) {
-			return $this->plugin_url . 'build/' . basename( $hashed[0] );
-		}
-		$plain = $this->plugin_dir . 'build/jtzl-bltn.css';
-		return file_exists( $plain ) ? $this->plugin_url . 'build/jtzl-bltn.css' : '';
-	}
-
-	/**
-	 * Read build/asset-manifest.json as a name => hashed-filename map.
-	 *
-	 * @since 0.1.0
-	 *
-	 * @return array<string,string>
-	 */
-	private function read_manifest(): array {
-		$path = $this->plugin_dir . 'build/asset-manifest.json';
-		if ( ! file_exists( $path ) ) {
-			return array();
-		}
-
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- local build artifact, not a remote request.
-		$json = file_get_contents( $path );
-
-		// A read failure ((string) false === '') or malformed JSON both decode to a
-		// non-array, so one guard covers both.
-		$data = json_decode( (string) $json, true );
-		if ( ! is_array( $data ) ) {
-			return array();
-		}
-
-		$map = array();
-		foreach ( $data as $key => $value ) {
-			if ( is_string( $key ) && is_string( $value ) ) {
-				$map[ $key ] = $value;
-			}
-		}
-		return $map;
 	}
 }

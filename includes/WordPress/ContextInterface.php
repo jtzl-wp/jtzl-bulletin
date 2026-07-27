@@ -156,6 +156,21 @@ interface ContextInterface {
 	 */
 	public function is_forum_edit(): bool;
 
+	/**
+	 * Whether this is a member profile's Subscriptions tab.
+	 *
+	 * The one reskin screen that reaches `bbp_has_forums()`, so it is what scopes
+	 * the forum-list paging Query\SubscribedForumQuery adds (issue #50). bbPress
+	 * reads it from the main query, which is also what makes it answerable inside
+	 * its own AJAX request: `bbp_get_ajax_url()` posts back to the page's own URL,
+	 * so the request is routed to the same profile tab.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool
+	 */
+	public function is_subscriptions(): bool;
+
 	// --- Auth & site state --------------------------------------------------
 
 	/**
@@ -188,6 +203,23 @@ interface ContextInterface {
 	 * @return bool
 	 */
 	public function current_user_can( string $capability ): bool;
+
+	/**
+	 * Whether the current user may edit a given user.
+	 *
+	 * Separate from current_user_can() because this capability is only meaningful
+	 * against a subject, and it is the test bbPress itself uses to decide who may
+	 * see a profile's private tabs (`user-subscriptions.php` gates its whole
+	 * section on `bbp_is_user_home() || current_user_can( 'edit_user', … )`). The
+	 * subscribed-forums continuation applies the same pair, so a moderator keeps
+	 * the access the screen already grants and nobody else gains any.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $user_id Subject user ID.
+	 * @return bool
+	 */
+	public function current_user_can_edit_user( int $user_id ): bool;
 
 	/**
 	 * Login URL, optionally with a redirect target.
@@ -232,6 +264,15 @@ interface ContextInterface {
 	 * @return string
 	 */
 	public function get_displayed_user_name(): string;
+
+	/**
+	 * ID of the user whose profile is being viewed (0 when none is).
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return int
+	 */
+	public function get_displayed_user_id(): int;
 
 	/**
 	 * Nicename (the URL slug, shown as the @handle) of the displayed user.
@@ -679,6 +720,24 @@ interface ContextInterface {
 	public function has_forums( array $args ): bool;
 
 	/**
+	 * Prime the forums loop with a user's subscribed forums.
+	 *
+	 * Goes through bbPress rather than assembling the relationship itself, because
+	 * how a subscription is *stored* is a site's choice: bbPress dispatches to a
+	 * meta, taxonomy or user-option strategy, so the same subscription arrives as a
+	 * `meta_query`, a `tax_query` or a `post__in` depending on which one is in use
+	 * (`BBP_User_Engagements_*::get_query()`). Only the paging is ours; the user and
+	 * the relationship stay bbPress's own, resolved from the profile the request is
+	 * routed to.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param array<string,mixed> $args Query args (see Query\SubscribedForumQuery).
+	 * @return bool Whether any subscribed forums matched.
+	 */
+	public function has_forum_subscriptions( array $args ): bool;
+
+	/**
 	 * Advance the forums loop.
 	 *
 	 * @since 0.3.0
@@ -705,6 +764,42 @@ interface ContextInterface {
 	 * @return int
 	 */
 	public function get_max_forum_pages(): int;
+
+	/**
+	 * Render bbPress's own row for the forum the loop is on.
+	 *
+	 * Used by the subscribed-forums continuation, where the rows that shipped with
+	 * the document are bbPress's `loop-single-forum.php` — the reskin tier restyles
+	 * that markup rather than replacing it, so an appended row has to be the same
+	 * template, not a copy of it. The template stack means a theme's override wins
+	 * here exactly as it does on page 1.
+	 *
+	 * @since 0.3.0
+	 */
+	public function render_forum_row(): void;
+
+	/**
+	 * IDs of the forums a user subscribes to.
+	 *
+	 * Reads the relationship directly rather than through a paged query, so the
+	 * continuation can bound a requested page against the set that exists before it
+	 * issues an offset query for it.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $user_id User ID.
+	 * @return int[]
+	 */
+	public function get_subscribed_forum_ids( int $user_id ): array;
+
+	/**
+	 * Whether subscriptions are switched on site-wide.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool
+	 */
+	public function is_subscriptions_active(): bool;
 
 	/**
 	 * Restore the global post after a secondary loop.

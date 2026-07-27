@@ -11,6 +11,7 @@ namespace JTZL\Bulletin;
 use DI\Container;
 use DI\ContainerBuilder;
 use JTZL\Bulletin\Asset\AssetManager;
+use JTZL\Bulletin\Asset\BuiltAssets;
 use JTZL\Bulletin\Takeover\TemplateController;
 use JTZL\Bulletin\WordPress\ContextInterface;
 use JTZL\Bulletin\WordPress\WordPressContext;
@@ -72,11 +73,13 @@ class ContainerFactory {
 		$templates_dir = $plugin_dir . 'templates/';
 
 		return array(
-			ContextInterface::class => autowire( WordPressContext::class ),
+			ContextInterface::class   => autowire( WordPressContext::class ),
 
-			AssetManager::class => autowire()
+			BuiltAssets::class        => autowire()
 				->constructorParameter( 'plugin_dir', $plugin_dir )
-				->constructorParameter( 'plugin_url', $plugin_url )
+				->constructorParameter( 'plugin_url', $plugin_url ),
+
+			AssetManager::class       => autowire()
 				->constructorParameter( 'version', $plugin_ver ),
 
 			TemplateController::class => autowire()

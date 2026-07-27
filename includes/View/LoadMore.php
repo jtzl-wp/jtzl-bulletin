@@ -30,6 +30,12 @@ class LoadMore {
 	 * id (the subject — a topic or a forum), target (id of the element rows are
 	 * appended to), next (the page the control will request), and label.
 	 *
+	 * A control without a subject omits both of its attributes rather than naming an
+	 * empty one: the subscribed-forums list is a list of one user's own subscriptions,
+	 * and which user that is rides on the URL the control posts back to (see
+	 * Ajax\LoadSubscribedForumsController). `data-id="0"` would have read as a subject
+	 * — on the forums index it is one, the root list.
+	 *
 	 * @since 0.1.0
 	 *
 	 * @param array<string,mixed> $control Control data.
@@ -42,11 +48,19 @@ class LoadMore {
 		$next   = (int) ( $control['next'] ?? 2 );
 		$label  = (string) ( $control['label'] ?? '' );
 
+		$subject = '';
+		if ( '' !== $param ) {
+			$subject = sprintf(
+				' data-param="%s" data-id="%s"',
+				esc_attr( $param ),
+				esc_attr( (string) $id )
+			);
+		}
+
 		printf(
-			'<div class="bltn-loadmore" data-action="%s" data-param="%s" data-id="%s" data-target="%s" data-next="%s">',
+			'<div class="bltn-loadmore" data-action="%s"%s data-target="%s" data-next="%s">',
 			esc_attr( $action ),
-			esc_attr( $param ),
-			esc_attr( (string) $id ),
+			$subject, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- assembled above from escaped parts.
 			esc_attr( $target ),
 			esc_attr( (string) $next )
 		);
