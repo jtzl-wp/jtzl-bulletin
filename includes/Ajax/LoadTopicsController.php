@@ -44,6 +44,13 @@ class LoadTopicsController {
 	private ThreadList $threads;
 
 	/**
+	 * Shared reader and bound for the requested page.
+	 *
+	 * @var RequestedPage
+	 */
+	private RequestedPage $paging;
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 0.1.0
@@ -51,11 +58,13 @@ class LoadTopicsController {
 	 * @param ContextInterface $wp      WordPress/bbPress seam.
 	 * @param TopicQuery       $query   Shared topic-query builder.
 	 * @param ThreadList       $threads Thread list renderer.
+	 * @param RequestedPage    $paging  Shared reader and bound for `paged`.
 	 */
-	public function __construct( ContextInterface $wp, TopicQuery $query, ThreadList $threads ) {
+	public function __construct( ContextInterface $wp, TopicQuery $query, ThreadList $threads, RequestedPage $paging ) {
 		$this->wp      = $wp;
 		$this->query   = $query;
 		$this->threads = $threads;
+		$this->paging  = $paging;
 	}
 
 	/**
@@ -64,15 +73,9 @@ class LoadTopicsController {
 	 * @since 0.1.0
 	 */
 	public function handle(): void {
-		// phpcs:disable WordPress.Security.NonceVerification.Missing -- public read-only endpoint; see Asset\AssetManager for why there is no nonce.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- public read-only endpoint; see Asset\AssetManager for why there is no nonce.
 		$forum_id = isset( $_POST['forum'] ) ? (int) $_POST['forum'] : 0;
-		$page     = isset( $_POST['paged'] ) ? (int) $_POST['paged'] : 2;
-		// phpcs:enable WordPress.Security.NonceVerification.Missing
-
-		// Clamp: page 1 ships with the document, so load-more starts at 2.
-		if ( $page < 2 ) {
-			$page = 2;
-		}
+		$page     = $this->paging->requested();
 
 		// send_json_error() ends the request, so there is nothing to return to.
 		if ( $forum_id <= 0 || $this->wp->get_forum_post_type() !== $this->wp->get_post_type( $forum_id ) ) {
@@ -95,6 +98,10 @@ class LoadTopicsController {
 		if ( $this->wp->is_password_required( $forum_id ) ) {
 			$this->wp->send_json_error( array( 'message' => 'protected' ), 403 );
 		}
+
+		// Then the page, after access and never before it: a reader who may not see
+		// this forum is told that, whatever page they asked for.
+		$this->paging->guard( $page );
 
 		$html = $this->threads->capture( $this->query->args( $forum_id, $page ) );
 		$max  = $this->wp->get_max_topic_pages();

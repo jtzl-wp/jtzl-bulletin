@@ -51,6 +51,13 @@ class LoadForumsController {
 	private ForumList $forums;
 
 	/**
+	 * Shared reader and bound for the requested page.
+	 *
+	 * @var RequestedPage
+	 */
+	private RequestedPage $paging;
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 0.3.0
@@ -58,11 +65,13 @@ class LoadForumsController {
 	 * @param ContextInterface $wp     WordPress/bbPress seam.
 	 * @param ForumQuery       $query  Shared forum-query builder.
 	 * @param ForumList        $forums Forum list renderer.
+	 * @param RequestedPage    $paging Shared reader and bound for `paged`.
 	 */
-	public function __construct( ContextInterface $wp, ForumQuery $query, ForumList $forums ) {
+	public function __construct( ContextInterface $wp, ForumQuery $query, ForumList $forums, RequestedPage $paging ) {
 		$this->wp     = $wp;
 		$this->query  = $query;
 		$this->forums = $forums;
+		$this->paging = $paging;
 	}
 
 	/**
@@ -71,19 +80,18 @@ class LoadForumsController {
 	 * @since 0.3.0
 	 */
 	public function handle(): void {
-		// phpcs:disable WordPress.Security.NonceVerification.Missing -- public read-only endpoint; see Asset\AssetManager for why there is no nonce.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- public read-only endpoint; see Asset\AssetManager for why there is no nonce.
 		$parent_id = isset( $_POST['forum'] ) ? (int) $_POST['forum'] : 0;
-		$page      = isset( $_POST['paged'] ) ? (int) $_POST['paged'] : 2;
-		// phpcs:enable WordPress.Security.NonceVerification.Missing
-
-		// Clamp: page 1 ships with the document, so load-more starts at 2.
-		if ( $page < 2 ) {
-			$page = 2;
-		}
+		$page      = $this->paging->requested();
 
 		if ( 0 !== $parent_id ) {
 			$this->guard_parent( $parent_id );
 		}
+
+		// Then the page, after access and never before it: a reader who may not see
+		// the named parent is told that, whatever page they asked for. The root list
+		// has no access check to come after, so this is its only refusal.
+		$this->paging->guard( $page );
 
 		$html = $this->forums->capture( $this->query->args( $parent_id, $page ) );
 		$max  = $this->wp->get_max_forum_pages();

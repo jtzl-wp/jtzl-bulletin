@@ -65,6 +65,13 @@ class LoadSubscribedForumsController {
 	private SubscribedForumList $forums;
 
 	/**
+	 * Shared reader for the requested page.
+	 *
+	 * @var RequestedPage
+	 */
+	private RequestedPage $paging;
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 0.3.0
@@ -72,11 +79,13 @@ class LoadSubscribedForumsController {
 	 * @param ContextInterface     $wp     WordPress/bbPress seam.
 	 * @param SubscribedForumQuery $query  Shared subscribed-forum query builder.
 	 * @param SubscribedForumList  $forums Subscribed-forum list renderer.
+	 * @param RequestedPage        $paging Shared reader for `paged`.
 	 */
-	public function __construct( ContextInterface $wp, SubscribedForumQuery $query, SubscribedForumList $forums ) {
+	public function __construct( ContextInterface $wp, SubscribedForumQuery $query, SubscribedForumList $forums, RequestedPage $paging ) {
 		$this->wp     = $wp;
 		$this->query  = $query;
 		$this->forums = $forums;
+		$this->paging = $paging;
 	}
 
 	/**
@@ -85,7 +94,7 @@ class LoadSubscribedForumsController {
 	 * @since 0.3.0
 	 */
 	public function handle(): void {
-		$page    = $this->requested_page();
+		$page    = $this->paging->requested();
 		$user_id = $this->authorized_user();
 
 		$this->guard_page( $page, $user_id );
@@ -101,21 +110,6 @@ class LoadSubscribedForumsController {
 				'hasMore'  => $page < $max,
 			)
 		);
-	}
-
-	/**
-	 * The page the request asks for, floored at the first page a continuation can be.
-	 *
-	 * @since 0.3.0
-	 *
-	 * @return int
-	 */
-	private function requested_page(): int {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- read-only endpoint; see Asset\AssetManager for why there is no nonce, and authorized_user() below for what does gate it.
-		$page = isset( $_POST['paged'] ) ? (int) $_POST['paged'] : 2;
-
-		// Page 1 ships with the document, so load-more starts at 2.
-		return max( 2, $page );
 	}
 
 	/**
@@ -177,9 +171,17 @@ class LoadSubscribedForumsController {
 	 * `ceil( subscriptions / page size )`. Reading the IDs is a single engagement
 	 * lookup, where serving the page is a sorted, offset query over the posts table —
 	 * so a request for page 20,000 costs the cheap answer, not the expensive one
-	 * (CWE-770; see issue #51, whose second item is the same hardening on the three
-	 * public endpoints, where the same shape applies with a forum's topic count and a
-	 * topic's reply count as the bound).
+	 * (CWE-770; issue #51, item 2).
+	 *
+	 * The three public endpoints reach the same hardening by a different route. An
+	 * earlier note here proposed giving them this exact shape, with a forum's topic
+	 * count and a topic's reply count as the bound; that was wrong, because those
+	 * counts live in postmeta maintained by bbPress's own write paths and go stale
+	 * under an import — a bound derived from a stale count refuses pages a reader can
+	 * legitimately reach. They take a declared ceiling instead, and Ajax\RequestedPage
+	 * writes out the reasoning. This endpoint keeps the exact bound, which is tighter
+	 * than that ceiling and subsumes it, so it reuses the shared reader and not the
+	 * shared refusal.
 	 *
 	 * The count is an upper bound, not the page count: forum visibility can still
 	 * remove rows the reader may not see. That is the right direction to err — a page

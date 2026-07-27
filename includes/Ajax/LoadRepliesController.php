@@ -45,6 +45,13 @@ class LoadRepliesController {
 	private ReplyView $reply_view;
 
 	/**
+	 * Shared reader and bound for the requested page.
+	 *
+	 * @var RequestedPage
+	 */
+	private RequestedPage $paging;
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 0.1.0
@@ -52,11 +59,13 @@ class LoadRepliesController {
 	 * @param ContextInterface $wp         WordPress/bbPress seam.
 	 * @param ReplyQuery       $query      Shared reply-query builder.
 	 * @param ReplyView        $reply_view Reply renderer.
+	 * @param RequestedPage    $paging     Shared reader and bound for `paged`.
 	 */
-	public function __construct( ContextInterface $wp, ReplyQuery $query, ReplyView $reply_view ) {
+	public function __construct( ContextInterface $wp, ReplyQuery $query, ReplyView $reply_view, RequestedPage $paging ) {
 		$this->wp         = $wp;
 		$this->query      = $query;
 		$this->reply_view = $reply_view;
+		$this->paging     = $paging;
 	}
 
 	/**
@@ -65,19 +74,17 @@ class LoadRepliesController {
 	 * @since 0.1.0
 	 */
 	public function handle(): void {
-		// phpcs:disable WordPress.Security.NonceVerification.Missing -- public read-only endpoint; see Asset\AssetManager for why there is no nonce.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- public read-only endpoint; see Asset\AssetManager for why there is no nonce.
 		$topic_id = isset( $_POST['topic'] ) ? (int) $_POST['topic'] : 0;
-		$page     = isset( $_POST['paged'] ) ? (int) $_POST['paged'] : 2;
-		// phpcs:enable WordPress.Security.NonceVerification.Missing
-
-		// Clamp: page 1 ships with the document, so load-more starts at 2.
-		if ( $page < 2 ) {
-			$page = 2;
-		}
+		$page     = $this->paging->requested();
 
 		// Refuse the request unless the topic may be read; a passing check falls
 		// through to serving. send_json_error() ends the request from inside.
 		$this->guard_access( $topic_id );
+
+		// Then the page, after access and never before it: a reader who may not
+		// read this thread is told that, whatever page they asked for.
+		$this->paging->guard( $page );
 
 		ob_start();
 		if ( $this->wp->has_replies( $this->query->args( $topic_id, $page ) ) ) {
