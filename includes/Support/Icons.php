@@ -63,6 +63,22 @@ class Icons {
 	}
 
 	/**
+	 * Magnifier.
+	 *
+	 * Used twice, and never at once: as the app bar's entry point into the search
+	 * screen, and as that screen's own submit control. The bar's copy is suppressed
+	 * on the search screen precisely so one glyph never means two things at the same
+	 * time (issue #35).
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return string
+	 */
+	public static function search(): string {
+		return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.4 15.4L20 20"/></svg>';
+	}
+
+	/**
 	 * Reply-context arrow — turns up and back to the left.
 	 *
 	 * Points the way the link goes. The parent of a reply is always older, and the

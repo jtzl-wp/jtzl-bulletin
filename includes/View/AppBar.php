@@ -66,6 +66,12 @@ class AppBar {
 		$back_label = (string) $args['back_label'];
 		$heading    = (bool) $args['heading'];
 
+		// Resolved before anything is emitted, because the leading side has to know:
+		// the title is centered in the space between the two, so a second trailing
+		// control has to be answered by a second leading spacer or the title drifts
+		// half a button off centre on every screen.
+		$search = $this->search_link();
+
 		echo '<header class="bltn-appbar">';
 
 		// Leading: back control, or a spacer to keep the title centered.
@@ -79,6 +85,9 @@ class AppBar {
 		} else {
 			echo '<span class="bltn-appbar__spacer" aria-hidden="true"></span>';
 		}
+		if ( '' !== $search ) {
+			echo '<span class="bltn-appbar__spacer" aria-hidden="true"></span>';
+		}
 
 		// Title (+ optional subtitle). The title doubles as the screen's focus target.
 		$tag        = $heading ? 'h1' : 'span';
@@ -89,6 +98,8 @@ class AppBar {
 		}
 		printf( '</%s>', $tag ); // phpcs:ignore WordPress.Security.EscapeOutput -- internal literal.
 
+		echo $search; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- assembled by search_link() from escaped parts.
+
 		// Trailing: account.
 		printf(
 			'<a class="bltn-iconbtn" href="%s" aria-label="%s">%s</a>',
@@ -98,6 +109,43 @@ class AppBar {
 		);
 
 		echo '</header>';
+	}
+
+	/**
+	 * The search entry point, or '' when there is nowhere for it to go.
+	 *
+	 * Search had no entry point on any screen a reader could reach. bbPress's inline
+	 * field appears on the topic archive and the profile tabs, and nothing in bbPress
+	 * links the topic archive at all — so search existed on screens nobody navigates
+	 * to (issue #35). One control in the bar reaches it from every screen instead,
+	 * on both tiers, at no vertical cost.
+	 *
+	 * A link, not a field. The bar is three items wide on a phone and a text input
+	 * cannot live there without taking the title's place; putting the input on the
+	 * screen it belongs to means the bar gains an icon rather than a control, which
+	 * is the version of this that survives "everything here is subtraction".
+	 *
+	 * Two conditions hide it, and both are the same thought: never offer a door to a
+	 * room the reader is in or that does not exist. It is absent on the search screen
+	 * itself — where the same glyph is the submit control, and one glyph must not
+	 * mean two things at once — and absent on a site with `_bbp_allow_search` off,
+	 * where bbPress answers that URL with nothing.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return string
+	 */
+	private function search_link(): string {
+		if ( ! $this->wp->allow_search() || $this->wp->is_search() ) {
+			return '';
+		}
+
+		return sprintf(
+			'<a class="bltn-iconbtn" href="%s" aria-label="%s">%s</a>',
+			esc_url( $this->wp->get_search_url() ),
+			esc_attr__( 'Search', 'jtzl-bulletin' ),
+			Icons::search()
+		);
 	}
 
 	/**

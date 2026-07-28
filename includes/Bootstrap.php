@@ -12,6 +12,7 @@ use DI\Container;
 use JTZL\Bulletin\Ajax\LoadForumsController;
 use JTZL\Bulletin\Ajax\LoadRepliesController;
 use JTZL\Bulletin\Ajax\LoadSubscribedForumsController;
+use JTZL\Bulletin\Ajax\LoadSearchController;
 use JTZL\Bulletin\Ajax\LoadTopicsController;
 use JTZL\Bulletin\Asset\AssetManager;
 use JTZL\Bulletin\Chrome\AdminBar;
@@ -111,7 +112,8 @@ class Bootstrap {
 	 * threads inside a forum, forums inside the index or a parent forum — and the
 	 * first continuation on a reskin screen, the Subscribed Forums list on a member
 	 * profile, which bbPress renders in its own markup and truncates at the same
-	 * 50-forum ceiling (issue #50).
+	 * 50-forum ceiling (issue #50) — and results inside a search (issue #35), the
+	 * only one of the five whose subject is a set of terms rather than a post.
 	 *
 	 * @since 0.3.0
 	 */
@@ -125,11 +127,14 @@ class Bootstrap {
 		assert( $forums instanceof LoadForumsController );
 		$subscribed = $this->container->get( LoadSubscribedForumsController::class );
 		assert( $subscribed instanceof LoadSubscribedForumsController );
+		$search = $this->container->get( LoadSearchController::class );
+		assert( $search instanceof LoadSearchController );
 
 		$wp->add_action( 'bbp_ajax_bulletin_load_replies', array( $replies, 'handle' ) );
 		$wp->add_action( 'bbp_ajax_bulletin_load_topics', array( $topics, 'handle' ) );
 		$wp->add_action( 'bbp_ajax_bulletin_load_forums', array( $forums, 'handle' ) );
 		$wp->add_action( 'bbp_ajax_bulletin_load_subscribed_forums', array( $subscribed, 'handle' ) );
+		$wp->add_action( 'bbp_ajax_bulletin_load_search', array( $search, 'handle' ) );
 	}
 
 	/**

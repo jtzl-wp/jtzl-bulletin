@@ -73,7 +73,8 @@ class ScreenClassifier {
 	public function is_takeover(): bool {
 		return $this->is_forums_index()
 			|| $this->is_single_forum()
-			|| $this->is_single_topic();
+			|| $this->is_single_topic()
+			|| $this->is_search();
 	}
 
 	/**
@@ -126,6 +127,31 @@ class ScreenClassifier {
 	 */
 	public function is_single_topic(): bool {
 		return $this->wp->is_bbpress() && $this->wp->is_single_topic();
+	}
+
+	/**
+	 * Whether the current request is the search screen.
+	 *
+	 * The fourth and last takeover (issue #35). It was reskinned before this — the
+	 * catch-all reaches it, because is_bbpress() counts search among bbPress's own
+	 * screens — so what changes is the treatment, not whether a reader falls out of
+	 * the shell. What earns the takeover is bbPress rendering the *entire* content
+	 * of every hit, between a header and a footer row that each repeat "Author |
+	 * Search Results"; on a phone that is the clutter this product exists to remove,
+	 * and no stylesheet takes it back out.
+	 *
+	 * Both states of the screen are one screen: with terms, and the bare form at
+	 * /forums/search/. Only `is_search()` decides — see the seam's note on why
+	 * `bbp_is_search_results()` cannot be part of the test — and it already answers
+	 * false on a site that has turned search off, which leaves that site exactly
+	 * where it was.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool
+	 */
+	public function is_search(): bool {
+		return $this->wp->is_bbpress() && $this->wp->is_search();
 	}
 
 	/**

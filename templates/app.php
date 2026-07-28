@@ -25,12 +25,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 <body <?php body_class( 'bltn' ); ?>>
 <div class="bltn-app">
 <?php
+/*
+ * Search is asked last, and deliberately. bbPress registers `bbp_search` as a
+ * public query var, so any of the three screens above can be requested with one
+ * riding along in the URL — and on such a request `bbp_is_search()` is true
+ * alongside them. Asking it last means the screen the reader actually navigated to
+ * is the screen they get; asking it first would have a stray query string replace
+ * a thread with a search.
+ */
 if ( bbp_is_forum_archive() ) {
 	require JTZL_BLTN_DIR . 'templates/screens/forums.php';
 } elseif ( bbp_is_single_forum() ) {
 	require JTZL_BLTN_DIR . 'templates/screens/forum.php';
 } elseif ( bbp_is_single_topic() ) {
 	require JTZL_BLTN_DIR . 'templates/screens/topic.php';
+} elseif ( bbp_is_search() ) {
+	require JTZL_BLTN_DIR . 'templates/screens/search.php';
 }
 ?>
 </div>

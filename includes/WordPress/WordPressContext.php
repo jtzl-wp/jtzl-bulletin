@@ -239,6 +239,28 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * Whether this is bbPress's search screen.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool
+	 */
+	public function is_search(): bool {
+		return (bool) bbp_is_search();
+	}
+
+	/**
+	 * Whether the site allows searching.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool
+	 */
+	public function allow_search(): bool {
+		return (bool) bbp_allow_search();
+	}
+
+	/**
 	 * Whether a user is logged in.
 	 *
 	 * @since 0.1.0
@@ -511,6 +533,17 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * The search screen's URL, with no terms.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return string
+	 */
+	public function get_search_url(): string {
+		return (string) bbp_get_search_url();
+	}
+
+	/**
 	 * A topic's permalink.
 	 *
 	 * @since 0.1.0
@@ -692,6 +725,35 @@ class WordPressContext implements ContextInterface {
 	 */
 	public function get_reply_post_date( int $reply_id, bool $humanize = true ): string {
 		return (string) bbp_get_reply_post_date( $reply_id, $humanize );
+	}
+
+	/**
+	 * A reply's stored title, unfiltered.
+	 *
+	 * See the interface for why this cannot go through `bbp_get_reply_title()`.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $reply_id Reply ID.
+	 * @return string
+	 */
+	public function get_reply_title( int $reply_id ): string {
+		// 'raw', because the default 'display' context runs sanitize_post_field(),
+		// which applies the very `the_title` filter the recursion lives on.
+		return (string) get_post_field( 'post_title', $reply_id, 'raw' );
+	}
+
+	/**
+	 * A short plain-text excerpt of a reply.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $reply_id Reply ID.
+	 * @param int $length   Maximum length in characters.
+	 * @return string
+	 */
+	public function get_reply_excerpt( int $reply_id, int $length ): string {
+		return $this->plain_excerpt( $reply_id, static fn(): string => (string) bbp_get_reply_excerpt( $reply_id, $length ) );
 	}
 
 	/**
@@ -894,6 +956,91 @@ class WordPressContext implements ContextInterface {
 	 */
 	public function get_topic_forum_id( int $topic_id ): int {
 		return (int) bbp_get_topic_forum_id( $topic_id );
+	}
+
+	/**
+	 * A topic's own post date.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int  $topic_id Topic ID.
+	 * @param bool $humanize Whether to return a human-readable diff.
+	 * @return string
+	 */
+	public function get_topic_post_date( int $topic_id, bool $humanize = true ): string {
+		return (string) bbp_get_topic_post_date( $topic_id, $humanize );
+	}
+
+	/**
+	 * A short plain-text excerpt of a topic's opening post.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $topic_id Topic ID.
+	 * @param int $length   Maximum length in characters.
+	 * @return string
+	 */
+	public function get_topic_excerpt( int $topic_id, int $length ): string {
+		return $this->plain_excerpt( $topic_id, static fn(): string => (string) bbp_get_topic_excerpt( $topic_id, $length ) );
+	}
+
+	/**
+	 * A short plain-text excerpt of a forum's description.
+	 *
+	 * Bounded here rather than in the getter, because bbPress ships no forum excerpt
+	 * to bound — and after plain_excerpt(), not before it, so a cut cannot land in the
+	 * middle of an entity that decoding was about to resolve.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $forum_id Forum ID.
+	 * @param int $length   Maximum length in characters.
+	 * @return string
+	 */
+	public function get_forum_excerpt( int $forum_id, int $length ): string {
+		$text = $this->plain_excerpt(
+			$forum_id,
+			static fn(): string => wp_strip_all_tags( (string) bbp_get_forum_content( $forum_id ) )
+		);
+
+		if ( mb_strlen( $text ) <= $length ) {
+			return $text;
+		}
+
+		return rtrim( mb_substr( $text, 0, $length - 1 ) ) . '…';
+	}
+
+	/**
+	 * Reduce one of bbPress's excerpts to text a template can escape.
+	 *
+	 * Two things stand between bbPress's excerpt and a printable string.
+	 *
+	 * It is not plain text. bbPress strips tags but leaves entities behind, and
+	 * appends a literal `&hellip;` when it truncates — so escaping it prints
+	 * `&hellip;` to the reader, and prints `&amp;` where the post said `&`.
+	 * Decoding first means one round of escaping at the template lands on the
+	 * characters the author actually typed.
+	 *
+	 * And it is not password-aware at the point it matters. `bbp_get_*_content()`
+	 * does check, and answers a protected post with the password form — but the
+	 * excerpt reads `post_excerpt` first and returns it unguarded, so a protected
+	 * post carrying one would spill it into a result row. Nothing in bbPress's own
+	 * UI writes that field, which is exactly why an import is free to. Withholding
+	 * the excerpt also spares the reader the alternative: the password form,
+	 * stripped of its markup, rendered as though it were what the post says.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int      $post_id Topic or reply ID.
+	 * @param callable $excerpt Deferred excerpt getter, called only when readable.
+	 * @return string
+	 */
+	private function plain_excerpt( int $post_id, callable $excerpt ): string {
+		if ( post_password_required( $post_id ) ) {
+			return '';
+		}
+
+		return trim( html_entity_decode( (string) $excerpt(), ENT_QUOTES | ENT_HTML5, 'UTF-8' ) );
 	}
 
 	/**
@@ -1558,6 +1705,155 @@ class WordPressContext implements ContextInterface {
 		// reply_query is always primed by a has_replies() call before this runs
 		// (the reading view and the AJAX handler both do so).
 		return (int) bbpress()->reply_query->max_num_pages;
+	}
+
+	/**
+	 * The search terms for this request, sanitised by bbPress.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return string
+	 */
+	public function get_search_terms(): string {
+		$terms = bbp_get_search_terms();
+
+		return $this->normalize_search_terms( is_string( $terms ) ? $terms : '' );
+	}
+
+	/**
+	 * Search terms arriving on a POSTed request parameter.
+	 *
+	 * The obvious thing to delegate to is `bbp_sanitize_search_request()`, and it
+	 * cannot be: it refuses any key outside `bbp_get_search_type_ids()`, which is
+	 * `s | fs | ts | rs` — and `bbp_search`, the rewrite id our control posts under,
+	 * is not one of them. Renaming the parameter to `s` to fit is worse than it
+	 * looks, because `s` is a *public query var*: WordPress reads `$_POST` into the
+	 * main query before `$_GET`, so posting it would turn the continuation request
+	 * into a WordPress search of its own.
+	 *
+	 * So this does what that function does once its allowlist has passed —
+	 * `wp_unslash()`, then the same normalisation the rewrite path gets.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param string $key Request parameter name.
+	 * @return string
+	 */
+	public function sanitize_search_request( string $key ): string {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- public read-only endpoint; see Asset\AssetManager for why there is no nonce, and LoadSearchController for what does gate the request.
+		$raw = isset( $_POST[ $key ] ) ? wp_unslash( $_POST[ $key ] ) : '';
+
+		return is_scalar( $raw ) ? $this->normalize_search_terms( (string) $raw ) : '';
+	}
+
+	/**
+	 * The one normalisation both ways into a search share.
+	 *
+	 * Not a tidy-up: it is what makes paging honest. The screen reads its terms from
+	 * bbPress's rewrite value and the continuation reads them from the request body,
+	 * and if those two derive the string differently then page 2 searches something
+	 * page 1 did not — which is the duplicate-and-gap symptom `Query\SearchQuery`'s
+	 * single arg builder and ID tiebreak exist to prevent, reintroduced one layer
+	 * above them. `sanitize_text_field()` trims, collapses whitespace and strips
+	 * tags, so `<b>foo</b>` and `foo` are one query rather than two (raised by
+	 * Gitar on #69).
+	 *
+	 * It also closes something bbPress leaves open: `bbp_get_search_terms()` returns
+	 * the rewrite value with only `wp_unslash()` applied, and bbPress's own
+	 * `bbp_search_terms()` echoes it into a value attribute unescaped.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param string $terms Raw terms.
+	 * @return string
+	 */
+	private function normalize_search_terms( string $terms ): string {
+		return sanitize_text_field( $terms );
+	}
+
+	/**
+	 * Prime the search-results loop.
+	 *
+	 * Delegates to bbPress rather than running a WP_Query of our own: its function is
+	 * what maintains `found_posts` and `posts_per_page` on `bbpress()->search_query`,
+	 * and those are what give the continuation control an honest bound. Deriving the
+	 * bound separately is the mistake Query\ReplyQuery documents.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param array<string,mixed> $args Query args (see Query\SearchQuery).
+	 * @return bool Whether any results matched.
+	 */
+	public function has_search_results( array $args ): bool {
+		return (bool) bbp_has_search_results( $args );
+	}
+
+	/**
+	 * Advance the search-results loop.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool Whether a result remains.
+	 */
+	public function the_search_results_loop(): bool {
+		return (bool) bbp_search_results();
+	}
+
+	/**
+	 * Set up the current search result in the loop.
+	 *
+	 * @since 0.3.0
+	 */
+	public function the_search_result(): void {
+		bbp_the_search_result();
+	}
+
+	/**
+	 * The post type of the result currently in the search loop.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return string
+	 */
+	public function get_search_result_post_type(): string {
+		return (string) get_post_type();
+	}
+
+	/**
+	 * The ID of the result currently in the search loop.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return int
+	 */
+	public function get_search_result_id(): int {
+		return (int) get_the_ID();
+	}
+
+	/**
+	 * The number of result pages from the last search query.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return int
+	 */
+	public function get_max_search_pages(): int {
+		// search_query is always primed by a has_search_results() call before this
+		// runs (the search screen and the AJAX handler both do so), and bbPress
+		// initialises it to an empty WP_Query at startup, so the property is there
+		// even on a request that never searched.
+		return (int) bbpress()->search_query->max_num_pages;
+	}
+
+	/**
+	 * The total number of results the last search query matched.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return int
+	 */
+	public function get_search_result_count(): int {
+		return (int) bbpress()->search_query->found_posts;
 	}
 
 	/**

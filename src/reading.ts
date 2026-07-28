@@ -82,8 +82,28 @@ function initModerationToggle(): void {
 		return;
 	}
 
+	/*
+	 * Both fallbacks are type ceremony, not behaviour, and neither side of them can
+	 * be reached from markup we produce — so they are excluded rather than covered by
+	 * a test asserting a state that cannot occur. `Node.textContent` is typed
+	 * `string | null` because it IS null on a document, a doctype or a notation; on an
+	 * element it never is. And `DOMStringMap` values are `string | undefined` because
+	 * the attribute may be absent, while `View\ModerationActions::render_toggle()`
+	 * always writes `data-bltn-label-on` — an empty translation would leave it present
+	 * and empty, which is a value, not a miss.
+	 *
+	 * Same rule the PHP side applies to its ABSPATH guards: mark what is unreachable
+	 * by construction, never what is merely untested.
+	 *
+	 * v8 has no per-branch marker, so the two lines leave the report entirely — but
+	 * not the suite. "works with no BLTN config at all" clicks the toggle and asserts
+	 * it reads "Done", which is both labels resolved and swapped; the assertions are
+	 * what protect these lines, and always were.
+	 */
+	/* v8 ignore start */
 	const labelOff = toggle.textContent ?? '';
 	const labelOn = toggle.dataset.bltnLabelOn ?? labelOff;
+	/* v8 ignore stop */
 
 	toggle.addEventListener('click', () => {
 		const on = thread.classList.toggle('bltn-thread--moderating');

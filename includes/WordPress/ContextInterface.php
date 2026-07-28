@@ -203,6 +203,37 @@ interface ContextInterface {
 	 */
 	public function is_subscriptions(): bool;
 
+	/**
+	 * Whether this is bbPress's search screen.
+	 *
+	 * The screen, in both its states: with terms, and the bare form at
+	 * `/forums/search/`. `bbp_is_search_results()` is deliberately NOT part of the
+	 * pair — it answers true whenever `$_REQUEST['bbp_search']` is set on any
+	 * request at all, so classifying on it would flip a profile or a tag archive
+	 * into the search screen the moment that query string rode along.
+	 *
+	 * It already answers false when a site has turned search off, so nothing
+	 * downstream has to ask twice.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool
+	 */
+	public function is_search(): bool;
+
+	/**
+	 * Whether the site allows searching.
+	 *
+	 * Only the entry point needs this separately from is_search(): the magnifier
+	 * is rendered on screens that are not the search screen, so it cannot infer
+	 * the setting from where it is.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool
+	 */
+	public function allow_search(): bool;
+
 	// --- Auth & site state --------------------------------------------------
 
 	/**
@@ -378,6 +409,15 @@ interface ContextInterface {
 	public function get_forums_url(): string;
 
 	/**
+	 * The search screen's URL, with no terms.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return string
+	 */
+	public function get_search_url(): string;
+
+	/**
 	 * A topic's permalink.
 	 *
 	 * @since 0.1.0
@@ -532,6 +572,47 @@ interface ContextInterface {
 	public function get_reply_post_date( int $reply_id, bool $humanize = true ): string;
 
 	/**
+	 * A reply's stored title, unfiltered, or '' when it has none.
+	 *
+	 * The field holds bbPress's "Reply To: {thread}", written at insert time, and
+	 * nothing normally shows it — a reply is displayed under the thread it belongs
+	 * to. Search is where that breaks down: a result naming its thread has nothing to
+	 * name when the reply has lost it.
+	 *
+	 * ⚠ It has to be the raw field. `bbp_get_reply_title()` **does not return** on a
+	 * reply with no thread — bbPress hangs, and takes the request with it. Measured:
+	 * an empty title runs `bbp_get_reply_title_fallback()`, which asks
+	 * `bbp_get_reply_topic_title()`, which asks `bbp_get_topic_title( 0 )`, which asks
+	 * `bbp_get_topic_id( 0 )` — and inside a search loop whose current post is a
+	 * reply, that resolution walks back to the reply's own topic and starts again.
+	 * Xdebug stops it at 512 frames; production would not.
+	 *
+	 * So this is `get_post_field()`, which runs no filters and therefore cannot enter
+	 * that loop, and callers handle '' themselves.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $reply_id Reply ID.
+	 * @return string
+	 */
+	public function get_reply_title( int $reply_id ): string;
+
+	/**
+	 * A short plain-text excerpt of a reply.
+	 *
+	 * Search is the one screen that shows one. A reply result is titled with the
+	 * *thread* it sits in, which need not contain the search terms at all, so
+	 * without the reply's own words the row cannot say why it is in the list.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $reply_id Reply ID.
+	 * @param int $length   Maximum length in characters.
+	 * @return string
+	 */
+	public function get_reply_excerpt( int $reply_id, int $length ): string;
+
+	/**
 	 * Echo a reply's filtered content (real post HTML).
 	 *
 	 * @since 0.1.0
@@ -646,6 +727,53 @@ interface ContextInterface {
 	 * @return int
 	 */
 	public function get_topic_forum_id( int $topic_id ): int;
+
+	/**
+	 * A topic's own post date.
+	 *
+	 * Distinct from get_topic_last_active_time(), which the thread list uses. A
+	 * thread list is browsed for what has moved; a result list is read in the order
+	 * things were written, so it shows the date it is sorted by.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int  $topic_id Topic ID.
+	 * @param bool $humanize Whether to return a human-readable diff.
+	 * @return string
+	 */
+	public function get_topic_post_date( int $topic_id, bool $humanize = true ): string;
+
+	/**
+	 * A short plain-text excerpt of a topic's opening post.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $topic_id Topic ID.
+	 * @param int $length   Maximum length in characters.
+	 * @return string
+	 */
+	public function get_topic_excerpt( int $topic_id, int $length ): string;
+
+	/**
+	 * A short plain-text excerpt of a forum's description.
+	 *
+	 * There is no excerpt getter for a forum in bbPress, so this is the one built here
+	 * — and both halves it adds matter. It is **bounded**, so a long description cannot make
+	 * one result row taller than the list it is in. And it is **password-aware**:
+	 * WordPress replaces protected content with its password *form*, so
+	 * `bbp_get_forum_content()` returns that markup, and stripping its tags leaves the
+	 * form's own prose behind — a row that reads "This content is password-protected.
+	 * To view it, please enter the password below. Password:" as though it were what
+	 * the forum is about. View\ForumList says the same thing about the same hazard, in
+	 * its own units; raised by Qodo on #69, where the search row had neither guard.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $forum_id Forum ID.
+	 * @param int $length   Maximum length in characters.
+	 * @return string
+	 */
+	public function get_forum_excerpt( int $forum_id, int $length ): string;
 
 	/**
 	 * Whether a topic is closed to new replies.
@@ -1015,6 +1143,109 @@ interface ContextInterface {
 	 * @return int
 	 */
 	public function get_max_reply_pages(): int;
+
+	/**
+	 * The search terms for this request.
+	 *
+	 * '' when none were given — which is the terms-less search screen, not an
+	 * error. bbPress's own getter returns `false` in that case; the seam narrows it
+	 * to a string so callers test one thing, and normalises it the same way
+	 * sanitize_search_request() does, so the screen and its continuation cannot
+	 * search two different strings.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return string
+	 */
+	public function get_search_terms(): string;
+
+	/**
+	 * Search terms arriving on a POSTed request parameter.
+	 *
+	 * The continuation endpoint's own reader. It is a separate method because the
+	 * getter above reads the *query var* bbPress's rewrite rules populate, and a
+	 * continuation request carries its subject in the request body like every other
+	 * one of ours — but the two normalise identically, which is what keeps a page
+	 * two searching what page one searched. See the implementation for why bbPress's
+	 * own sanitiser cannot be handed this key.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param string $key Request parameter name.
+	 * @return string
+	 */
+	public function sanitize_search_request( string $key ): string;
+
+	/**
+	 * Prime the search-results loop.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param array<string,mixed> $args Query args (see Query\SearchQuery).
+	 * @return bool Whether any results matched.
+	 */
+	public function has_search_results( array $args ): bool;
+
+	/**
+	 * Advance the search-results loop.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool Whether a result remains.
+	 */
+	public function the_search_results_loop(): bool;
+
+	/**
+	 * Set up the current search result in the loop.
+	 *
+	 * @since 0.3.0
+	 */
+	public function the_search_result(): void;
+
+	/**
+	 * The post type of the result currently in the search loop.
+	 *
+	 * Search is the only loop we render that returns more than one type, so the
+	 * row renderer has to ask. bbPress's own loop-search.php asks the same
+	 * question, in the same place, to pick its partial.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return string
+	 */
+	public function get_search_result_post_type(): string;
+
+	/**
+	 * The ID of the result currently in the search loop.
+	 *
+	 * Asked for outright rather than through bbp_get_topic_id() / bbp_get_reply_id()
+	 * / bbp_get_forum_id(), which each answer from a different ambient global that
+	 * bbp_the_search_result() has to reset on every iteration. One result, one ID,
+	 * and the row renderer passes it explicitly to every getter it then calls.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return int
+	 */
+	public function get_search_result_id(): int;
+
+	/**
+	 * The number of result pages from the last search query.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return int
+	 */
+	public function get_max_search_pages(): int;
+
+	/**
+	 * The total number of results the last search query matched.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return int
+	 */
+	public function get_search_result_count(): int;
 
 	// --- Assets -------------------------------------------------------------
 

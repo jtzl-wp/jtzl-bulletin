@@ -26,9 +26,15 @@ class LoadMore {
 	/**
 	 * Echo the load-more control.
 	 *
-	 * Fields: action (bbPress AJAX action), param (POST key for the subject id),
-	 * id (the subject — a topic or a forum), target (id of the element rows are
-	 * appended to), next (the page the control will request), and label.
+	 * Fields: action (bbPress AJAX action), param (POST key for the subject),
+	 * id (the subject — a topic, a forum, or a set of search terms), target (id of
+	 * the element rows are appended to), next (the page the control will request),
+	 * and label.
+	 *
+	 * The subject is a string, not an id. It was written for topic and forum IDs and
+	 * they still arrive as integers, but the search list's subject is the terms
+	 * themselves — and the script has always sent this value through verbatim, so
+	 * widening it here is the whole change (issue #35).
 	 *
 	 * A control without a subject omits both of its attributes rather than naming an
 	 * empty one: the subscribed-forums list is a list of one user's own subscriptions,
@@ -43,7 +49,7 @@ class LoadMore {
 	public function render( array $control ): void {
 		$action = (string) ( $control['action'] ?? '' );
 		$param  = (string) ( $control['param'] ?? '' );
-		$id     = (int) ( $control['id'] ?? 0 );
+		$id     = (string) ( $control['id'] ?? '' );
 		$target = (string) ( $control['target'] ?? '' );
 		$next   = (int) ( $control['next'] ?? 2 );
 		$label  = (string) ( $control['label'] ?? '' );
@@ -53,7 +59,7 @@ class LoadMore {
 			$subject = sprintf(
 				' data-param="%s" data-id="%s"',
 				esc_attr( $param ),
-				esc_attr( (string) $id )
+				esc_attr( $id )
 			);
 		}
 
