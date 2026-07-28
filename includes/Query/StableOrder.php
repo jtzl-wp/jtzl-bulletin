@@ -101,6 +101,20 @@ class StableOrder {
 		$orderby = $args['orderby'] ?? '';
 		$order   = $this->direction( $args['order'] ?? 'DESC' );
 
+		// An absent or empty-string orderby is not the absence of an order — to
+		// WP_Query it *is* an order, the default one, `post_date` in the requested
+		// direction (the `empty( $q['orderby'] )` branch of WP_Query::get_posts).
+		// Naming it is what lets the tiebreak be appended to it: left empty, the key
+		// would be dropped by WP_Query::parse_orderby() and the loop would come back
+		// sorted by ID alone — a reordered screen rather than a settled tie. bbPress
+		// registers its "Topics with no replies" view exactly this way (issue #34).
+		//
+		// `false` and an empty array are a different thing and stay untouched: those
+		// blank out ORDER BY on purpose, and are refused below.
+		if ( '' === $orderby ) {
+			$orderby = 'date';
+		}
+
 		// A search ranks by relevance, and a random order is a deliberate absence
 		// of one: in neither case would appending a key break a tie, it would
 		// change which rows rank where. Leave both exactly as bbPress asked.
@@ -108,23 +122,40 @@ class StableOrder {
 			return $args;
 		}
 
-		if ( is_array( $orderby ) ) {
-			// Already keyed: add ID unless the caller sorts on it already, and
-			// follow the direction of the key it will be breaking ties within.
-			if ( ! isset( $orderby['ID'] ) ) {
-				$last            = end( $orderby );
-				$orderby['ID']   = $this->direction( is_string( $last ) ? $last : $order );
-				$args['orderby'] = $orderby;
-			}
-			return $args;
-		}
-
-		$args['orderby'] = array(
-			(string) $orderby => $order,
-			'ID'              => $order,
-		);
+		$args['orderby'] = is_array( $orderby )
+			? $this->with_id_appended( $orderby, $order )
+			: array(
+				(string) $orderby => $order,
+				'ID'              => $order,
+			);
 
 		return $args;
+	}
+
+	/**
+	 * Append `ID` to an orderby that is already keyed.
+	 *
+	 * The direction comes from the key ID will be breaking ties *within*, not from
+	 * the argument list's top-level `order` — that one describes the unkeyed form,
+	 * and WP_Query ignores it once each key carries its own direction. A caller who
+	 * already sorts on ID is left alone: they have settled their own ties, and
+	 * moving the key would reorder their loop rather than stabilise it.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param array<string,mixed> $orderby A keyed orderby, known non-empty.
+	 * @param string              $order   Normalised fallback direction.
+	 * @return array<string,mixed>
+	 */
+	private function with_id_appended( array $orderby, string $order ): array {
+		if ( isset( $orderby['ID'] ) ) {
+			return $orderby;
+		}
+
+		$last          = end( $orderby );
+		$orderby['ID'] = $this->direction( is_string( $last ) ? $last : $order );
+
+		return $orderby;
 	}
 
 	/**
@@ -136,6 +167,11 @@ class StableOrder {
 	 * turned into the keyed array without re-parsing it, so it is left alone —
 	 * bbPress never emits one, and a caller who wrote it has said what they want.
 	 *
+	 * An empty *string* never arrives here: the caller resolves it to `date` first,
+	 * because that is what WP_Query would do with it. `false` and an empty array do
+	 * arrive, and are refused — those blank out ORDER BY deliberately, and appending
+	 * ID would impose an order the caller declined.
+	 *
 	 * @since 0.3.0
 	 *
 	 * @param mixed $orderby The `orderby` argument.
@@ -145,7 +181,7 @@ class StableOrder {
 		if ( is_array( $orderby ) ) {
 			return array() !== $orderby;
 		}
-		if ( ! is_string( $orderby ) || '' === $orderby ) {
+		if ( ! is_string( $orderby ) ) {
 			return false;
 		}
 		if ( in_array( strtolower( $orderby ), array( 'rand', 'none' ), true ) ) {
