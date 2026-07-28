@@ -653,7 +653,7 @@ interface ContextInterface {
 	 */
 	public function get_paged(): int;
 
-	// --- WordPress post / meta / transients --------------------------------
+	// --- WordPress post & meta ---------------------------------------------
 
 	/**
 	 * A post's type.
@@ -674,38 +674,6 @@ interface ContextInterface {
 	 * @return string
 	 */
 	public function get_post_status( int $post_id ): string;
-
-	/**
-	 * A single post-meta value as a string.
-	 *
-	 * @since 0.1.0
-	 *
-	 * @param int    $post_id Post ID.
-	 * @param string $key     Meta key.
-	 * @return string
-	 */
-	public function get_post_meta_value( int $post_id, string $key ): string;
-
-	/**
-	 * Read a transient.
-	 *
-	 * @since 0.1.0
-	 *
-	 * @param string $key Transient key.
-	 * @return mixed The value, or false if absent.
-	 */
-	public function get_transient( string $key );
-
-	/**
-	 * Write a transient.
-	 *
-	 * @since 0.1.0
-	 *
-	 * @param string $key   Transient key.
-	 * @param mixed  $value Value to store.
-	 * @param int    $ttl   Lifetime in seconds.
-	 */
-	public function set_transient( string $key, $value, int $ttl ): void;
 
 	// --- bbPress query & replies loop --------------------------------------
 
@@ -813,15 +781,23 @@ interface ContextInterface {
 	public function reset_postdata(): void;
 
 	/**
-	 * Topic IDs in a forum, ordered freshest first.
+	 * Where a topic sits in its forum's freshness order, and its neighbours.
 	 *
-	 * @since 0.1.0
+	 * Immediate forum only — topics in sub-forums are not folded in. Bounded by
+	 * design: this answers with four integers no matter how large the forum is,
+	 * where the array it replaced grew with the topic count (issue #59).
+	 *
+	 * Position is 0 and both neighbours are 0 when the topic is not a member of
+	 * the ordered set — trashed, spammed, or in another forum.
+	 *
+	 * @since 0.3.0
 	 *
 	 * @param int      $forum_id Forum ID.
+	 * @param int      $topic_id Topic to locate within it.
 	 * @param string[] $statuses Post statuses to include.
-	 * @return int[]
+	 * @return array{total:int,position:int,prev_id:int,next_id:int}
 	 */
-	public function get_forum_topic_ids( int $forum_id, array $statuses ): array;
+	public function get_topic_rank( int $forum_id, int $topic_id, array $statuses ): array;
 
 	/**
 	 * IDs of a forum's sticky topics, super stickies included.
