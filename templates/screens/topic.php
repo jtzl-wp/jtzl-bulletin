@@ -134,6 +134,55 @@ $bltn_moderates = $bltn_mod->available( $bltn_topic_id );
 				</p>
 
 				<?php
+				/*
+				 * The thread's topic tags, in bbPress's own markup: the anchors are
+				 * core's get_the_term_list() output, and only the wrapper is ours
+				 * (bbPress's default before/after would print a "Tagged:" paragraph).
+				 * They sit with the header because they describe the thread, not the
+				 * post — the same reason bbPress prints them in content-single-topic.php
+				 * and nowhere in its topic loop, which is also why the thread list
+				 * carries none (issue #33).
+				 *
+				 * The wrapper is a labelled group, and that is what pays for dropping
+				 * "Tagged:". A sighted reader is told these are tags by their shape —
+				 * a row of small outlined pills under a heading — and a screen reader
+				 * is told nothing by shape at all, so without a name the row is three
+				 * bare links in the middle of a thread header. `role="group"` names the
+				 * set without adding a landmark to enumerate, which is the same trade
+				 * the moderation tray makes one element below.
+				 *
+				 * No guard is needed around this. bbp_get_topic_tag_list() returns its
+				 * `none` string — empty — before it builds a wrapper, both when the
+				 * topic has no terms and when the site has topic tags switched off, so
+				 * there is no empty box to suppress.
+				 *
+				 * The separator is a space rather than '': the flex gap does the
+				 * spacing on screen, but with no separator at all the terms would run
+				 * together as one word for anything reading this markup without our
+				 * stylesheet. A whitespace-only text node between flex items generates
+				 * no anonymous flex item, so the space costs nothing visually.
+				 *
+				 * Unlike the title above, the term names are not escaped here, and the
+				 * asymmetry is deliberate. The title is ours: we take a string and make
+				 * an element out of it, so #51's rule applies — text should not be able
+				 * to become markup. The terms are not: get_the_term_list() builds the
+				 * anchors and interpolates the name itself, exactly as core's own
+				 * the_tags() does on every WordPress theme. There is no argument that
+				 * would change it, only the `term_links-topic-tag` filter, and taking
+				 * that over would mean re-implementing core's markup to escape one
+				 * value core chose not to.
+				 */
+				bbp_topic_tag_list(
+					$bltn_topic_id,
+					array(
+						'before' => '<div class="bltn-tags" role="group" aria-label="' . esc_attr__( 'Thread tags', 'jtzl-bulletin' ) . '">',
+						'sep'    => ' ',
+						'after'  => '</div>',
+					)
+				);
+				?>
+
+				<?php
 				// The thread's own actions, under the header they act on. Revealed with
 				// the per-reply rows rather than standing open, so a moderator reading a
 				// thread sees the thread, not a control panel.

@@ -358,6 +358,49 @@ body.admin-bar .bltn-app {
 	margin-inline-start: auto;
 }
 
+/* Topic tags — the reading view's one navigational control, sitting with the
+   thread header because that is what they describe.
+
+   Outlined, not filled. The filled wash pill is already spoken for twice on this
+   screen — Subscribe and the "Original post" chip — and both are teal-inked
+   because one is an action and the other a status. A tag is quieter than either:
+   a fact about the thread that happens to be followable. An outline puts it in
+   the same family without claiming the accent, and sans keeps it reading as
+   chrome against the serif body.
+
+   The voice lives on the container, not on the anchors, so the one case that
+   arrives as bare text still lands in it: on a spammed topic bbPress substitutes
+   the pre-spam terms from post meta and implodes them as plain strings, with no
+   links to style. A moderator viewing that topic gets a quiet grey line rather
+   than unstyled 16px body text.
+
+   Height, not just padding, is the constraint: 11px over 1.4 plus 4px of padding
+   and the border clears the 24px WCAG 2.5.8 minimum, which a tighter chip at this
+   type size does not. */
+.bltn-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin: 2px 0 10px;
+	font-family: var(--bltn-sans);
+	font-size: 11px;
+	line-height: 1.4;
+	color: var(--bltn-ink-2);
+}
+.bltn-tags a {
+	display: inline-block;
+	font-weight: 600;
+	color: var(--bltn-ink-2);
+	border: 1px solid var(--bltn-line);
+	border-radius: 999px;
+	padding: 4px 10px;
+	text-decoration: none;
+}
+.bltn-tags a:hover {
+	border-color: var(--bltn-ink-3);
+	color: var(--bltn-ink);
+}
+
 .bltn-post {
 	padding: 20px 0 4px;
 	border-top: 1px solid var(--bltn-line-soft);
@@ -1564,6 +1607,37 @@ body.admin-bar .bltn-app {
 .bltn-reskin__body #bbpress-forums div.bbp-template-notice.warning {
 	border-inline-start: 3px solid var(--bltn-unread);
 }
+
+/* Topic tags, this tier's copy of them (#33). The takeover reading view calls
+   bbp_topic_tag_list() with our own wrapper and gets chips; a topic that declines
+   the takeover — threaded replies, #12 — reaches the same upstream call through
+   bbPress's own content-single-topic.php, with bbPress's defaults: a "Tagged:"
+   label and a comma-separated list, printed as a direct child of #bbpress-forums.
+   Left unstyled it arrived at 14px in full body ink and reaching both shell edges,
+   reading as content on the one screen whose job is to make bbPress read as ours.
+
+   Recoloured and retyped rather than rebuilt into the takeover's chips, and that is
+   the tier's rule rather than thrift: bbPress separates the anchors with literal
+   ", " text nodes, so a flex row of pills would set a stray comma between every two
+   of them. Same reason "Started by:" and "Voices" survive on the loop cards — this
+   tier keeps every field bbPress renders and only changes its voice. Sized to the
+   breadcrumb directly above it, so the two read as one band of chrome above the
+   thread rather than as two unrelated lines. */
+.bltn-reskin .bltn-reskin__body #bbpress-forums > div.bbp-topic-tags {
+	padding-inline: 20px;
+	margin: 0 0 10px;
+	font-family: var(--bltn-sans);
+	font-size: 11.5px;
+	color: var(--bltn-ink-3);
+}
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-topic-tags p {
+	margin: 0;
+}
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-topic-tags a {
+	font-weight: 600;
+	color: var(--bltn-ink-2);
+	text-decoration: none;
+}
 /* Search: off bbPress's float:right, a full-width field in our input styling — no
    longer squeezed beside the section heading. Shared, because the profile's per-tab
    search and the topic archive's own field are the same markup. */
@@ -1732,9 +1806,19 @@ body.admin-bar .bltn-app {
    its shape. The loop is the shared card above; what is particular to these screens
    is the chrome around it, which arrives as direct children of #bbpress-forums with
    nothing padding them. Hence `>`: it gives them the 20px gutter the card already
-   has, and cannot reach the profile's nested copies of the same classes. */
+   has, and cannot reach the profile's nested copies of the same classes.
+
+   The notice joined the list for the tag archive's sake (#33). It is the only screen
+   in this family that renders one at the top level with content in it — a tag's
+   description, which bbPress wraps in `.bbp-template-notice.info` — and its tinted
+   band was reaching the shell edge while the breadcrumb above it sat on the gutter,
+   so the two disagreed by the notice's own 14px of padding. This rule has to stay
+   AFTER the notice block above: `.info` sets `padding` as a shorthand at equal
+   specificity, so only a later `padding-inline` takes the horizontal axis off it
+   while leaving its vertical padding — and the empty state's 30px — alone. */
 .bltn-reskin .bltn-reskin__body #bbpress-forums > div.bbp-search-form,
 .bltn-reskin .bltn-reskin__body #bbpress-forums > div.bbp-breadcrumb,
+.bltn-reskin .bltn-reskin__body #bbpress-forums > div.bbp-template-notice,
 .bltn-reskin .bltn-reskin__body #bbpress-forums > div.bbp-pagination {
 	padding-inline: 20px;
 }
