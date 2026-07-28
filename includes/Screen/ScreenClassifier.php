@@ -140,8 +140,39 @@ class ScreenClassifier {
 	 * @return bool
 	 */
 	private function is_excluded(): bool {
+		if ( $this->is_moderation_form() ) {
+			return false;
+		}
+
 		return $this->wp->is_topic_edit()
 			|| $this->wp->is_reply_edit()
 			|| $this->wp->is_forum_edit();
+	}
+
+	/**
+	 * Whether the request is one of bbPress's moderation forms.
+	 *
+	 * These have to be asked about before the edit exclusion, because bbPress builds
+	 * all three on top of it: `bbp_is_topic_merge()` and `bbp_is_topic_split()` are
+	 * `bbp_is_topic_edit()` plus an `action` parameter, and `bbp_is_reply_move()` is
+	 * `bbp_is_reply_edit()` plus one. Excluding every edit request therefore excluded
+	 * these too, and merge, split and move — the destinations of three links the
+	 * moderation mode renders — dropped a moderator out of Bulletin into the site
+	 * theme mid-task. That contradicts the tiering's own rule that nothing a reader
+	 * can reach from inside the shell leaves it, and issue #36's "merge/split/move
+	 * reachable and legible in-shell".
+	 *
+	 * The plain edit forms stay excluded. They are the composer's surface, and P4 owns
+	 * it; a moderator following Edit is going somewhere this release does not render,
+	 * which is a different problem from the one this fixes.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool
+	 */
+	private function is_moderation_form(): bool {
+		return $this->wp->is_topic_merge()
+			|| $this->wp->is_topic_split()
+			|| $this->wp->is_reply_move();
 	}
 }

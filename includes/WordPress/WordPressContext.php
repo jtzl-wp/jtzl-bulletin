@@ -195,6 +195,39 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * Whether the request is bbPress's merge-topic form.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool
+	 */
+	public function is_topic_merge(): bool {
+		return (bool) bbp_is_topic_merge();
+	}
+
+	/**
+	 * Whether the request is bbPress's split-topic form.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool
+	 */
+	public function is_topic_split(): bool {
+		return (bool) bbp_is_topic_split();
+	}
+
+	/**
+	 * Whether the request is bbPress's move-reply form.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool
+	 */
+	public function is_reply_move(): bool {
+		return (bool) bbp_is_reply_move();
+	}
+
+	/**
 	 * Whether this is a member profile's Subscriptions tab.
 	 *
 	 * @since 0.3.0
@@ -249,6 +282,131 @@ class WordPressContext implements ContextInterface {
 	 */
 	public function current_user_can_edit_user( int $user_id ): bool {
 		return (bool) current_user_can( 'edit_user', $user_id );
+	}
+
+	/**
+	 * Whether the current user may moderate a given forum post.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $post_id Topic or reply ID the moderation would act on.
+	 * @return bool
+	 */
+	public function current_user_can_moderate( int $post_id ): bool {
+		return $post_id > 0 && (bool) current_user_can( 'moderate', $post_id );
+	}
+
+	/**
+	 * Moderation links for a topic, in bbPress's own markup.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $topic_id Topic ID.
+	 * @return string Markup, or '' when the user may do nothing.
+	 */
+	public function get_topic_moderation_links( int $topic_id ): string {
+		return $this->moderation_links(
+			'bbp_topic_admin_links',
+			static fn(): string => (string) bbp_get_topic_admin_links(
+				array(
+					'id'           => $topic_id,
+					'sep'          => '',
+
+					/*
+					 * bbPress's own words for these are "Stick" and "(to front)",
+					 * written to read inline as "Stick (to front)". Laid out as chips
+					 * the parenthetical loses its host and names nothing, and "stick"
+					 * is bbPress's jargon on a screen that says "Pinned" everywhere
+					 * else — the forum screen's section label, and DESIGN.md's own
+					 * vocabulary. So each chip names its action in the app's language.
+					 * Same functions, same nonces; only the labels are ours.
+					 */
+					'stick_text'   => __( 'Pin', 'jtzl-bulletin' ),
+					'unstick_text' => __( 'Unpin', 'jtzl-bulletin' ),
+					'super_text'   => __( 'Pin everywhere', 'jtzl-bulletin' ),
+				)
+			)
+		);
+	}
+
+	/**
+	 * Moderation links for a reply, in bbPress's own markup.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $reply_id Reply ID.
+	 * @return string Markup, or '' when the user may do nothing.
+	 */
+	public function get_reply_moderation_links( int $reply_id ): string {
+		return $this->moderation_links(
+			'bbp_reply_admin_links',
+			static fn(): string => (string) bbp_get_reply_admin_links(
+				array(
+					'id'  => $reply_id,
+					'sep' => '',
+				)
+			)
+		);
+	}
+
+	/**
+	 * Render one of bbPress's admin-link sets, minus the link that opens a composer,
+	 * and report emptiness honestly.
+	 *
+	 * Two things happen here, both of them about staying out of bbPress's way.
+	 *
+	 * The set is bbPress's own — we ask for it and drop exactly one member rather than
+	 * enumerate the rest, so a link a future bbPress adds arrives without us updating
+	 * a list (and without fifteen more functions in `stubs/bbpress-stubs.php`). What
+	 * comes out is `reply`: "Reply" on a topic, "Reply To" on a reply, both pointing at
+	 * bbPress's composer, which the takeover reading view does not render — P4 owns
+	 * posting. A door to a room that is not built.
+	 *
+	 * The filter is added and removed around the single call rather than left on. On
+	 * the reskin tier bbPress renders its own admin links AND its own reply form, so
+	 * "Reply To" works there and removing it would be us breaking a working control on
+	 * a screen we only restyle.
+	 *
+	 * `sep` is emptied because bbPress joins with " | " and this design has no pipes:
+	 * the links become chips laid out with a flex gap. One `sep` governs both levels —
+	 * the set, and the sub-actions inside a single link (untrash / trash / delete) — so
+	 * the two read alike, which they should.
+	 *
+	 * Emptiness has to survive the round trip because bbPress always wraps in its
+	 * `before`/`after` span: a user who may do nothing still gets
+	 * `<span class="bbp-admin-links"></span>` back, which is truthy markup for an empty
+	 * control. Callers decide whether to render a group by whether there is anything in
+	 * it, so the wrapper alone must read as nothing.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param string            $filter bbPress filter naming the link set.
+	 * @param callable():string $render Produces the markup with the filter in place.
+	 * @return string Markup, or '' when the set holds no links.
+	 */
+	private function moderation_links( string $filter, callable $render ): string {
+		$without_composer = static function ( $links ) {
+			if ( is_array( $links ) ) {
+				unset( $links['reply'] );
+			}
+
+			return $links;
+		};
+
+		add_filter( $filter, $without_composer );
+
+		try {
+			$markup = $render();
+		} finally {
+			// In a finally because "for the duration of the call" has to be true even
+			// when the call does not return: bbPress runs plugin hooks while building
+			// these links, and one of those throwing would otherwise leave the filter
+			// attached for the rest of the request — stripping "Reply To" from the
+			// reskin tier, which renders both those links and a working reply form.
+			remove_filter( $filter, $without_composer );
+		}
+
+		return '' === trim( wp_strip_all_tags( $markup ) ) ? '' : $markup;
 	}
 
 	/**

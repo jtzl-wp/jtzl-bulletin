@@ -29,6 +29,7 @@ $bltn_reply_view = $bltn_container->get( \JTZL\Bulletin\View\ReplyView::class );
 $bltn_navigator  = $bltn_container->get( \JTZL\Bulletin\Navigation\ThreadNavigator::class );
 $bltn_navbar     = $bltn_container->get( \JTZL\Bulletin\View\ThreadNavBar::class );
 $bltn_loadmore   = $bltn_container->get( \JTZL\Bulletin\View\LoadMore::class );
+$bltn_mod        = $bltn_container->get( \JTZL\Bulletin\View\ModerationActions::class );
 
 $bltn_topic_id  = bbp_get_topic_id();
 $bltn_forum_id  = bbp_get_topic_forum_id( $bltn_topic_id );
@@ -36,6 +37,7 @@ $bltn_forum     = bbp_get_forum_title( $bltn_forum_id );
 $bltn_protected = $bltn_ctx->is_password_required( $bltn_topic_id );
 $bltn_closed    = $bltn_ctx->is_topic_closed( $bltn_topic_id );
 $bltn_replies   = (int) bbp_get_topic_reply_count( $bltn_topic_id, true );
+$bltn_moderates = $bltn_mod->available( $bltn_topic_id );
 ?>
 <section class="bltn-screen">
 
@@ -125,7 +127,20 @@ $bltn_replies   = (int) bbp_get_topic_reply_count( $bltn_topic_id, true );
 							?>
 						</span>
 					<?php endif; ?>
+					<?php if ( $bltn_moderates ) : ?>
+						<?php // The only moderator chrome on the screen until it is tapped. ?>
+						<?php $bltn_mod->render_toggle(); ?>
+					<?php endif; ?>
 				</p>
+
+				<?php
+				// The thread's own actions, under the header they act on. Revealed with
+				// the per-reply rows rather than standing open, so a moderator reading a
+				// thread sees the thread, not a control panel.
+				if ( $bltn_moderates ) {
+					$bltn_mod->render_for_topic( $bltn_topic_id );
+				}
+				?>
 
 				<?php // --- Opening post (the topic itself) --- ?>
 				<div class="bltn-post bltn-post--op" id="post-<?php echo esc_attr( (string) $bltn_topic_id ); ?>">
@@ -143,7 +158,7 @@ $bltn_replies   = (int) bbp_get_topic_reply_count( $bltn_topic_id, true );
 					if ( $bltn_ctx->has_replies( $bltn_query->args( $bltn_topic_id, 1 ) ) ) :
 						while ( $bltn_ctx->the_replies_loop() ) :
 							$bltn_ctx->the_reply();
-							$bltn_reply_view->render();
+							$bltn_reply_view->render( $bltn_topic_id );
 						endwhile;
 					endif;
 					?>

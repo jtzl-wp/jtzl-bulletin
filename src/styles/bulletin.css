@@ -535,6 +535,118 @@ body.admin-bar .bltn-app {
 	margin: 1.2em 0;
 }
 
+/* ---- moderation: a mode, not furniture (issue #36) ----
+
+   bbPress puts a seven-item control row under the opening post and a five-item row
+   under every reply. On a 23-reply thread that is 24 control rows a moderator did not
+   ask for, on the screen whose entire job is the post. So the default state adds one
+   word — "Moderate", beside Subscribe — and the rows appear only when it is tapped.
+
+   THE HIDING IS CSS, THE MARKUP IS ALWAYS THERE. Every tray is server-rendered inside
+   .bltn-thread, and the mode is a class on that article, so a reply appended by the
+   load-more endpoint arrives already in whatever state the reader has the screen in.
+   No JS re-application step, and nothing to forget when a new list is added.
+
+   `.bltn-thread--modready` is what makes that safe, and it is added by the toggle's own
+   initialiser AFTER it has attached its listener (src/reading.ts). So both rules below
+   are inert until the script that answers them is demonstrably running: no class means
+   every tray shows inline and no toggle appears, which is exactly bbPress's own
+   behaviour — a moderator gets every control, working.
+
+   It used to key on `@media (scripting: enabled)`, which was wrong: that asks whether
+   scripting is ON, not whether OUR bundle ran. A bundle that 404s, throws early, or
+   finds no BLTN config leaves scripting "enabled" — and left a visible, inert toggle
+   above hidden trays. A broken control is worse than no control (Qodo, #62). Keying on
+   the class also drops the media query's own browser-support caveat, and there is still
+   no flash to suppress: hidden is not the default, it is what the script asks for. */
+.bltn-modtoggle {
+	display: none;
+}
+.bltn-thread--modready .bltn-modtoggle {
+	display: inline-flex;
+}
+.bltn-thread--modready:not(.bltn-thread--moderating) .bltn-mod {
+	display: none;
+}
+
+/* Quieter than Subscribe on purpose. Teal is the reader's own actions — links, the
+   subscribe pill — and a mode switch that is not one should not compete with them at
+   rest. Engaged, it fills teal, which is the tab bar's own active treatment and says
+   the true thing: you are in a mode, and it is on. */
+.bltn-modtoggle {
+	appearance: none;
+	cursor: pointer;
+	font: inherit;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--bltn-ink-2);
+	background: var(--bltn-bg);
+	border: 1px solid var(--bltn-line);
+	border-radius: 7px;
+	padding: 5px 11px;
+	transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.bltn-modtoggle[aria-expanded="true"] {
+	color: #fff;
+	background: var(--bltn-accent);
+	border-color: var(--bltn-accent);
+}
+
+/* The tray. Paper on the app's white surface reads as recessed — a place tools are
+   kept, not more of the thread — so the fill alone carries the elevation and there is
+   no border under it. Full-bleed like the rows it sits between, inset by the gutter. */
+.bltn-mod {
+	margin: 0 0 14px;
+	padding: 10px;
+	border-radius: 10px;
+	background: var(--bltn-bg);
+}
+/* The flex container is bbPress's own wrapper, not the tray. bbPress puts every
+   link inside one `<span class="bbp-admin-links">`, so a flex tray would lay out
+   that single span and leave the chips as inline text — touching, with ragged
+   wrapping and the gap doing nothing. Found by reading the computed box, not by
+   eye: it looked close enough to right in a screenshot. */
+.bltn-mod .bbp-admin-links {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+/* Under a post, the tray belongs to the post above it, so it keeps the reading
+   measure's top spacing and closes the gap to the divider below. */
+.bltn-post .bltn-mod {
+	margin: 14px 0 16px;
+}
+.bltn-mod a {
+	font-family: var(--bltn-sans);
+	font-size: 12.5px;
+	font-weight: 600;
+	line-height: 1.2;
+	color: var(--bltn-ink-2);
+	background: var(--bltn-surface);
+	border-radius: 6px;
+	padding: 7px 10px;
+	text-decoration: none;
+	/* 44px is the touch target these sit in; the chip is smaller than that on
+	   purpose and reaches it through the tray's own padding and the 6px gaps. */
+	min-height: 30px;
+	display: inline-flex;
+	align-items: center;
+}
+/* Consequential actions get full-strength ink rather than a hue. The palette has one
+   accent and one amber, both spoken for, and inventing a red for a moderator-only
+   surface would spend the system's scarcest resource on its rarest screen. Weight and
+   contrast say "this one is different" without it — and bbPress already puts a
+   confirm() on the only action that cannot be undone, which is the real guardrail. */
+.bltn-mod a[class*="-trash-link"],
+.bltn-mod a[class*="-spam-link"],
+.bltn-mod a[class*="-delete-link"] {
+	color: var(--bltn-ink);
+}
+.bltn-mod a:hover {
+	background: var(--bltn-wash);
+	color: var(--bltn-accent-ink);
+}
+
 /* ---- load more (replies, threads, forums — one control, three lists) ---- */
 .bltn-loadmore {
 	padding: 14px 20px 24px;

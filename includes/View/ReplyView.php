@@ -53,22 +53,40 @@ class ReplyView {
 	private ContextInterface $wp;
 
 	/**
+	 * Moderation actions renderer.
+	 *
+	 * @var ModerationActions
+	 */
+	private ModerationActions $moderation;
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param ContextInterface $wp WordPress/bbPress seam.
+	 * @param ContextInterface  $wp         WordPress/bbPress seam.
+	 * @param ModerationActions $moderation Moderation actions renderer.
 	 */
-	public function __construct( ContextInterface $wp ) {
-		$this->wp = $wp;
+	public function __construct( ContextInterface $wp, ModerationActions $moderation ) {
+		$this->wp         = $wp;
+		$this->moderation = $moderation;
 	}
 
 	/**
 	 * Echo the current reply.
 	 *
+	 * The thread is passed rather than read from the loop because this renders in two
+	 * places: the page template, where bbp_get_topic_id() would answer, and the
+	 * load-more endpoint, where it would not — an AJAX request sets no topic context,
+	 * so it returns 0. That would have silently dropped the moderation row from every
+	 * appended reply while page 1 kept its own, which reads as a rendering fault
+	 * rather than a missing argument.
+	 *
 	 * @since 0.1.0
+	 *
+	 * @param int $topic_id Thread the reply belongs to.
 	 */
-	public function render(): void {
+	public function render( int $topic_id ): void {
 		$reply_id = $this->wp->get_reply_id();
 
 		printf( '<article class="bltn-post" id="post-%s">', esc_attr( (string) $reply_id ) );
@@ -98,6 +116,16 @@ class ReplyView {
 		echo '<div class="bltn-post__body">';
 		$this->wp->the_reply_content( $reply_id ); // Echoes filtered post HTML (code/tables/images held in-column).
 		echo '</div>';
+
+		// Below the body, where an action reads as being about the post above it, and
+		// where it cannot push the reading content down the screen. Rendered here — not
+		// only in the page template — so replies the load-more endpoint appends carry
+		// their row too; the mode is a class on the enclosing article, so those rows are
+		// in whatever state the reader has the screen in (issue #36).
+		if ( $this->moderation->available( $topic_id ) ) {
+			$this->moderation->render_for_reply( $reply_id );
+		}
+
 		echo '</article>';
 	}
 }

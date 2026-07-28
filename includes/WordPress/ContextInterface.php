@@ -157,6 +157,38 @@ interface ContextInterface {
 	public function is_forum_edit(): bool;
 
 	/**
+	 * Whether the request is bbPress's merge-topic form.
+	 *
+	 * The three moderation forms are each built on top of an edit request — merge and
+	 * split are `bbp_is_topic_edit()` plus an `action` parameter, move is
+	 * `bbp_is_reply_edit()` plus one — so they need asking about separately from the
+	 * edit screens the posting phase owns (issue #36).
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool
+	 */
+	public function is_topic_merge(): bool;
+
+	/**
+	 * Whether the request is bbPress's split-topic form.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool
+	 */
+	public function is_topic_split(): bool;
+
+	/**
+	 * Whether the request is bbPress's move-reply form.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return bool
+	 */
+	public function is_reply_move(): bool;
+
+	/**
 	 * Whether this is a member profile's Subscriptions tab.
 	 *
 	 * The one reskin screen that reaches `bbp_has_forums()`, so it is what scopes
@@ -220,6 +252,50 @@ interface ContextInterface {
 	 * @return bool
 	 */
 	public function current_user_can_edit_user( int $user_id ): bool;
+
+	/**
+	 * Whether the current user may moderate a given forum post.
+	 *
+	 * The one gate on the reading view's moderation mode, and deliberately coarser
+	 * than bbPress's own per-link tests. bbPress lets each admin link answer for
+	 * itself, which means a participant inside the edit window gets an "Edit" link on
+	 * their own post — a *posting* affordance, and this release has no composer to
+	 * edit in (that is P4). Gating the whole mode on `moderate` keeps the reading view
+	 * free of controls for everyone who is not moderating, which is what issue #36
+	 * asks for; the per-link tests still run inside, so a Moderator sees a narrower
+	 * set than a Keymaster without us enumerating either.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $post_id Topic or reply ID the moderation would act on.
+	 * @return bool
+	 */
+	public function current_user_can_moderate( int $post_id ): bool;
+
+	/**
+	 * Moderation links for a topic, in bbPress's own markup.
+	 *
+	 * Rendered by bbPress rather than re-authored, so the nonces, the capability
+	 * tests each link runs, and the `confirm()` it puts on permanent delete (and
+	 * correctly omits on reversible trash) all arrive intact — we restyle the result.
+	 * The posting link is dropped: `reply` opens a composer this release does not have.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $topic_id Topic ID.
+	 * @return string Markup, or '' when the user may do nothing.
+	 */
+	public function get_topic_moderation_links( int $topic_id ): string;
+
+	/**
+	 * Moderation links for a reply, in bbPress's own markup.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $reply_id Reply ID.
+	 * @return string Markup, or '' when the user may do nothing.
+	 */
+	public function get_reply_moderation_links( int $reply_id ): string;
 
 	/**
 	 * Login URL, optionally with a redirect target.

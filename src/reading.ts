@@ -46,6 +46,56 @@ interface Control {
 	loadNext(): Promise<boolean>;
 }
 
+/**
+ * Moderation mode (issue #36).
+ *
+ * The trays are already in the DOM — server-rendered under the thread header and under
+ * every post — so this only flips the class the stylesheet keys on. Nothing is fetched,
+ * injected or re-applied, which is why a reply appended by a load-more control needs no
+ * involvement here: it lands inside the same article and inherits the state.
+ *
+ * `bltn-thread--modready` is the contract, and it is what makes the degradation safe.
+ * The stylesheet hides a tray ONLY inside a thread carrying that class, and shows the
+ * toggle only there too — so until this function has actually run and attached its
+ * listener, a moderator sees every tray inline and no toggle, which is exactly bbPress's
+ * own behaviour. An earlier version keyed the hiding on `@media (scripting: enabled)`,
+ * which asks whether scripting is on rather than whether THIS ran: a bundle that 404s,
+ * throws before this line, or finds no BLTN config would have left the toggle visible and
+ * inert with every tray hidden. A broken control is worse than no control (raised by Qodo
+ * on #62).
+ *
+ * Deliberately outside initReading() and called before it: moderation needs neither the
+ * AJAX endpoint nor the localised strings, so it must not inherit that function's early
+ * return on a missing config, nor an exception thrown anywhere inside it.
+ *
+ * The label names the next action ("Moderate" → "Done") and aria-expanded carries the
+ * state the label therefore cannot. No aria-controls: the mode reveals the thread's tray
+ * AND a tray under every post, so naming one region would describe less than the button
+ * already does.
+ */
+function initModerationToggle(): void {
+	const toggle = document.querySelector<HTMLButtonElement>(
+		'[data-bltn-modtoggle]'
+	);
+	const thread = toggle?.closest<HTMLElement>('.bltn-thread');
+	if (!toggle || !thread) {
+		return;
+	}
+
+	const labelOff = toggle.textContent ?? '';
+	const labelOn = toggle.dataset.bltnLabelOn ?? labelOff;
+
+	toggle.addEventListener('click', () => {
+		const on = thread.classList.toggle('bltn-thread--moderating');
+		toggle.setAttribute('aria-expanded', on ? 'true' : 'false');
+		toggle.textContent = on ? labelOn : labelOff;
+	});
+
+	// Last, so there is no instant in which the trays are hidden by a toggle that
+	// cannot yet answer a click.
+	thread.classList.add('bltn-thread--modready');
+}
+
 function initReading(): void {
 	const config = window.BLTN;
 	if (!config) {
@@ -260,6 +310,10 @@ function initReading(): void {
 
 	resolveDeepLink();
 }
+
+// Moderation first, and outside the config gate: it enhances markup that already works
+// without it, so it must not be lost to a problem in the load-more wiring.
+initModerationToggle();
 
 // This bundle is only ever enqueued in a browser, and initReading() itself
 // no-ops without a BLTN config, so it is the single gate on whether there is

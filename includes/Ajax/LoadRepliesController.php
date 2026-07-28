@@ -90,7 +90,7 @@ class LoadRepliesController {
 		if ( $this->wp->has_replies( $this->query->args( $topic_id, $page ) ) ) {
 			while ( $this->wp->the_replies_loop() ) {
 				$this->wp->the_reply();
-				$this->reply_view->render();
+				$this->reply_view->render( $topic_id );
 			}
 		}
 		$html = (string) ob_get_clean();
