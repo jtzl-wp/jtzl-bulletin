@@ -8,6 +8,7 @@
 
 namespace JTZL\Bulletin\View;
 
+use JTZL\Bulletin\Support\Icons;
 use JTZL\Bulletin\WordPress\ContextInterface;
 
 /**
@@ -90,6 +91,7 @@ class ReplyView {
 		$reply_id = $this->wp->get_reply_id();
 
 		printf( '<article class="bltn-post" id="post-%s">', esc_attr( (string) $reply_id ) );
+		$this->render_reply_context( $reply_id, $topic_id );
 		echo '<div class="bltn-byline">';
 		printf(
 			'<span class="bltn-byline__name">%s</span>',
@@ -127,5 +129,108 @@ class ReplyView {
 		}
 
 		echo '</article>';
+	}
+
+	/**
+	 * The "In reply to …" line, for a reply that answers another reply.
+	 *
+	 * Bulletin's threading is a sequence and a line, and no indentation (issue #37).
+	 * A reply is placed under the one it answers — Query\ReplyOrder computes that
+	 * order — and this names the parent for the cases position cannot show.
+	 *
+	 * The order carries most of it. Under it, a reply usually IS the post below its
+	 * parent, so the line is confirming what the reader can already see. It earns
+	 * its place on the cases where the sequence is silent: a second child sits after
+	 * its elder sibling's whole subtree, so its parent may be well above it; and at a
+	 * page boundary a child opens a page whose parent closed the last one. Neither is
+	 * rare enough to leave a reader guessing, and position alone cannot distinguish
+	 * "answers the post above" from "answers something further up".
+	 *
+	 * No indentation, though. It buys nothing the order has not already given, and
+	 * it costs the reading measure a step per level on the screen with the least
+	 * width to spare — which is the whole product's constraint.
+	 *
+	 * ⚠ The order being ours is a consequence of bbPress, not a preference:
+	 * bbp_has_replies() pages a hierarchical query by *root* replies and loads every
+	 * descendant, which is why it forces posts_per_page to -1 (issue #12). So
+	 * Query\ReplyQuery asks bbPress for a flat query and supplies the reading order
+	 * itself.
+	 *
+	 * No excerpt of the parent. Discourse and friends quote it because their parent
+	 * is collapsed somewhere else; ours never is — the order puts it above, usually
+	 * immediately above, and the reading view loads forward from page 1. Quoting it
+	 * would print the same words twice, a line apart.
+	 *
+	 * "Usually" is doing real work there. A parent is above its child in the reading
+	 * order by construction, but it can be off the loaded pages: the order is sliced
+	 * 15 at a time, so a parent that closes page 1 has children opening page 2 — and
+	 * a page-2 reply is in the document only after the reader has loaded it.
+	 * src/reading.ts handles that rather than this file: a tap on a target the
+	 * document does not hold pages forward until it does.
+	 *
+	 * Three conditions, each load-bearing:
+	 *
+	 *  - Threading is on. bbPress renders no "reply to" control when it is off, but
+	 *    `_bbp_reply_to` survives the switch, so a forum that ever had threading keeps
+	 *    the meta. An admin who turns threading off is asking for a flat conversation
+	 *    and we honour that. It also means this whole feature is a no-op on a default
+	 *    install, where bbp_thread_replies() is false.
+	 *  - The parent belongs to THIS thread. A cross-thread parent is reachable for
+	 *    real: bbp_move_reply_handler() re-parents a reply to another topic without
+	 *    clearing `_bbp_reply_to`, and bbp_validate_reply_to() only asks whether the
+	 *    target is a reply, not which thread it is in. (bbp_split_topic() does clear
+	 *    it; merge keeps everything in one thread, so neither of those leaks.) The
+	 *    same check catches a parent that is not a reply at all — bbp_get_reply_to()
+	 *    reads the meta raw, and bbp_get_reply_topic_id() answers 0 for a non-reply,
+	 *    which is why bbp_has_replies() carries a normalisation of its own.
+	 *  - The parent is published. To a reader who cannot see a trashed or spammed parent
+	 *    there is no parent, and naming one would hand them a link to an anchor that is
+	 *    not in the document. A moderator viewing all statuses loses the line in that
+	 *    case too, which is a fair price for not branching this on capability.
+	 *
+	 * The href is a bare fragment, not bbp_get_reply_url(). bbPress's URL carries a
+	 * page segment counted against a loop that includes the lead topic while ours does
+	 * not (see the class docblock), so it can name a later page for a post that is
+	 * already on screen — reloading the whole document to reach something visible.
+	 *
+	 * The fragment is not left to the browser either: src/reading.ts intercepts it, so
+	 * the reader gets the same highlight an arriving permalink gets, the app frame
+	 * stays put, and an unloaded target is paged in rather than silently doing
+	 * nothing. That file carries the measurements.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $reply_id Reply being rendered.
+	 * @param int $topic_id Thread it belongs to.
+	 */
+	private function render_reply_context( int $reply_id, int $topic_id ): void {
+		if ( ! $this->wp->is_thread_replies_active() ) {
+			return;
+		}
+
+		$parent = $this->wp->get_reply_to( $reply_id );
+		if ( $parent <= 0 || $this->wp->get_reply_topic_id( $parent ) !== $topic_id ) {
+			return;
+		}
+		if ( $this->wp->get_post_status( $parent ) !== $this->wp->get_public_status_id() ) {
+			return;
+		}
+
+		printf(
+			// The whole phrase is the link, so its accessible name says where it goes
+			// without the surrounding text (WCAG 2.4.4). The author name is the only
+			// payload: it says which way the conversation turned, and the tap resolves
+			// which post when a member has answered more than once.
+			'<p class="bltn-replyto"><a href="#post-%1$s">%2$s<span>%3$s</span></a></p>',
+			esc_attr( (string) $parent ),
+			Icons::reply_to(), // phpcs:ignore WordPress.Security.EscapeOutput -- static SVG.
+			esc_html(
+				sprintf(
+					/* translators: %s: display name of the member being replied to. */
+					__( 'In reply to %s', 'jtzl-bulletin' ),
+					$this->wp->get_reply_author_display_name( $parent )
+				)
+			)
+		);
 	}
 }

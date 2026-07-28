@@ -541,6 +541,54 @@ interface ContextInterface {
 	public function the_reply_content( int $reply_id ): void;
 
 	/**
+	 * The reply a reply answers, or 0 when it answers the thread itself.
+	 *
+	 * Reads `_bbp_reply_to` directly, so unlike the value bbp_has_replies() hangs on
+	 * each post it is NOT normalised against the thread: bbPress zeroes a parent that
+	 * turns out to be the topic itself before its loop sees it, and this does not.
+	 * Callers check that themselves — see View\ReplyView, which has to establish the
+	 * parent belongs to this thread anyway.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $reply_id Reply ID.
+	 * @return int Parent reply ID, or 0.
+	 */
+	public function get_reply_to( int $reply_id ): int;
+
+	/**
+	 * The thread a reply belongs to.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $reply_id Reply ID.
+	 * @return int Topic ID, or 0 when the ID is not a reply.
+	 */
+	public function get_reply_topic_id( int $reply_id ): int;
+
+	/**
+	 * Every reply of a topic this reader may see, mapped to the reply it answers.
+	 *
+	 * The input to Query\ReplyOrder, and the only unbounded query the reading view
+	 * makes — so it asks for IDs and one meta key, never post objects or content,
+	 * and Query\ReplyQuery only calls it when threading is actually on.
+	 *
+	 * "May see" is bbPress's own answer, not ours: this runs through
+	 * bbp_has_replies(), so the status and `perm` handling that decides whether a
+	 * moderator sees trashed and spammed replies is the same code that decides it
+	 * for the rendered page. A reader and a moderator therefore get orders built
+	 * from their own sets, and a parent missing from one of them is an orphan there
+	 * — which ReplyOrder promotes to a root rather than dropping.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $topic_id Topic to read.
+	 * @return array<int,int> Reply ID => parent reply ID (0 for a reply to the
+	 *                        thread), in (date, ID) order.
+	 */
+	public function get_reply_parents( int $topic_id ): array;
+
+	/**
 	 * ID of the topic currently in the loop.
 	 *
 	 * @since 0.1.0

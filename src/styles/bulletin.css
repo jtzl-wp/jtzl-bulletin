@@ -421,6 +421,29 @@ body.admin-bar .bltn-app {
 	}
 }
 
+/* Reply context — "In reply to Mara L." above the byline of a reply that answers
+   another reply (issue #37). Bulletin's whole threading treatment: the loop stays
+   flat and chronological, so the parent is named rather than implied by an indent
+   that would point at whichever post happens to sit above. Sans, ink-3, above the
+   byline and smaller than it, so it reads as the caption to the post rather than
+   as part of it. Absent entirely on a root reply, which is most of them. */
+.bltn-replyto {
+	margin: 0 0 7px;
+	font-family: var(--bltn-sans);
+	font-size: 11.5px;
+	line-height: 1.3;
+}
+.bltn-replyto a {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	color: var(--bltn-ink-3);
+	text-decoration: none;
+}
+.bltn-replyto a:hover {
+	color: var(--bltn-accent-ink);
+}
+
 .bltn-byline {
 	display: flex;
 	align-items: baseline;

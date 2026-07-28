@@ -61,4 +61,19 @@ class Icons {
 	public static function nav_next(): string {
 		return '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
 	}
+
+	/**
+	 * Reply-context arrow — turns up and back to the left.
+	 *
+	 * Points the way the link goes. The parent of a reply is always older, and the
+	 * reading view renders oldest-first, so the post it names is always further up
+	 * the screen (issue #37).
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return string
+	 */
+	public static function reply_to(): string {
+		return '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14l-5-5 5-5"/><path d="M4 9h10a5 5 0 0 1 5 5v5"/></svg>';
+	}
 }

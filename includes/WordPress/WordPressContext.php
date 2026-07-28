@@ -706,6 +706,126 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * The reply a reply answers, or 0 when it answers the thread itself.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $reply_id Reply ID.
+	 * @return int Parent reply ID, or 0.
+	 */
+	public function get_reply_to( int $reply_id ): int {
+		return (int) bbp_get_reply_to( $reply_id );
+	}
+
+	/**
+	 * The thread a reply belongs to.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $reply_id Reply ID.
+	 * @return int Topic ID, or 0 when the ID is not a reply.
+	 */
+	public function get_reply_topic_id( int $reply_id ): int {
+		return (int) bbp_get_reply_topic_id( $reply_id );
+	}
+
+	/**
+	 * Every reply of a topic this reader may see, mapped to the reply it answers.
+	 *
+	 * This is the one unbounded query the reading view makes, so it asks for
+	 * `fields => ids` and one primed meta read — never the thread's post objects,
+	 * which is exactly what bbPress's hierarchical mode does and what issue #12 was
+	 * about. A 20-reply thread and a 20,000-reply thread differ here by a list of
+	 * integers.
+	 *
+	 * A plain WP_Query rather than bbp_has_replies(), for two reasons that are both
+	 * bbPress's doing. `bbp_has_replies()` cannot answer `fields => ids` at all: it
+	 * walks its own results reading `$post->post_type` to hang `reply_to` on each
+	 * one (replies/template.php:219), which fatals on a list of integers. And it
+	 * assigns `bbpress()->reply_query`, so calling it here would leave the loop
+	 * global holding this query instead of the page's.
+	 *
+	 * What it does NOT reimplement is which replies a reader may see. The status
+	 * block below is bbPress's own, copied from bbp_has_replies()'s defaults, and
+	 * ReadingFlowTest asserts this method returns exactly the ID set bbPress's query
+	 * returns — logged out and as a keymaster viewing all — so the copy cannot
+	 * quietly drift from the original.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $topic_id Topic to read.
+	 * @return array<int,int> Reply ID => parent reply ID, in (date, ID) order.
+	 */
+	public function get_reply_parents( int $topic_id ): array {
+		$args = array(
+			'post_parent'            => $topic_id,
+			'post_type'              => bbp_get_reply_post_type(),
+			'posts_per_page'         => -1,
+			'fields'                 => 'ids',
+			'orderby'                => array(
+				'date' => 'ASC',
+				'ID'   => 'ASC',
+			),
+			'ignore_sticky_posts'    => true,
+			'update_post_term_cache' => false,
+			'no_found_rows'          => true,
+		);
+
+		// bbPress's own visibility rules, verbatim from bbp_has_replies().
+		if ( bbp_get_view_all( 'edit_others_replies' ) ) {
+			$post_statuses = array_keys( bbp_get_topic_statuses() );
+			if ( current_user_can( 'read_private_replies' ) ) {
+				$post_statuses[] = bbp_get_private_status_id();
+			}
+			$args['post_status'] = $post_statuses;
+		} else {
+			$args['perm'] = 'readable';
+		}
+
+		// Run the same filters bbp_has_replies() runs, so a site that narrows the
+		// reply query narrows the reading order with it. bbPress hooks these itself
+		// (_bbp_has_replies_query, core/filters.php:426) to expose `bbp_has_replies_query`,
+		// which makes them the documented way to change this query rather than an
+		// obscure one. Skipping them let the order — and the page count derived from
+		// it — count replies the rendered page excludes: a load-more that fetches a
+		// short page, or a context link naming a post that is not in the document
+		// (raised by Gitar).
+		$args = bbp_parse_args( $args, array(), 'has_replies' );
+
+		// A filter may say WHICH replies exist for this reader. It does not get to say
+		// how they are enumerated: this query has to stay one unpaginated list of IDs
+		// in reading order, and a plugin setting posts_per_page — the likeliest thing
+		// for one to set — would otherwise truncate the order to a page and take the
+		// rest of the thread with it.
+		$args['fields']         = 'ids';
+		$args['posts_per_page'] = -1;
+		$args['nopaging']       = true;
+		$args['paged']          = 1;
+		$args['offset']         = 0;
+		$args['post_parent']    = $topic_id;
+		$args['post_type']      = bbp_get_reply_post_type();
+		$args['orderby']        = array(
+			'date' => 'ASC',
+			'ID'   => 'ASC',
+		);
+
+		$ids = array_map( 'intval', ( new \WP_Query( $args ) )->posts ); // @phpstan-var int[] $ids
+		if ( array() === $ids ) {
+			return array();
+		}
+
+		// One read for the whole thread rather than a query per reply.
+		update_meta_cache( 'post', $ids );
+
+		$parents = array();
+		foreach ( $ids as $id ) {
+			$parents[ $id ] = (int) get_post_meta( $id, '_bbp_reply_to', true );
+		}
+
+		return $parents;
+	}
+
+	/**
 	 * ID of the topic currently in the loop.
 	 *
 	 * @since 0.1.0

@@ -247,24 +247,71 @@ function initReading(): void {
 
 	// Takes the element rather than an id: callers resolve it first, so a
 	// null-check in here would be unreachable.
+	//
+	// The app's own scroller is moved directly rather than through
+	// scrollIntoView(), and that is a fix rather than a preference. scrollIntoView()
+	// scrolls every scrollable ancestor, and `overflow: hidden` does NOT make a box
+	// unscrollable — it only stops the *user* scrolling it. The takeover's frame is
+	// a clipped 100dvh box around a taller document, so the viewport is
+	// programmatically scrollable by about 1.1k px on the fixture; scrollIntoView()
+	// took it up with the scroller and left the app bar above the top of the screen,
+	// with a band of bare page under the nav bar. Measured on both an arriving
+	// permalink and a reply-context tap (issue #37) before it was believed.
+	//
+	// Moving one element by a measured delta cannot do that. scrollIntoView() stays
+	// as the fallback for a target outside a .bltn-scroll — nothing renders one
+	// today, and if something does, the old behaviour is better than none.
 	function scrollToTarget(el: HTMLElement): void {
 		const reduce = window.matchMedia(
 			'(prefers-reduced-motion: reduce)'
 		).matches;
-		el.scrollIntoView({
-			behavior: reduce ? 'auto' : 'smooth',
-			block: 'start',
-		});
+		const behavior: ScrollBehavior = reduce ? 'auto' : 'smooth';
+		const scroller = el.closest<HTMLElement>('.bltn-scroll');
+
+		if (scroller) {
+			const delta =
+				el.getBoundingClientRect().top -
+				scroller.getBoundingClientRect().top;
+			scroller.scrollTo({ top: scroller.scrollTop + delta, behavior });
+		} else {
+			el.scrollIntoView({ behavior, block: 'start' });
+		}
+		highlight(el);
+	}
+
+	/**
+	 * Flash the target, every time — including a second visit to the same post.
+	 *
+	 * `.bltn-post--target` runs a one-shot animation on class insertion, and adding
+	 * a class an element already carries changes nothing, so simply adding it went
+	 * silent the moment this became reachable more than once per page. That is not
+	 * hypothetical: two replies answering the same post give two context links to
+	 * the same anchor, which the fixture has. Measured before and after — one running
+	 * animation on the first tap, zero on the second (raised by Gitar).
+	 *
+	 * So the previous target is cleared first, which also stops a spent class
+	 * lingering on posts the reader has left behind. The `offsetWidth` read between
+	 * the two is a synchronous reflow: without it the removal and the re-add collapse
+	 * into one style recalculation, the browser sees no change, and nothing replays.
+	 * It is the one place in this file that reads layout on purpose.
+	 */
+	function highlight(el: HTMLElement): void {
+		document
+			.querySelectorAll('.bltn-post--target')
+			.forEach((spent) => spent.classList.remove('bltn-post--target'));
+		void el.offsetWidth;
 		el.classList.add('bltn-post--target');
 	}
 
-	function resolveDeepLink(): void {
-		const hash = window.location.hash;
-		if (!hash || hash.indexOf('#post-') !== 0) {
-			return;
-		}
-		const id = hash.slice(1);
-
+	/**
+	 * Bring `#post-…` into view, loading forward first if it is not here yet.
+	 *
+	 * Shared by the two ways a reader can name a post: the URL they arrived on, and
+	 * a reply-context link they tapped inside the thread (issue #37). Both want the
+	 * same three things — scroll, highlight, and page forward when the target lives
+	 * past the DOM — so neither gets its own half of them.
+	 */
+	function goToPost(id: string): void {
 		const present = document.getElementById(id);
 		if (present) {
 			scrollToTarget(present);
@@ -291,10 +338,10 @@ function initReading(): void {
 		}
 
 		// Not in the initial DOM — walk forward a page at a time until it shows
-		// up or we run out of pages. Both entry points have already established
-		// the target is absent, so step() goes straight to loading. The walk ends on
-		// `more` being false, which is also what an exhausted control answers, so
-		// there is no separate liveness check to make here.
+		// up or we run out of pages. Every caller has already established the target
+		// is absent, so step() goes straight to loading. The walk ends on `more`
+		// being false, which is also what an exhausted control answers, so there is
+		// no separate liveness check to make here.
 		const step = (): void => {
 			void walker.loadNext().then((more) => {
 				const found = document.getElementById(id);
@@ -308,6 +355,57 @@ function initReading(): void {
 		step();
 	}
 
+	function resolveDeepLink(): void {
+		const hash = window.location.hash;
+		if (!hash || hash.indexOf('#post-') !== 0) {
+			return;
+		}
+		goToPost(hash.slice(1));
+	}
+
+	/**
+	 * In-thread links to another post — today, only the reply-context line.
+	 *
+	 * The native fragment jump is not good enough here, and that was measured rather
+	 * than assumed. Three things go wrong when the browser handles it:
+	 *
+	 *  1. No highlight. `.bltn-post--target` is a class this file adds, not `:target`,
+	 *     so a jump the browser performs lands the reader somewhere with nothing to
+	 *     say which post they were sent to.
+	 *  2. The shell comes apart. `.bltn-scroll` sits in a `1fr` grid track whose
+	 *     default `min-block-size: auto` lets it grow past the track, so the ROOT
+	 *     document is scrollable on every takeover screen (~1.1k px on the fixture,
+	 *     and on an unthreaded thread too — this predates the feature). A native jump
+	 *     scrolls the root as well as the scroller, taking the app bar off the top of
+	 *     the screen and leaving a band of page below the nav bar.
+	 *  3. A parent that is not loaded yet does nothing at all. Rare — a parent is
+	 *     normally older than its child and the view loads forward from page 1 — but
+	 *     an import writing `_bbp_reply_to` directly, or a moderator repointing one
+	 *     (bbp_validate_reply_to() checks neither date nor order), can put it on a
+	 *     later page.
+	 *
+	 * preventDefault() answers all three: no root scroll, the highlight fires, and
+	 * goToPost() pages forward when it has to. Without this script the link still
+	 * navigates — degraded, not broken — which is why it can live behind the config
+	 * gate rather than beside the moderation toggle.
+	 */
+	function initPostLinks(): void {
+		document.addEventListener('click', (event) => {
+			const link = (event.target as HTMLElement | null)?.closest?.<
+				HTMLAnchorElement
+			>('a[href^="#post-"]');
+			// The href is read back rather than asserted from the selector, so an
+			// empty one falls through to the guard in goToPost() instead of a walk.
+			const href = link?.getAttribute('href') ?? '';
+			if (!link || href.length < 2) {
+				return;
+			}
+			event.preventDefault();
+			goToPost(href.slice(1));
+		});
+	}
+
+	initPostLinks();
 	resolveDeepLink();
 }
 

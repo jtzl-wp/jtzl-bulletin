@@ -106,13 +106,15 @@ class ScreenClassifier {
 	/**
 	 * Whether the current request is a single topic's reading view.
 	 *
-	 * Declines the takeover when threaded replies are active: bbp_has_replies()
-	 * forces posts_per_page to -1 for a hierarchical query, so our template would
-	 * load the whole thread unpaginated and "load more replies" would never appear
-	 * (issue #12). Such a topic is no longer left to the theme, though — it falls
-	 * through to Reskin, where bbPress renders it threaded inside our chrome with
-	 * its own pagination. Proper threaded depth in the takeover view supersedes
-	 * this (issue #37).
+	 * Every single topic, with no exceptions left. P1 declined the takeover when
+	 * threaded replies were active, because bbp_has_replies() forces
+	 * posts_per_page to -1 for a hierarchical query and the thread would have
+	 * loaded unpaginated (issue #12). Query\ReplyQuery now asks for a flat query
+	 * outright, so there is nothing left to decline: the thread pages the way
+	 * every other thread does and its shape is rendered as reply context rather
+	 * than depth (issue #37). Removing the guard also retires the reskinned
+	 * threaded-topic screen (issue #64) — nothing routes a reader to bbPress's own
+	 * content-single-topic.php any more.
 	 *
 	 * A password-protected topic still takes over: the screen template renders
 	 * WordPress's own password form in place of the opening post and replies until
@@ -123,7 +125,7 @@ class ScreenClassifier {
 	 * @return bool
 	 */
 	public function is_single_topic(): bool {
-		return $this->wp->is_bbpress() && $this->wp->is_single_topic() && ! $this->wp->is_thread_replies_active();
+		return $this->wp->is_bbpress() && $this->wp->is_single_topic();
 	}
 
 	/**

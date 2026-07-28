@@ -95,7 +95,8 @@ class LoadRepliesController {
 		}
 		$html = (string) ob_get_clean();
 
-		$max = $this->wp->get_max_reply_pages();
+		// Query\ReplyQuery's count, not bbPress's — see its max_pages() docblock.
+		$max = $this->query->max_pages( $topic_id );
 
 		$this->wp->send_json_success(
 			array(

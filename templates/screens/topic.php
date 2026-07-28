@@ -215,7 +215,10 @@ $bltn_moderates = $bltn_mod->available( $bltn_topic_id );
 
 				<?php
 				// Inline load-more when the topic runs past one page of replies.
-				if ( $bltn_ctx->get_max_reply_pages() > 1 ) {
+				// The query's own count, not bbPress's: on a threaded forum a page is a
+				// slice of a reading order we computed, so WP_Query only ever sees one
+				// page of IDs and would report exactly one page (issue #37).
+				if ( $bltn_query->max_pages( $bltn_topic_id ) > 1 ) {
 					$bltn_loadmore->render(
 						array(
 							'action' => 'bulletin_load_replies',
