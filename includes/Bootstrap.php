@@ -21,6 +21,7 @@ use JTZL\Bulletin\Query\StickyHoisting;
 use JTZL\Bulletin\Query\SubscribedForumQuery;
 use JTZL\Bulletin\Takeover\TemplateController;
 use JTZL\Bulletin\View\ProfileIdentity;
+use JTZL\Bulletin\View\ProtectedRowContent;
 use JTZL\Bulletin\View\SubscribedForumsMore;
 use JTZL\Bulletin\WordPress\ContextInterface;
 
@@ -154,6 +155,8 @@ class Bootstrap {
 		assert( $subscriptions instanceof SubscribedForumQuery );
 		$subscribed_more = $this->container->get( SubscribedForumsMore::class );
 		assert( $subscribed_more instanceof SubscribedForumsMore );
+		$protected = $this->container->get( ProtectedRowContent::class );
+		assert( $protected instanceof ProtectedRowContent );
 
 		// Give the member-profile header a coherent identity block (name + @handle +
 		// role beside the avatar). The hook fires only inside bbPress's user-details
@@ -178,6 +181,18 @@ class Bootstrap {
 		// And decline bbPress's sticky hoisting there, which serves a sticky twice and
 		// miscounts the page it hoisted onto. Same hook, separate decision.
 		$wp->add_filter( 'bbp_after_has_topics_parse_args', array( $stickies, 'filter_topic_args' ), 11 );
+
+		// Keep WordPress's password form out of the description slot of a loop row,
+		// where bbPress's own row templates would otherwise print it as though it were
+		// what the forum is about (issue #54). Armed by the four actions bbPress fires
+		// around those two slots and by nothing else, so the forms Bulletin renders on
+		// purpose — the in-shell prompt (#18), and a protected reply's own prompt in the
+		// reading view — cannot be reached by it. See View\ProtectedRowContent.
+		$wp->add_action( 'bbp_theme_before_forum_description', array( $protected, 'open_row_slot' ) );
+		$wp->add_action( 'bbp_theme_after_forum_description', array( $protected, 'close_row_slot' ) );
+		$wp->add_action( 'bbp_theme_before_reply_content', array( $protected, 'open_row_slot' ) );
+		$wp->add_action( 'bbp_theme_after_reply_content', array( $protected, 'close_row_slot' ) );
+		$wp->add_filter( 'the_password_form', array( $protected, 'filter_password_form' ) );
 	}
 
 	/**

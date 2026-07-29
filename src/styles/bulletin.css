@@ -887,7 +887,13 @@ body.admin-bar .bltn-app {
 
 /* ---- password-protected forum/topic (issue #18) ---- */
 /* WordPress's own password form (form.post-password-form), wrapped in our shell
-   and restyled here so the field and button read as Bulletin, not the theme. */
+   and restyled here so the field and button read as Bulletin, not the theme.
+
+   Scoped to `.bltn`, the class both documents carry, rather than to the screen
+   wrapper: a password form can also arrive mid-thread, when an individual reply
+   carries a password of its own and the reading view renders its prompt in place of
+   the body (see #54 — that one is the reader's only way in, so it is emitted, not
+   withheld). One rule for every prompt Bulletin renders, wherever it lands. */
 .bltn-protected {
 	padding: 40px 24px 48px;
 	max-inline-size: 34rem;
@@ -900,26 +906,31 @@ body.admin-bar .bltn-app {
 	letter-spacing: -0.01em;
 	margin: 0 0 16px;
 }
-.bltn-protected .post-password-form {
+.bltn .post-password-form {
 	margin: 0;
 }
-.bltn-protected .post-password-form p {
+.bltn .post-password-form p {
+	/* Sans, explicitly: mid-thread the form inherits the serif reading face, and a
+	   prompt about access is chrome, not the post's words. */
+	font-family: var(--bltn-sans);
 	font-size: 13.5px;
 	color: var(--bltn-ink-2);
 	margin: 0 0 14px;
 }
-.bltn-protected .post-password-form label {
+.bltn .post-password-form label {
 	display: block;
+	font-family: var(--bltn-sans);
 	font-size: 12px;
 	font-weight: 600;
 	color: var(--bltn-ink-3);
 }
-.bltn-protected .post-password-form input[type="password"] {
+.bltn .post-password-form input[type="password"] {
 	appearance: none;
 	display: block;
 	inline-size: 100%;
 	box-sizing: border-box;
 	font: inherit;
+	font-family: var(--bltn-sans);
 	font-size: 15px;
 	color: var(--bltn-ink);
 	background: var(--bltn-surface);
@@ -928,15 +939,16 @@ body.admin-bar .bltn-app {
 	padding: 11px 13px;
 	margin-block: 6px 12px;
 }
-.bltn-protected .post-password-form input[type="password"]:focus-visible {
+.bltn .post-password-form input[type="password"]:focus-visible {
 	outline: 2px solid var(--bltn-accent);
 	outline-offset: 1px;
 	border-color: transparent;
 }
-.bltn-protected .post-password-form input[type="submit"] {
+.bltn .post-password-form input[type="submit"] {
 	appearance: none;
 	cursor: pointer;
 	font: inherit;
+	font-family: var(--bltn-sans);
 	font-size: 13.5px;
 	font-weight: 600;
 	color: var(--bltn-accent-ink);
@@ -946,7 +958,7 @@ body.admin-bar .bltn-app {
 	padding: 11px 18px;
 	transition: background 0.15s ease;
 }
-.bltn-protected .post-password-form input[type="submit"]:hover {
+.bltn .post-password-form input[type="submit"]:hover {
 	background: color-mix(in srgb, var(--bltn-accent) 12%, var(--bltn-wash));
 }
 
@@ -1547,6 +1559,15 @@ body.admin-bar .bltn-app {
 	padding: 0;
 	font-size: 12.5px;
 	color: var(--bltn-ink-2);
+}
+/* A password-protected post contributes nothing to its row — the description is
+   withheld outright rather than showing WordPress's password form in the slot
+   (issue #54, View\ProtectedRowContent). bbPress still prints the wrapper, so the
+   slot survives as an empty div and would otherwise keep the margin that separates
+   it from the title above it. */
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-forum-content:empty,
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-reply-content:empty {
+	margin: 0;
 }
 /* Sub-forums: bbPress's inline list of children with their (topics, replies)
    counts, quietened to a meta line. Upstream this list is indented as a nested
