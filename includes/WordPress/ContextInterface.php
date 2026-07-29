@@ -1247,6 +1247,49 @@ interface ContextInterface {
 	 */
 	public function get_search_result_count(): int;
 
+	/**
+	 * A WHERE fragment admitting every row of one post type, plus every row whose
+	 * status is in a list.
+	 *
+	 * The seam owns it because it is SQL: the caller supplies the post type to
+	 * exempt and the statuses to admit, and never sees a table name or a
+	 * placeholder. Both are bound through $wpdb->prepare().
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param string   $exempt_post_type Post type admitted whatever its status.
+	 * @param string[] $statuses         Statuses admitted for every other post type.
+	 * @return string A fragment beginning with AND, or '' if there is nothing to say.
+	 */
+	public function post_status_where_clause( string $exempt_post_type, array $statuses ): string;
+
+	/**
+	 * Read a query variable off a query object.
+	 *
+	 * Typed loosely on purpose. The callers are hooks that WordPress hands a
+	 * WP_Query to, and this seam exists so they never have to name the class to
+	 * take it: the type check happens here, and anything that is not a query
+	 * answers null.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param mixed  $query The query, as a hook received it.
+	 * @param string $key   Variable name.
+	 * @return mixed The value, or null if there is no query to ask.
+	 */
+	public function get_query_arg( $query, string $key );
+
+	/**
+	 * Write a query variable onto a query object.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param mixed  $query The query, as a hook received it.
+	 * @param string $key   Variable name.
+	 * @param mixed  $value Value to set.
+	 */
+	public function set_query_arg( $query, string $key, $value ): void;
+
 	// --- Assets -------------------------------------------------------------
 
 	/**

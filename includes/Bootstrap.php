@@ -16,6 +16,7 @@ use JTZL\Bulletin\Ajax\LoadSearchController;
 use JTZL\Bulletin\Ajax\LoadTopicsController;
 use JTZL\Bulletin\Asset\AssetManager;
 use JTZL\Bulletin\Chrome\AdminBar;
+use JTZL\Bulletin\Query\SearchVisibility;
 use JTZL\Bulletin\Query\StableOrder;
 use JTZL\Bulletin\Query\StickyHoisting;
 use JTZL\Bulletin\Query\SubscribedForumQuery;
@@ -76,6 +77,7 @@ class Bootstrap {
 		$this->register_assets();
 		$this->register_ajax();
 		$this->register_reskin();
+		$this->register_search_visibility();
 		$this->register_chrome();
 	}
 
@@ -193,6 +195,35 @@ class Bootstrap {
 		$wp->add_action( 'bbp_theme_before_reply_content', array( $protected, 'open_row_slot' ) );
 		$wp->add_action( 'bbp_theme_after_reply_content', array( $protected, 'close_row_slot' ) );
 		$wp->add_filter( 'the_password_form', array( $protected, 'filter_password_form' ) );
+	}
+
+	/**
+	 * Search visibility: give a search query back the post statuses bbPress
+	 * computed for the reader running it and then overwrote (issue #68) — which
+	 * loses every `closed` topic and admits `private` and `hidden` ones.
+	 *
+	 * Its own group because it belongs to neither tier. The captured list rides
+	 * the query object, so these fire on any query built by
+	 * `bbp_has_search_results()` and on nothing else — bbPress's own search
+	 * template included, the defect being upstream of our takeover.
+	 *
+	 * `pre_get_posts` at 5 lands immediately after bbPress's normalizer at 4, the
+	 * narrowest way to undo one substitution. See Query\SearchVisibility.
+	 *
+	 * @since 0.3.0
+	 */
+	private function register_search_visibility(): void {
+		$wp     = $this->wp();
+		$search = $this->container->get( SearchVisibility::class );
+		assert( $search instanceof SearchVisibility );
+
+		// Last on the arguments filter, so what is copied is what the query will
+		// actually use: a site that widens or narrows post_status through the same
+		// hook has had its say by then, and a copy taken before it would restore
+		// bbPress's answer over the site's own.
+		$wp->add_filter( 'bbp_after_has_search_results_parse_args', array( $search, 'capture_statuses' ), PHP_INT_MAX );
+		$wp->add_action( 'pre_get_posts', array( $search, 'widen_statuses' ), 5 );
+		$wp->add_filter( 'posts_where', array( $search, 'restrict_statuses' ), 10, 2 );
 	}
 
 	/**

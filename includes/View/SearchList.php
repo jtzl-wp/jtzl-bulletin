@@ -138,6 +138,7 @@ class SearchList {
 			'permalink' => $this->wp->get_forum_permalink( $forum_id ),
 			'title'     => $this->wp->get_forum_title( $forum_id ),
 			'kind'      => __( 'Forum', 'jtzl-bulletin' ),
+			'closed'    => $this->wp->is_forum_closed( $forum_id ),
 			'author'    => '',
 			/* translators: %s: formatted thread count. */
 			'date'      => sprintf( _n( '%s thread', '%s threads', $topics, 'jtzl-bulletin' ), number_format_i18n( $topics ) ),
@@ -147,6 +148,11 @@ class SearchList {
 
 	/**
 	 * A thread result.
+	 *
+	 * Carries whether it is closed, as View\ThreadRow and View\ForumRow already do
+	 * for the same subjects on their own screens. Reachable only since issue #68 —
+	 * a closed thread could not appear in a search result at all before that, so
+	 * the row had never needed to say so.
 	 *
 	 * @since 0.3.0
 	 *
@@ -158,6 +164,7 @@ class SearchList {
 			'permalink' => $this->wp->get_topic_permalink( $topic_id ),
 			'title'     => $this->wp->get_topic_title( $topic_id ),
 			'kind'      => __( 'Thread', 'jtzl-bulletin' ),
+			'closed'    => $this->wp->is_topic_closed( $topic_id ),
 			'author'    => $this->wp->get_topic_author_name( $topic_id ),
 			'date'      => $this->wp->get_topic_post_date( $topic_id ),
 			'sub'       => $this->wp->get_topic_excerpt( $topic_id, self::EXCERPT_LENGTH ),
@@ -186,6 +193,10 @@ class SearchList {
 	 *
 	 * The link is bbp_get_reply_url(), which resolves to the thread on the right
 	 * page with a #post-N anchor. P1 already made that landing work past page one.
+	 *
+	 * The one kind carrying no closed marker, deliberately. A reply is never closed;
+	 * the thread around it is, and saying so on this row would be a statement about
+	 * a post the reader is not looking at. The other two rows mark themselves.
 	 *
 	 * @since 0.3.0
 	 *

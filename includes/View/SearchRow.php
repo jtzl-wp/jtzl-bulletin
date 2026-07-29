@@ -72,7 +72,15 @@ class SearchRow {
 	}
 
 	/**
-	 * Echo the row's meta line: kind, then author, then date.
+	 * Echo the row's meta line: kind, then closed, then author, then date.
+	 *
+	 * Closed sits second here, where View\ThreadRow and View\ForumRow lead with it.
+	 * Both want the same slot for the same reason — a word at the head of the meta
+	 * column is found by scanning without reading — and the kind has the stronger
+	 * claim on a result list, being the only thing that tells two rows with the
+	 * same title apart. Second is close enough to still be found beside it, and it
+	 * keeps closed away from the date, the one field it contradicts, which is what
+	 * issue #38 actually asked for.
 	 *
 	 * @since 0.3.0
 	 *
@@ -85,6 +93,12 @@ class SearchRow {
 
 		echo '<p class="bltn-row__meta">';
 		printf( '<span class="bltn-result__kind">%s</span>', esc_html( $kind ) );
+		if ( (bool) ( $row['closed'] ?? false ) ) {
+			printf(
+				' &middot; <span class="bltn-closed">%s</span>',
+				esc_html__( 'Closed', 'jtzl-bulletin' )
+			);
+		}
 		if ( '' !== $author ) {
 			printf( ' &middot; <b>%s</b>', esc_html( $author ) );
 		}

@@ -1857,6 +1857,65 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * A WHERE fragment admitting every row of one post type, plus every row whose
+	 * status is in a list.
+	 *
+	 * Raw SQL because WP_Query has no way to say it: `post_status` applies to the
+	 * whole query, and a search spans three post types for which one status string
+	 * means two different things (see Query\SearchVisibility). Only the table name
+	 * and the fixed operators are interpolated; the post type and every status are
+	 * bound as placeholders.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param string   $exempt_post_type Post type admitted whatever its status.
+	 * @param string[] $statuses         Statuses admitted for every other post type.
+	 * @return string A fragment beginning with AND, or '' if there is nothing to say.
+	 */
+	public function post_status_where_clause( string $exempt_post_type, array $statuses ): string {
+		global $wpdb;
+
+		if ( '' === $exempt_post_type || array() === $statuses ) {
+			return '';
+		}
+
+		$placeholders = implode( ', ', array_fill( 0, count( $statuses ), '%s' ) );
+
+		return (string) $wpdb->prepare(
+			" AND ( {$wpdb->posts}.post_type = %s OR {$wpdb->posts}.post_status IN ( {$placeholders} ) )", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			array_merge( array( $exempt_post_type ), array_values( $statuses ) )
+		);
+	}
+
+	/**
+	 * Read a query variable off a query object.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param mixed  $query The query, as a hook received it.
+	 * @param string $key   Variable name.
+	 * @return mixed The value, or null if there is no query to ask.
+	 */
+	public function get_query_arg( $query, string $key ) {
+		return $query instanceof \WP_Query ? $query->get( $key ) : null;
+	}
+
+	/**
+	 * Write a query variable onto a query object.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param mixed  $query The query, as a hook received it.
+	 * @param string $key   Variable name.
+	 * @param mixed  $value Value to set.
+	 */
+	public function set_query_arg( $query, string $key, $value ): void {
+		if ( $query instanceof \WP_Query ) {
+			$query->set( $key, $value );
+		}
+	}
+
+	/**
 	 * Enqueue a stylesheet.
 	 *
 	 * @since 0.1.0
