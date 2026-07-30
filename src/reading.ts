@@ -127,6 +127,8 @@ function initReading(): void {
 	const labels = {
 		loading: 'Loading…',
 		error: 'Could not load more. Tap to retry.',
+		loadedOne: '1 more loaded.',
+		loadedMany: '%d more loaded.',
 		...config.i18n,
 	};
 	const ajaxUrl = config.ajaxUrl;
@@ -209,12 +211,91 @@ function initReading(): void {
 			}
 		}
 
-		function appendRows(html: string): void {
-			if (!html || !container) {
+		// Resolved at init, not at append time, because the control removes itself
+		// on its last page and this element is its sibling — after the removal
+		// there is no control left to look next to, and the last page is the one
+		// whose arrival most needs announcing.
+		const status = control.nextElementSibling?.matches(
+			'[data-bltn-loadmore-status]'
+		)
+			? (control.nextElementSibling as HTMLElement)
+			: null;
+
+		/** Announce what arrived, for a reader who cannot see it arrive. */
+		function announce(added: number): void {
+			if (!status || added < 1) {
 				return;
 			}
+			status.textContent =
+				added === 1
+					? labels.loadedOne
+					: labels.loadedMany.replace('%d', String(added));
+		}
+
+		/**
+		 * Move focus off the control before it is removed.
+		 *
+		 * Takes the element rather than a count. Deriving it from
+		 * `children[length - appended]` was the first shape of this and needed a
+		 * guard for an index that could not actually occur — `appendRows()` already
+		 * holds the node, so handing it over removes both the arithmetic and the
+		 * unreachable branch.
+		 *
+		 * Only fires when the control actually held focus. In a browser a pointer
+		 * click on a `<button>` focuses it, so that is the usual case; what the guard
+		 * protects is programmatic activation, where focus is elsewhere and moving it
+		 * would be unasked-for. `preventScroll` is what keeps it from moving the
+		 * viewport either way.
+		 */
+		function rehomeFocus(first: Element | null): void {
+			if (!first || !control.contains(document.activeElement)) {
+				return;
+			}
+			first.setAttribute('tabindex', '-1');
+			(first as HTMLElement).focus({ preventScroll: true });
+		}
+
+		/**
+		 * The row shapes every list this control serves can arrive in.
+		 *
+		 * Counting the container's direct children instead would be wrong on one list
+		 * and right on the rest, which is the worst kind of wrong. The Subscribed
+		 * Forums continuation appends each page as a single `ul.bbp-forums >
+		 * li.bbp-body` block (see DESIGN.md #50 — both stylesheets select on that
+		 * chain), so a page of five forums is ONE child and would have announced
+		 * "1 more loaded." The takeover lists append one element per row.
+		 */
+		const ROW_SELECTOR =
+			'.bltn-row, .bltn-post, li.bbp-body ul.forum, li.bbp-body ul.topic, li.bbp-body div.reply';
+
+		/**
+		 * What arrived, in the two forms the callers need.
+		 *
+		 * `rows` is what a reader would say arrived, and it is what gets announced.
+		 * `first` is the element focus lands on when the control removes itself. They
+		 * are separate because the row count and the appended-element count are not
+		 * the same number on every list: the Subscribed Forums continuation appends a
+		 * whole page as ONE `ul.bbp-forums > li.bbp-body` block (DESIGN.md #50), so
+		 * five forums arrive as five rows and one child. Announcing the child count
+		 * there said "1 more loaded."
+		 *
+		 * Both are read off the fragment before it is appended — `appendChild` empties
+		 * it, but a node reference taken beforehand stays valid and is then in the
+		 * document, which is exactly what focus needs.
+		 */
+		function appendRows(html: string): { rows: number; first: Element | null } {
+			if (!html || !container) {
+				return { rows: 0, first: null };
+			}
 			const frag = document.createRange().createContextualFragment(html);
+			const rows = frag.querySelectorAll(ROW_SELECTOR).length;
+			const appended = frag.children.length;
+			const first = frag.firstElementChild;
 			container.appendChild(frag);
+			// The appended-element count is the fallback for `rows`, so a list whose
+			// markup none of the selectors above anticipates still announces something
+			// rather than silently nothing.
+			return { rows: rows > 0 ? rows : appended, first };
 		}
 
 		function loadNext(): Promise<boolean> {
@@ -229,8 +310,9 @@ function initReading(): void {
 
 			return fetchPage(control, next)
 				.then((data) => {
-					appendRows(data.html);
+					const added = appendRows(data.html);
 					loading = false;
+					announce(added.rows);
 					if (data.hasMore) {
 						control.setAttribute(
 							'data-next',
@@ -239,6 +321,13 @@ function initReading(): void {
 						setState('idle');
 						return true;
 					}
+					// Last page: the control goes, so whatever focus it held has to
+					// be put somewhere first. Removing a focused element sends focus
+					// to <body>, which on a long thread returns a keyboard reader to
+					// the top of the document — past everything they just loaded.
+					// It lands on the first newly appended row instead, which is
+					// where the reader was going.
+					rehomeFocus(added.first);
 					control.parentNode?.removeChild(control);
 					live = false;
 					return false;

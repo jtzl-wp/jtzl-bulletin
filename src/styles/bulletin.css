@@ -112,6 +112,20 @@ body.admin-bar .bltn-app {
 	block-size: 100%;
 	display: grid;
 	grid-template-rows: auto 1fr auto; /* app bar · scroll · optional bottom bar */
+	/* The column has to be stated, and it has to carry a zero minimum.
+	   An implicit `auto` track is sized by its widest item's min-content, and the
+	   app bar's min-content is its nowrap title plus three 40px buttons — 412.7px
+	   inside a 390px phone. Every grid item then inherited that width and
+	   `overflow: hidden` clipped the excess, so the right 23px of the screen was
+	   cut and unreachable: the account button lost 15 of its 40px, `.bltn-row`'s
+	   disclosure chevron fell off the edge entirely, and the title's own
+	   `text-overflow: ellipsis` never engaged because the bar was never asked to
+	   shrink. `minmax(0, 1fr)` caps the track at the container and lets the
+	   ellipsis do its job. `min-inline-size: 0` on the title does NOT substitute:
+	   it bounds how far the flex item shrinks, not the flex container's intrinsic
+	   contribution to the track. Worst at 200% zoom, where a short title clipped
+	   63% of the width (WCAG 1.4.4, 1.4.10). */
+	grid-template-columns: minmax(0, 1fr);
 	background: var(--bltn-surface);
 	overflow: hidden;
 }
@@ -133,6 +147,14 @@ body.admin-bar .bltn-app {
 	text-decoration: none;
 	inline-size: 40px;
 	block-size: 40px;
+	/* Do not shrink. Once the app bar is correctly clamped to the viewport
+	   (`grid-template-columns` on .bltn-screen), a long title makes the bar's flex
+	   line overflow — and a flex item's default `flex-shrink: 1` meant the buttons
+	   paid for it, dropping to 37px on exactly the screens with the longest names.
+	   The title is the item built to absorb it: `min-inline-size: 0` plus an
+	   ellipsis. So the tap targets keep their size on every screen and the text
+	   truncates, which is the whole point of the ellipsis. */
+	flex: 0 0 auto;
 	border-radius: 10px;
 	display: grid;
 	place-content: center;
@@ -446,6 +468,14 @@ body.admin-bar .bltn-app {
 	gap: 5px;
 	color: var(--bltn-ink-3);
 	text-decoration: none;
+	/* The pointer target is grown past the text box, not the text. See the
+	   .bltn-hit-24 note below the permalink rule. */
+	position: relative;
+}
+.bltn-replyto a::after {
+	content: "";
+	position: absolute;
+	inset: -6px -4px;
 }
 .bltn-replyto a:hover {
 	color: var(--bltn-accent-ink);
@@ -494,6 +524,20 @@ body.admin-bar .bltn-app {
 .bltn-permalink {
 	color: inherit;
 	text-decoration: none;
+	position: relative;
+}
+/* The one thing the "costs no pixels" argument did not cover: a 12px timestamp
+   renders a 15px-tall box, and WCAG 2.2 2.5.8 asks for 24. On a 22-reply thread
+   that was ~30 sub-minimum targets and every in-content affordance the screen
+   has. The target is grown with an inset overlay instead of padding, so the
+   permalink still occupies exactly the byline space it did — the decision that
+   it costs no pixels survives, and only the thumb notices. Vertical inset is
+   -6px (15 + 12 = 27) and horizontal -4px, kept small so two adjacent stops in
+   one byline cannot overlap. */
+.bltn-permalink::after {
+	content: "";
+	position: absolute;
+	inset: -6px -4px;
 }
 .bltn-permalink:hover {
 	color: var(--bltn-accent-ink);
@@ -508,6 +552,16 @@ body.admin-bar .bltn-app {
 	line-height: 1.62;
 	color: var(--bltn-ink);
 	overflow-wrap: anywhere;
+	/* A reading measure, on the prose only. Measured at 720px (the frame's desktop
+	   width) this ran to 80 characters a line at 17px — comfortable reading is
+	   45–75, and past that the eye loses its place on the return sweep. It is the
+	   one number on the desktop surface that decides whether a long post is
+	   pleasant, and desktop is the surface going to the client for review.
+	   `ch` rather than `px` so the measure tracks the serif's own metrics, and on
+	   `.bltn-post__body` alone rather than the frame, so the chrome — app bar,
+	   bottom bar, tag row, load-more — keeps using the full width. Below ~600px
+	   the frame is already narrower than 66ch, so this changes nothing on a phone. */
+	max-inline-size: 66ch;
 }
 .bltn-post__body p {
 	margin: 0 0 0.82em;
@@ -754,7 +808,12 @@ body.admin-bar .bltn-app {
 /* ---- bottom bar (thread Prev/Next, scoped to the current forum) ---- */
 .bltn-navbar {
 	display: grid;
-	grid-template-columns: 1fr auto 1fr;
+	/* Zero minimums, so the bar can compress instead of forcing the shell wider than
+	   the viewport. With `auto` in the middle the count's nowrap text was
+	   incompressible, and once the app bar stopped setting the shell's width this bar
+	   became the next thing that did — 269px of min-content, which clipped the screen
+	   at 200% zoom on a phone. */
+	grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr);
 	align-items: center;
 	gap: 6px;
 	padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px));
@@ -800,6 +859,13 @@ body.admin-bar .bltn-app {
 	text-align: center;
 	white-space: nowrap;
 	font-variant-numeric: tabular-nums;
+	/* Truncate rather than push the bar wider than the screen. "Thread 20 of 23"
+	   stays on one line wherever it fits, which is every real phone; below that the
+	   position ellipsises and the two controls keep their targets. Losing the tail of
+	   a count is a smaller failure than clipping the screen it sits on. */
+	min-inline-size: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 /* ---- empty states ---- */
@@ -1006,6 +1072,11 @@ body.admin-bar .bltn-app {
 .bltn-reskin .bltn-app {
 	display: grid;
 	grid-template-rows: auto 1fr;
+	/* Same zero-minimum column as `.bltn-screen`, and for the same reason — this
+	   grid has the same shape and the same app bar in it. Latent here rather than
+	   live: the reskin bar carries the (short) site name, so it measured no
+	   overflow. Stated so a longer name never reintroduces the clipping. */
+	grid-template-columns: minmax(0, 1fr);
 }
 .bltn-reskin__body {
 	background: var(--bltn-surface);
@@ -1026,6 +1097,49 @@ body.admin-bar .bltn-app {
 }
 .bltn-reskin__body a:hover {
 	text-decoration: underline;
+}
+
+/* A permanent underline on the META links, and only those.
+
+   The defect it answers: a loop card embeds four links inside a run of meta grey —
+   "Started by: Mara K. in: Troubleshooting" · "1 day ago" · "Mara K." — where colour
+   was the only thing marking them tappable. Measured, the accent against the grey
+   they sit among is 1.15:1 (2.27:1 against body ink), and WCAG technique F73 wants
+   ≥3:1 when colour is the sole distinction. `:hover` cannot supply it on the phone
+   this is built for: there is no hover on a touch screen, so that cue existed only
+   for desktop.
+
+   Scoped rather than applied to every `a`, because the first version of this WAS
+   every `a` and it underlined the card TITLE too — 15 ruled serif headlines down a
+   screen, which is the "reads as ruled" outcome this rule exists to avoid. A title
+   needs no underline: at 16px serif 600 in full ink above 12px sans grey it is
+   already distinguished by face, size, weight and position, so colour is not its
+   only cue and F73 does not reach it. The tab bar is excluded for the same reason —
+   a filled teal chip is not distinguished by colour alone either.
+
+   A tinted underline rather than full strength, so four of them in one card sit
+   quietly. `color-mix` degrades to the text colour where unsupported, which is
+   stronger than intended, never absent. */
+.bltn-reskin__body p.bbp-topic-meta a,
+.bltn-reskin__body li.bbp-topic-freshness a,
+.bltn-reskin__body div.bbp-reply-header span.bbp-header a,
+.bltn-reskin__body span.bbp-reply-post-date a,
+.bltn-reskin__body a.bbp-reply-permalink {
+	text-decoration: underline;
+	text-decoration-color: color-mix(
+		in srgb,
+		var(--bltn-accent-ink) 35%,
+		transparent
+	);
+	text-decoration-thickness: 1px;
+	text-underline-offset: 2px;
+}
+.bltn-reskin__body p.bbp-topic-meta a:hover,
+.bltn-reskin__body li.bbp-topic-freshness a:hover,
+.bltn-reskin__body div.bbp-reply-header span.bbp-header a:hover,
+.bltn-reskin__body span.bbp-reply-post-date a:hover,
+.bltn-reskin__body a.bbp-reply-permalink:hover {
+	text-decoration-color: var(--bltn-accent-ink);
 }
 
 /* Header band: the avatar and the identity block (name + @handle + role,
@@ -1153,6 +1267,13 @@ body.admin-bar .bltn-app {
 	a {
 	color: #fff;
 	background: var(--bltn-accent);
+	/* bbPress fades its own active tab (`opacity: 0.8`, bbpress.css:1341). We
+	   replaced its background and its colour but not that, so the pair we
+	   intended — white on the accent, 4.69:1 — composited to 3.87:1 and failed
+	   AA on the one chip that says where the reader is. Same shape as the
+	   placeholder reset further up: a foreign dim, undone, not a colour of ours
+	   changed. */
+	opacity: 1;
 }
 
 /* Body: the display name leads, then labelled metadata sections. */
@@ -1404,6 +1525,31 @@ body.admin-bar .bltn-app {
 	order: -1;
 	flex: 1 1 100%;
 	margin-bottom: 3px;
+}
+/* "in reply to: {thread}" is the CONTAINER, not the content, and it was being set
+   in the reading face at title size — because bbPress reuses `a.bbp-topic-permalink`
+   here, which the topic loop's own rule (further up) makes serif 16px/600 ink.
+   The effect on the Replies Created tab was the manufactured duplicate that issue
+   #35 diagnosed and fixed on search, still live one tier over: six replies to one
+   thread rendered as six rows headlined by the same title, with each reply's actual
+   words as the last, smallest, greyest line. The reader's own record of what they
+   wrote read as a rendering bug.
+   So the pair is swapped back into the register the rest of the system uses — the
+   thread name to the meta line, the reply's own words already being serif 15px via
+   `div.bbp-reply-content`. Retype only: every field bbPress rendered is still here,
+   in the same order, saying the same thing. Same weighting `View\SearchRow` gives
+   the same two facts on the takeover tier. */
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	div.bbp-reply-header
+	span.bbp-header
+	a.bbp-topic-permalink {
+	font-family: var(--bltn-sans);
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 1.4;
+	color: var(--bltn-ink-2);
 }
 .bltn-reskin .bltn-reskin__body #bbpress-forums span.bbp-reply-post-date,
 .bltn-reskin .bltn-reskin__body #bbpress-forums a.bbp-reply-permalink {
@@ -1817,6 +1963,9 @@ body.admin-bar .bltn-app {
 	color: var(--bltn-accent-ink);
 	background: var(--bltn-wash);
 	font-weight: 600;
+	/* bbPress fades this one too (`opacity: 0.8`, bbpress.css:692), which took the
+	   current page number to 4.24:1 — the chip that says which page you are on. */
+	opacity: 1;
 }
 
 /* bbPress's own row emphasis, recoloured into the palette rather than dropped.
@@ -1909,10 +2058,22 @@ body.admin-bar .bltn-app {
    pending in the status-colour family owed to #36, which wants one legible
    treatment for all four rather than four dimmings. The takeover states it in a
    word instead (see DESIGN.md, "Closed is a fact, not a demotion"); the reskin
-   cannot, because it recolours bbPress's markup and does not author its own. */
-.bltn-reskin .bltn-reskin__body #bbpress-forums ul.status-closed,
-.bltn-reskin .bltn-reskin__body #bbpress-forums ul.status-closed a {
+   cannot, because it recolours bbPress's markup and does not author its own.
+
+   ⚠ The `a` half of this used to take `inherit` too, and that did NOT deliver
+   what the paragraph above claims. This selector (1 id, 3 classes, 2 types) also
+   outranks `.bltn-reskin__body a`, so a closed row's four unnamed link runs
+   inherited the surrounding grey — rgb(105,113,106) against rgb(10,95,82) on
+   every open row. Closed rows silently lost their link colour: a difference with
+   no meaning, and on a tier where colour is what marks a link, it also removed
+   the only cue that those words were tappable. So the reset is now split — the
+   row goes back to inherit, and the links are put back to the accent explicitly.
+   "Reads exactly like an open one" is a claim this rule now actually keeps. */
+.bltn-reskin .bltn-reskin__body #bbpress-forums ul.status-closed {
 	color: inherit;
+}
+.bltn-reskin .bltn-reskin__body #bbpress-forums ul.status-closed a {
+	color: var(--bltn-accent-ink);
 }
 
 /* ==== ARCHIVE LAYER: the topic archive's own furniture (issue #43) ====
@@ -1976,6 +2137,20 @@ body.admin-bar .bltn-app {
 }
 .bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-breadcrumb a {
 	color: var(--bltn-ink-3);
+	/* Underlined, and tinted off this line's own grey rather than the accent so the
+	   trail stays one tone. #43 styled the breadcrumb as a quiet label rather than
+	   navigation — but the same note records its actual job: it is the way OUT for a
+	   reader who arrives cold on a URL nothing links. A way out that gives no sign of
+	   being tappable is not one, and these segments are the same grey as the text
+	   around them, so they have no colour cue either. */
+	text-decoration: underline;
+	text-decoration-color: color-mix(
+		in srgb,
+		var(--bltn-ink-3) 40%,
+		transparent
+	);
+	text-decoration-thickness: 1px;
+	text-underline-offset: 2px;
 }
 .bltn-reskin
 	.bltn-reskin__body
@@ -1983,7 +2158,11 @@ body.admin-bar .bltn-app {
 	div.bbp-breadcrumb
 	span.bbp-breadcrumb-sep {
 	margin: 0 5px;
-	color: var(--bltn-line);
+	/* Was `--bltn-line` (#e6e8e3), a border token used as a text colour: 1.23:1 on
+	   white, so the separator was failing at its own job as well as at AA. It takes
+	   the same grey as the rest of the line, which is what "a quiet label line"
+	   (issue #43) actually asks for — one tone, legible. */
+	color: var(--bltn-ink-3);
 }
 .bltn-reskin
 	.bltn-reskin__body
@@ -2005,4 +2184,46 @@ body.admin-bar .bltn-app {
 	#bbpress-forums
 	> div.bbp-pagination:has(+ ul.bbp-topics) {
 	display: none;
+}
+
+/* The same doubling, on the profile tabs, which the rule above never reached: its
+   `>` combinator is relative to #bbpress-forums, and a profile's pager is nested a
+   level deeper inside `div.bbp-user-section`. So Topics Started opened on a count
+   line and Replies Created on a count line AND a row of page chips, while the three
+   archive screens — the ones the rule was written for — opened on their content.
+   One screen in a set of five behaving differently is the kind of thing a reader
+   notices without being able to say why.
+   Two loop types here, not one: a profile tab lists topics or replies. */
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	div.bbp-user-section
+	> div.bbp-pagination:has(+ ul.bbp-topics, + ul.bbp-replies) {
+	display: none;
+}
+
+/* ---- reduced motion ---- */
+/* Every animation and transition in this stylesheet, answered in one place.
+   Nothing here was guarded before, so a reader who has asked their OS to reduce
+   motion still got the 2.4s reply highlight on every deep link and permalink tap
+   — the one animation in the product that fires without being asked for.
+
+   Duration is collapsed rather than `animation: none`, because the highlight is
+   not decoration: it is what tells a reader WHICH post a link just took them to.
+   `1ms` keeps the final keyframe applied and the animationend event firing (the
+   highlight replays on a second visit to the same anchor, which needs the event),
+   while removing the motion. The transitions are hover/press feedback and lose
+   nothing by being instant. */
+@media (prefers-reduced-motion: reduce) {
+	.bltn-post--target,
+	.bltn-iconbtn,
+	.bltn-loadmore__btn,
+	.bltn-navbtn,
+	.bltn-row,
+	.bltn-modtoggle,
+	.bltn-tags a {
+		animation-duration: 1ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 1ms !important;
+	}
 }

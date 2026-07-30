@@ -130,8 +130,17 @@ class AssetManager {
 				array(
 					'ajaxUrl' => $this->wp->get_ajax_url(),
 					'i18n'    => array(
-						'loading' => __( 'Loading…', 'jtzl-bulletin' ),
-						'error'   => __( 'Could not load more. Tap to retry.', 'jtzl-bulletin' ),
+						'loading'    => __( 'Loading…', 'jtzl-bulletin' ),
+						'error'      => __( 'Could not load more. Tap to retry.', 'jtzl-bulletin' ),
+						// Written into the control's live region so a reader who cannot
+						// see the rows arrive is told that they did. Both plural forms
+						// are shipped because `_n()` cannot be resolved in the browser:
+						// the script picks on `n === 1`, which is correct for the
+						// languages this ships in and degrades to the plural form
+						// elsewhere rather than to nothing.
+						'loadedOne'  => __( '1 more loaded.', 'jtzl-bulletin' ),
+						/* translators: %d: number of items just loaded. */
+						'loadedMany' => __( '%d more loaded.', 'jtzl-bulletin' ),
 					),
 				)
 			);

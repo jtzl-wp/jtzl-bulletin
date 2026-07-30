@@ -400,6 +400,22 @@ interface ContextInterface {
 	public function get_displayed_user_role(): string;
 
 	/**
+	 * The name bbPress would give the current screen.
+	 *
+	 * This is computed by bbPress for every screen it owns — a member's profile, a tag
+	 * archive, a registered view, a search — but hung on the legacy `wp_title`
+	 * filter only, which `wp_get_document_title()` never calls. So the answer exists
+	 * and simply never reaches a document that titles itself the modern way. Asked
+	 * for with empty separators, so it returns the name alone: WordPress adds the
+	 * site name and the separator itself.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return string Screen name, or '' where bbPress has none.
+	 */
+	public function get_bbpress_screen_title(): string;
+
+	/**
 	 * The forums index URL.
 	 *
 	 * @since 0.1.0

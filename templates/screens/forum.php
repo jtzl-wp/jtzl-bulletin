@@ -56,9 +56,13 @@ $bltn_closed    = $bltn_ctx->is_forum_closed( $bltn_forum_id );
 $bltn_subforums = '';
 $bltn_sub_more  = false;
 $bltn_pinned    = '';
-$bltn_rest      = '';
-$bltn_more      = false;
-$bltn_page      = $bltn_ctx->get_paged();
+// This forum's own pinned rows, as distinct from the site-wide super stickies that
+// are pinned into every forum. Only the former says anything about whether this
+// forum holds content — see the empty state at the foot of this template.
+$bltn_own_pinned = '';
+$bltn_rest       = '';
+$bltn_more       = false;
+$bltn_page       = $bltn_ctx->get_paged();
 
 if ( ! $bltn_protected ) {
 	/*
@@ -97,14 +101,25 @@ if ( ! $bltn_protected ) {
 		 * The guard reads the args back, so it tests the exact list the query would
 		 * use rather than a second derivation that could drift from it.
 		 */
-		$bltn_pin_queries = array(
-			$bltn_query->super_pinned_args(),
-			$bltn_query->forum_pinned_args( $bltn_forum_id ),
-		);
-		foreach ( $bltn_pin_queries as $bltn_pin_args ) {
-			if ( array() !== $bltn_pin_args['post__in'] ) {
-				$bltn_pinned .= $bltn_threads->capture( $bltn_pin_args );
-			}
+		$bltn_super_args = $bltn_query->super_pinned_args();
+		if ( array() !== $bltn_super_args['post__in'] ) {
+			$bltn_pinned .= $bltn_threads->capture( $bltn_super_args );
+		}
+
+		/*
+		 * The forum's OWN pinned topics are kept in a second variable as well as
+		 * appended, because the two sets answer different questions. A site-wide
+		 * super sticky is pinned into every forum, so it says nothing about whether
+		 * THIS forum holds anything — and the empty state below needs to know. With
+		 * one combined variable a forum with no content of its own rendered the
+		 * site's notice under "Pinned", reported "0 threads" in its header, and
+		 * suppressed the empty state that would have explained the gap: a screen
+		 * contradicting itself and then going quiet.
+		 */
+		$bltn_own_pinned_args = $bltn_query->forum_pinned_args( $bltn_forum_id );
+		if ( array() !== $bltn_own_pinned_args['post__in'] ) {
+			$bltn_own_pinned = $bltn_threads->capture( $bltn_own_pinned_args );
+			$bltn_pinned    .= $bltn_own_pinned;
 		}
 		wp_reset_postdata();
 	}
@@ -140,7 +155,7 @@ $bltn_back_text = $bltn_parent_id
 	);
 	?>
 
-	<div class="bltn-scroll" id="bltn-threads">
+	<main class="bltn-scroll" id="bltn-threads">
 
 		<?php if ( $bltn_protected ) : ?>
 
@@ -288,18 +303,36 @@ $bltn_back_text = $bltn_parent_id
 			 * topics directly (legal in bbPress) still shows them. Suppressing the
 			 * empty state whenever sub-forums exist is what closes the dead end
 			 * where a populated category announced "No threads yet".
+			 *
+			 * $bltn_own_pinned, not $bltn_pinned, and that is the whole of a defect
+			 * the design review found. A site-wide super sticky is pinned into every
+			 * forum by design (see DESIGN.md — it is how one notice reaches every
+			 * forum a reader navigates to), so testing the combined set meant a forum
+			 * with nothing of its own was never "empty": it rendered the site's notice
+			 * under "Pinned", reported "0 threads" in its header — both true — and
+			 * then suppressed the one element that would have reconciled them. The
+			 * empty state now speaks for the forum's own list, which is what it was
+			 * always about, and sits below the pinned section so the two read in
+			 * order: here is the site's notice; this forum has nothing yet.
 			 */
 			?>
-			<?php if ( '' === $bltn_subforums && '' === $bltn_pinned && '' === $bltn_rest ) : ?>
+			<?php if ( '' === $bltn_subforums && '' === $bltn_own_pinned && '' === $bltn_rest ) : ?>
 
 				<div class="bltn-empty">
 					<p class="bltn-empty__title"><?php esc_html_e( 'No threads yet', 'jtzl-bulletin' ); ?></p>
-					<p class="bltn-empty__body"><?php esc_html_e( 'Be the first to start one.', 'jtzl-bulletin' ); ?></p>
+					<?php
+					/*
+					 * Not "Be the first to start one." — this release has no composer
+					 * on any screen, so that invited an action the reader cannot take,
+					 * on the one screen whose job is to explain an absence.
+					 */
+					?>
+					<p class="bltn-empty__body"><?php esc_html_e( 'Nothing has been posted in this forum.', 'jtzl-bulletin' ); ?></p>
 				</div>
 
 			<?php endif; ?>
 
 		<?php endif; ?>
-	</div>
+	</main>
 
 </section>

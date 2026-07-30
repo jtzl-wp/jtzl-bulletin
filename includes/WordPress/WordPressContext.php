@@ -522,6 +522,17 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * The name bbPress would give the current screen.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return string
+	 */
+	public function get_bbpress_screen_title(): string {
+		return trim( (string) bbp_title( '', '', '' ) );
+	}
+
+	/**
 	 * The forums index URL.
 	 *
 	 * @since 0.1.0

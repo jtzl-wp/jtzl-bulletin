@@ -15,6 +15,10 @@ export interface LoadMoreData {
 export interface BltnI18n {
 	loading?: string;
 	error?: string;
+	/** Live-region announcement for a single appended row. */
+	loadedOne?: string;
+	/** Live-region announcement for several; carries a `%d` the script fills. */
+	loadedMany?: string;
 }
 
 export interface BltnConfig {

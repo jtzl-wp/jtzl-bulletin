@@ -45,7 +45,7 @@ $bltn_more = 1 < $bltn_ctx->get_max_forum_pages();
 	);
 	?>
 
-	<div class="bltn-scroll bltn-list" id="bltn-forums">
+	<main class="bltn-scroll bltn-list" id="bltn-forums">
 		<?php if ( '' !== $bltn_rows ) : ?>
 
 			<?php
@@ -84,6 +84,6 @@ $bltn_more = 1 < $bltn_ctx->get_max_forum_pages();
 			</div>
 
 		<?php endif; ?>
-	</div>
+	</main>
 
 </section>

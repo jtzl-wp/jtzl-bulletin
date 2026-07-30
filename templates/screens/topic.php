@@ -55,7 +55,7 @@ $bltn_moderates = $bltn_mod->available( $bltn_topic_id );
 
 	<?php if ( $bltn_protected ) : ?>
 
-		<div class="bltn-scroll" id="bltn-reading">
+		<main class="bltn-scroll" id="bltn-reading">
 			<div class="bltn-protected">
 				<?php
 				/*
@@ -79,11 +79,11 @@ $bltn_moderates = $bltn_mod->available( $bltn_topic_id );
 				echo get_the_password_form( $bltn_topic_id ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- WordPress core markup.
 				?>
 			</div>
-		</div>
+		</main>
 
 	<?php else : ?>
 
-		<div class="bltn-scroll" id="bltn-reading">
+		<main class="bltn-scroll" id="bltn-reading">
 			<article class="bltn-thread">
 
 				<p class="bltn-thread__label"><?php echo esc_html( $bltn_forum ); ?></p>
@@ -233,9 +233,20 @@ $bltn_moderates = $bltn_mod->available( $bltn_topic_id );
 				?>
 
 			</article>
-		</div>
+		</main>
 
 		<?php
+		/*
+		 * The bar stays LAST in the document, matching where it sits on the screen.
+		 * The design review proposed hoisting it above the scroll region so a
+		 * keyboard reader reaches Prev/Next without passing every reply's
+		 * permalink. Declined: visual order here is app bar → content → bar, DOM
+		 * order already matches it, and inverting that trades WCAG 2.4.3/1.3.2
+		 * (meaningful sequence) for tab stops that landmark navigation already
+		 * skips — the bar is a labelled <nav> and the scroll region is now <main>,
+		 * so both are reachable directly. A footer's controls coming after the
+		 * content they act on is the sequence, not a defect in it.
+		 */
 		$bltn_nav_model = $bltn_navigator->locate( $bltn_topic_id, $bltn_forum_id );
 		$bltn_navbar->render( $bltn_nav_model );
 		?>

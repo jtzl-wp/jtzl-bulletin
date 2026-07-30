@@ -75,7 +75,7 @@ if ( $bltn_query->is_runnable( $bltn_terms ) ) {
 	);
 	?>
 
-	<div class="bltn-scroll bltn-list" id="bltn-search">
+	<main class="bltn-scroll bltn-list" id="bltn-search">
 
 		<?php
 		/*
@@ -168,6 +168,6 @@ if ( $bltn_query->is_runnable( $bltn_terms ) ) {
 			</div>
 
 		<?php endif; ?>
-	</div>
+	</main>
 
 </section>

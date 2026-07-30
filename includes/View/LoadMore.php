@@ -75,5 +75,18 @@ class LoadMore {
 			esc_html( $label )
 		);
 		echo '</div>';
+
+		/*
+		 * The arrival of new rows, for a reader who cannot see them arrive. Empty
+		 * until the script writes a count into it; `role="status"` is polite, so it
+		 * never interrupts what is being read.
+		 *
+		 * A SIBLING of the control, not a child, and that is load-bearing: on its
+		 * last page the control removes itself from the document (reading.ts), which
+		 * would take a nested live region with it — and the last page is exactly the
+		 * one whose arrival still needs announcing. Left behind it costs nothing: it
+		 * is visually hidden and empty.
+		 */
+		echo '<p class="bltn-sr-only" role="status" data-bltn-loadmore-status></p>';
 	}
 }
