@@ -17,6 +17,7 @@ use JTZL\Bulletin\Ajax\LoadTopicsController;
 use JTZL\Bulletin\Asset\AssetManager;
 use JTZL\Bulletin\Chrome\AdminBar;
 use JTZL\Bulletin\Chrome\DocumentTitle;
+use JTZL\Bulletin\Chrome\PasswordForm;
 use JTZL\Bulletin\Chrome\ProtectedTitle;
 use JTZL\Bulletin\Chrome\ReplyToLink;
 use JTZL\Bulletin\Chrome\RowActionLabels;
@@ -270,6 +271,16 @@ class Bootstrap {
 		assert( $reply_to instanceof ReplyToLink );
 
 		$this->wp()->add_filter( 'bbp_get_reply_to_link', array( $reply_to, 'filter_reply_to_link' ), 100 );
+
+		// And put the caret back in the password field when the reader has just
+		// mistyped it — the wrong-password state is a full page load, so focus is on
+		// <body> and the field has to be found again (see Chrome\PasswordForm). At 20,
+		// after View\ProtectedRowContent's withholding at 10 on the same filter: what
+		// that returns for a loop row is the empty string, which has no field to focus.
+		$password_form = $this->container->get( PasswordForm::class );
+		assert( $password_form instanceof PasswordForm );
+
+		$this->wp()->add_filter( 'the_password_form', array( $password_form, 'filter_password_form' ), 20 );
 
 		// And name the screens WordPress could not: bbPress filters only the legacy
 		// wp_title, which wp_get_document_title() never calls, so four reskin routes

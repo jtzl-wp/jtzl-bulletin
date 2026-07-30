@@ -25,6 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 $bltn_container = \JTZL\Bulletin\Plugin::get_container();
 $bltn_appbar    = $bltn_container->get( \JTZL\Bulletin\View\AppBar::class );
+$bltn_heading   = $bltn_container->get( \JTZL\Bulletin\View\ScreenHeading::class );
 ?>
 <!doctype html>
 <html <?php language_attributes(); ?>>
@@ -35,8 +36,8 @@ $bltn_appbar    = $bltn_container->get( \JTZL\Bulletin\View\AppBar::class );
 <div class="bltn-app">
 	<?php
 	// Chrome only: a back control to the forums index and the account button. The
-	// title stays the site name and is not a heading — bbPress's own content
-	// carries the screen's h1 — so we don't compete with it or double up.
+	// title stays the site name and is not a heading — the screen's h1 is rendered
+	// below, in the content region, exactly as the four takeover templates do it.
 	$bltn_appbar->render(
 		array(
 			'back_url'   => bbp_get_forums_url(),
@@ -47,6 +48,15 @@ $bltn_appbar    = $bltn_container->get( \JTZL\Bulletin\View\AppBar::class );
 	?>
 	<main class="bltn-reskin__body bltn-scroll">
 		<?php
+		/*
+		 * The screen's heading, announced and not shown. This template used to leave it
+		 * out on the grounds that bbPress's own content carries an h1 — measured across
+		 * eight reskin routes, not one of them does (see View\ScreenHeading). Before the
+		 * loop deliberately: it is the document's first heading, and CLAUDE.md trap #5
+		 * is a `the_title` re-entrancy hang reachable from inside a running loop.
+		 */
+		$bltn_heading->render();
+
 		while ( have_posts() ) {
 			the_post();
 			the_content();

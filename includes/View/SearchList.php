@@ -70,6 +70,18 @@ class SearchList {
 	 * @return string Markup, or '' when the query matched nothing.
 	 */
 	public function capture( array $args ): string {
+		// Read back off the args rather than passed in beside them, so the rows are
+		// marked with the terms the query actually ran — the screen and the load-more
+		// endpoint both build these through Query\SearchQuery, and a second parameter
+		// would be a second thing the two paths could disagree about.
+		//
+		// Scalar-checked rather than cast outright: WordPress accepts an array for `s`
+		// (`?s[]=x` reaches a query var that way), and casting one would print "Array"
+		// and then mark that word in every row on the screen. Nothing marked is the
+		// right answer to terms that are not a string (raised by Qodo).
+		$raw   = $args['s'] ?? '';
+		$terms = is_scalar( $raw ) ? (string) $raw : '';
+
 		ob_start();
 
 		if ( $this->wp->has_search_results( $args ) ) {
@@ -78,6 +90,7 @@ class SearchList {
 
 				$row = $this->row_for( $this->wp->get_search_result_post_type(), $this->wp->get_search_result_id() );
 				if ( array() !== $row ) {
+					$row['terms'] = $terms;
 					$this->row->render( $row );
 				}
 			}

@@ -41,9 +41,35 @@ namespace JTZL\Bulletin\View;
  * The kind qualifies the headline and belongs against it; the third line is what
  * remains once both have been read.
  *
+ * ## The terms are marked, in both text slots
+ *
+ * The headline and the supporting line each go through View\TermHighlighter, which
+ * escapes them and wraps what matched. The two are marked together on purpose: which
+ * of them holds the match is not a fact about the result, it is a fact about the kind
+ * — a reply's words are its headline while a thread's are its supporting line — so
+ * marking one and not the other would leave half the list looking unmatched.
+ *
  * @since 0.3.0
  */
 class SearchRow {
+
+	/**
+	 * Search-term marker (also the escaper for the two text slots).
+	 *
+	 * @var TermHighlighter
+	 */
+	private TermHighlighter $marks;
+
+	/**
+	 * Constructor.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param TermHighlighter $marks Search-term marker.
+	 */
+	public function __construct( TermHighlighter $marks ) {
+		$this->marks = $marks;
+	}
 
 	/**
 	 * Echo one result row.
@@ -51,8 +77,9 @@ class SearchRow {
 	 * Fields: permalink (where the result opens), title (the headline — a forum or
 	 * thread's name, or a reply's own words), kind (the translated noun for what
 	 * this is), author (plain name, absent on a forum), date (the post's own date,
-	 * which is the one the list is ordered by), and sub (the supporting line, plain
-	 * text, already decoded and password-checked by the seam).
+	 * which is the one the list is ordered by), sub (the supporting line, plain
+	 * text, already decoded and password-checked by the seam), and terms (what the
+	 * reader searched for, to mark).
 	 *
 	 * @since 0.3.0
 	 *
@@ -61,12 +88,14 @@ class SearchRow {
 	public function render( array $row ): void {
 		$title = (string) ( $row['title'] ?? '' );
 		$sub   = (string) ( $row['sub'] ?? '' );
+		$terms = (string) ( $row['terms'] ?? '' );
 
 		printf( '<a class="bltn-row bltn-result" href="%s">', esc_url( (string) ( $row['permalink'] ?? '' ) ) );
-		printf( '<h2 class="bltn-row__title">%s</h2>', esc_html( $title ) );
+		// Escaped by the highlighter, which has to do it itself — see its docblock.
+		printf( '<h2 class="bltn-row__title">%s</h2>', $this->marks->highlight( $title, $terms ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		$this->render_meta( $row );
 		if ( '' !== $sub ) {
-			printf( '<p class="bltn-result__sub">%s</p>', esc_html( $sub ) );
+			printf( '<p class="bltn-result__sub">%s</p>', $this->marks->highlight( $sub, $terms ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		}
 		echo '</a>';
 	}

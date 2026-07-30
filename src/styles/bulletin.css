@@ -20,6 +20,10 @@
 	--bltn-line-soft: #eef0ec;
 	--bltn-accent: #0e7c6b;
 	--bltn-accent-ink: #0a5f52;
+	/* The searched term's tint. Its own token rather than a --bltn-wash reuse: this is
+	   the one tint that carries meaning, and 18% is a computed value (see .bltn-result
+	   mark) where wash's 6% is a button fill. */
+	--bltn-mark: rgba(14, 124, 107, 0.18);
 	--bltn-unread: #cf7726; /* Amber — unread only. */
 
 	--bltn-sans:
@@ -38,7 +42,8 @@
      --bltn-bg:#0d100e; --bltn-surface:#171a18; --bltn-wash:rgba(60,194,169,.10);
      --bltn-ink:#eceee9; --bltn-ink-2:#9ba39c; --bltn-ink-3:#6a726b;
      --bltn-line:#262b27; --bltn-line-soft:#1f231f;
-     --bltn-accent:#3cc2a9; --bltn-accent-ink:#3cc2a9; --bltn-unread:#e0975a; */
+     --bltn-accent:#3cc2a9; --bltn-accent-ink:#3cc2a9; --bltn-unread:#e0975a;
+     --bltn-mark:rgba(60,194,169,.26); */
 
 .bltn *,
 .bltn *::before,
@@ -951,6 +956,57 @@ body.admin-bar .bltn-app {
 	color: var(--bltn-ink-2);
 }
 
+/* A reply result is headlined by its own words, so its headline is as long as the
+   excerpt allows — three lines of 17px serif at 390px, and four below about 350px.
+   Clamped at three, which is the design width's own answer: nothing is cut on a
+   phone, and the narrow case stops growing.
+
+   Three and not the two the review proposed, because clamping fights the marking
+   below it: a term matched on the clipped line is ellipsised away, and a result row
+   that hides the reason it is in the list is worse than a tall one. Shortening the
+   headline to fit two lines has the same defect.
+
+   Which is also why the clamp lifts below 360px rather than doing its most work
+   there. Measured: at 320px a term matching at the *end* of the excerpt was hidden
+   on 15 of 15 rows (`/forums/search/real post/`), and at 360px and above on none.
+   So the narrowest viewport is exactly where clamping costs the most and the rule
+   above decides it — a fourth line is the price of the mark staying visible, and
+   320px is the reflow benchmark, where losing content is the thing not to do.
+
+   The genuinely better answer — an excerpt windowed around the match, which would
+   let the clamp apply at every width — belongs with the flooding question (13 of 15
+   rows from one thread), and neither is worth doing without the other. */
+@media (min-width: 360px) {
+	.bltn-result .bltn-row__title {
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 3;
+		overflow: hidden;
+	}
+}
+
+/* The matched terms. A result list is triaged against words the reader typed a
+   second ago, and nothing on the row said which words those were — so confirming a
+   row matched meant reading it.
+
+   --bltn-mark is the accent at 18%, held as flat rgba rather than a color-mix:
+   this is the one tint in the app that carries meaning rather than decoration, so
+   it should not depend on color-mix support. Computed, not judged by eye — over the
+   row's white surface the tint is rgb(212,231,228), which leaves the headline
+   (--bltn-ink) at 13.38:1 and the supporting line (--bltn-ink-2) at 5.15:1; on
+   --bltn-bg paper the weaker of the two is still 4.69:1, so a row moved onto paper
+   stays above 4.5. The 6% --bltn-wash used for button fills was measured at this and
+   is far too faint to read as a mark.
+
+   `color: inherit` resets the user agent's black-on-yellow, which would otherwise
+   overrule both the serif headline's ink and the supporting line's grey. */
+.bltn-result mark {
+	background: var(--bltn-mark);
+	color: inherit;
+	border-radius: 2px;
+	padding-inline: 1px;
+}
+
 /* ---- password-protected forum/topic (issue #18) ---- */
 /* WordPress's own password form (form.post-password-form), wrapped in our shell
    and restyled here so the field and button read as Bulletin, not the theme.
@@ -982,6 +1038,32 @@ body.admin-bar .bltn-app {
 	font-size: 13.5px;
 	color: var(--bltn-ink-2);
 	margin: 0 0 14px;
+}
+
+/* The wrong-password state. WordPress 6.8+ emits the message in its own wrapper
+   with role="alert", and points the field's aria-describedby at it — so the
+   semantics are core's and complete. What core leaves to the stylesheet is telling
+   it apart, and the rule above was catching it: "Invalid password." rendered at
+   13.5px/400/--bltn-ink-2, byte-identical to the instruction sentence under it. A
+   reader who mistyped saw one extra grey line and no other change (measured on the
+   fixture, 390px).
+
+   So the error becomes the strongest text in the block instead of the quietest:
+   near-black at 600, one step up in size, behind a solid rule. Deliberately NOT a
+   new colour. This palette has one accent and an amber reserved for unread, and
+   there is no alert token — introducing red for one string is a palette decision
+   for JT, not a side effect of a design pass. Weight, size and the rule carry it
+   without one. See Chrome\PasswordForm for the other half (the caret). */
+.bltn .post-password-form-invalid-password {
+	padding-inline-start: 12px;
+	border-inline-start: 2px solid var(--bltn-ink);
+	margin: 0 0 14px;
+}
+.bltn .post-password-form-invalid-password p {
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--bltn-ink);
+	margin: 0;
 }
 .bltn .post-password-form label {
 	display: block;
