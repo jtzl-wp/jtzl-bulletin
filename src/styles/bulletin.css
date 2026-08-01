@@ -1181,6 +1181,125 @@ body.admin-bar .bltn-app {
 	text-decoration: underline;
 }
 
+/* WCAG 2.2 §2.5.8 (Target Size, Minimum) on the reskin tier — issue #76.
+
+   Measured at 390px across eight routes: ~290 targets under 24px, every failure a
+   height and none a width, and zero of them inline-in-prose (the exception 2.5.8
+   grants). The meta run is the bulk of it — an author at 13px, "started in" and
+   freshness at 15 — with the card title itself 2px short at 22.
+
+   The target grows through an overlay, not padding, for the reason .bltn-permalink
+   already grows that way on the takeover tier: the row keeps exactly the pixels it
+   had and only the thumb notices. It differs from that rule in using a fixed 24px
+   box centred on the link rather than a symmetric inset, because these link heights
+   run 13-22px — an inset large enough for the 13s would push the 22s to 34 and start
+   colliding for no gain.
+
+   The list is enumerated rather than written as `#bbpress-forums a`, so a link inside
+   a post body — the one place 2.5.8's prose exception applies, and the one place a
+   forum's own HTML can put anything at all — is never grown into its neighbours.
+
+   Costs one pixel: `p.bbp-topic-meta` below goes 4px -> 5px. At 4px the grown boxes
+   of a card's title and its "Started by:" line miss each other by 0.7px; at 5px every
+   route measures 0 targets under 24 and 0 overlapping pairs. Fifteen rows of archive
+   grow 1628px -> 1643px, which is 0.9%.
+
+   What is met is §2.5.8 itself — every target on every reskin route measures 24px or
+   more, at both roles. What is NOT zero everywhere is the intersection between two
+   grown targets that were already close: a favourite toggle beside a long card title
+   (1.2px), a forum title beside its row's freshness (3.3-4.1px), and a keymaster's
+   admin links against each other (1.5px). Those are ≥24px targets whose edges touch,
+   which the criterion permits — closing them means buying vertical space by the line,
+   and the one place that trade is worth taking is the destructive one, below.
+
+   ⚠ ONE EXCEPTION, recorded not fixed: the child-forum links in `ul.bbp-forums-list`
+   on a Subscriptions row. They are a run of INLINE links that wraps, and two lines
+   18px apart cannot both carry a 24px target — grown, they collide by 6px, and taking
+   the list to a 24px line-height still leaves 2.9px while costing that row 12px.
+   Giving each child its own line would resolve it and cost far more. Issue #76 holds
+   the measurements. (Labelling those counts in #74 is what pushed that list from one
+   line to two, so this got harder before it got fixed.) */
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-topic-title a,
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-topic-freshness a,
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-forum-info a.bbp-forum-title,
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-forum-freshness a,
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-reply-header a,
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-reply-author a,
+.bltn-reskin .bltn-reskin__body #bbpress-forums .bbp-breadcrumb a,
+.bltn-reskin .bltn-reskin__body #bbpress-forums .bbp-row-actions a {
+	position: relative;
+}
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-topic-title a::after,
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-topic-freshness a::after,
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-forum-info a.bbp-forum-title::after,
+.bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-forum-freshness a::after,
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-reply-header a::after,
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-reply-author a::after,
+.bltn-reskin .bltn-reskin__body #bbpress-forums .bbp-breadcrumb a::after,
+.bltn-reskin .bltn-reskin__body #bbpress-forums .bbp-row-actions a::after {
+	content: "";
+	position: absolute;
+	inset-inline: 0;
+	top: 50%;
+	transform: translateY(-50%);
+	height: 24px;
+}
+/* A meta run carrying edit actions is given room as well as size.
+
+   Where bbPress prints admin links, the run holds six or seven more targets on top of
+   the date and permalink — 145 on a keymaster's view of Replies Created against 55
+   without. All of them clear 24px, but grown they intersect at the edges by up to 6px,
+   and the pair that intersects is `bbp-reply-permalink` beside `bbp-reply-spam-link`.
+   An ambiguous band between "go to this reply" and "mark it spam" is a different kind
+   of defect from one between two ways of reading the same thread, so this run gets a
+   24px line: a keymaster's worst intersection drops from 6px to 1.5px, and a member's
+   to zero.
+
+   Keyed on the links being present rather than on the role, because the hazard is: a
+   member still inside bbPress's edit window has edit and trash on her own posts and
+   should get the same run. The price is +8.8% on that screen's height, paid only where
+   destructive controls are actually on screen — a logged-out reader of the same tab
+   measures 2571px against a keymaster's 3193px. (On the dev fixture only the keymaster
+   exercises it: the seeded replies are days old and past the edit lock, so a member's
+   run carries no links.)
+
+   ⚠ The selector tests for a link INSIDE the wrapper, not the wrapper. bbPress prints
+   `<span class="bbp-admin-links"></span>` on every reply whether or not the reader can
+   act on it — 15 empty ones on a logged-out view of Replies Created — so `:has(span
+   .bbp-admin-links)` alone charges the height to every reader, including the one with
+   no controls at all, which is the exact opposite of the intent above. Found in review
+   of #84.
+
+   Where :has() is unsupported everyone keeps the tighter line, which is where everyone
+   is today — the same graceful-degradation bargain the even/odd band below makes. */
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	div.bbp-reply-header
+	div.bbp-meta:has(span.bbp-admin-links a) {
+	line-height: 24px;
+}
+
+/* A title long enough to wrap is several inline fragments, and one absolutely
+   positioned overlay covers only the first — the second line would keep its 22px.
+   `inline-block` makes the whole title one box instead, and that box is already taller
+   than 24px whenever it wraps, so the ELEMENT is the target and the overlay above has
+   nothing left to do there. A title that fits on one line stays at 22px and is grown by
+   that same overlay. Both cases are covered without a second rule.
+
+   There was one here, re-declaring `inset: 0` on the title's ::after, and it was dead:
+   the generic overlay selector carries the `li.bbp-topic-title` class as well, so it
+   won on specificity and the override never applied. It is gone rather than made to
+   win, because what it was for is already true. Found in review of #84.
+
+   Safe because the title carries no permanent underline (only :hover, and the box is
+   the text's own width), and the meta line beneath it is a separate block that was
+   already breaking the line. */
+.bltn-reskin .bltn-reskin__body #bbpress-forums a.bbp-topic-permalink,
+.bltn-reskin .bltn-reskin__body #bbpress-forums a.bbp-forum-title {
+	display: inline-block;
+}
+
 /* A permanent underline on the META links, and only those.
 
    The defect it answers: a loop card embeds four links inside a run of meta grey —
@@ -1496,7 +1615,9 @@ body.admin-bar .bltn-app {
 	#bbpress-forums
 	li.bbp-topic-title
 	p.bbp-topic-meta {
-	margin: 4px 0 0;
+	/* 5px, not 4: the one pixel §2.5.8 needs. See the target-size block above — at
+	   4px a card's grown title box and its grown "Started by:" box miss by 0.7px. */
+	margin: 5px 0 0;
 	font-size: 12px;
 	color: var(--bltn-ink-3);
 }
