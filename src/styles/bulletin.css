@@ -1443,7 +1443,13 @@ body.admin-bar .bltn-app {
 .bltn-reskin__body #bbpress-forums #bbp-single-user-details #bbp-user-avatar {
 	width: auto;
 	float: none;
-	margin: 0 0 10px;
+	/* No bottom margin. It carried 10px when this header was three stacked blocks and
+	   the margin was the only thing separating them. In a wrapping flex row it becomes
+	   part of the first line's cross-size instead: the line grows to the avatar's
+	   MARGIN box, so `align-items: center` centred the identity block 5px low, and the
+	   gap before the tab strip measured 26px against the 16 its own margin asks for.
+	   Spacing on this header is the container's job now, not the avatar's. */
+	margin: 0;
 }
 .bltn-reskin__body
 	#bbpress-forums
@@ -1457,11 +1463,32 @@ body.admin-bar .bltn-app {
 	object-fit: cover;
 	display: block;
 }
+/* The header is a row: avatar, then the name block beside it, then the tabs on
+   their own line beneath.
+
+   It was three stacked full-width blocks, which gave a 60px avatar a whole row to
+   itself and started the name below it — while the comment here claimed avatar and
+   name "read as a single unit" and DESIGN.md specified the name "beside the avatar".
+   The intent was recorded twice and delivered nowhere (issue #88).
+
+   Wrapping rather than a fixed two-column grid, so the tab strip takes the full width
+   on its own line by asking for it (`flex: 1 0 100%`) instead of by being placed. */
+.bltn-reskin__body #bbpress-forums #bbp-single-user-details {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	column-gap: 14px;
+}
+.bltn-reskin__body #bbpress-forums #bbp-single-user-details #bbp-user-avatar {
+	flex: 0 0 auto;
+}
 /* Identity block: the display name leads (serif, as in the reading view), with
-   @handle and role as one quiet meta line beneath — so avatar and name read as a
-   single unit, which bbPress's name-less header never did. */
+   @handle and role as one quiet meta line beneath. */
 .bltn-reskin__body #bbpress-forums #bbp-single-user-details .bltn-identity {
-	margin: 0 0 16px;
+	flex: 1 1 auto;
+	/* A long display name shortens rather than pushing the row wider than the gutter. */
+	min-inline-size: 0;
+	margin: 0;
 }
 .bltn-reskin__body #bbpress-forums .bltn-identity__name {
 	display: block;
@@ -1479,6 +1506,48 @@ body.admin-bar .bltn-app {
 	font-size: 12px;
 	color: var(--bltn-ink-3);
 }
+/* The edit form, reflowed off bbPress's desktop two-column layout (issue #88).
+
+   Upstream floats the label into a 20% column, right-aligned, with the field at 60%
+   beside it. At 390px that computes to a 61px label column of which 20px is padding —
+   41px of text room against the ~62px "Nickname" needs — so `overflow-wrap` did as it
+   was told and broke the word: "Nickn / ame", "Displa / y Name", "Websit / e".
+
+   Label above its field, both full width, which is the same move the tier already
+   makes on the `<ul>`-as-table loops: "reflow, don't replicate". It is the last
+   floated desktop layout on the tier.
+
+   `label[for]` matches upstream's own selector rather than every label, so the
+   checkbox rows — where bbPress puts the label AFTER the input and expects them on one
+   line — keep their shape. */
+.bltn-reskin .bltn-reskin__body #bbpress-forums #bbp-your-profile fieldset label[for] {
+	float: none;
+	inline-size: auto;
+	padding: 0 0 5px;
+	text-align: start;
+	display: block;
+	font-family: var(--bltn-sans);
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--bltn-ink-2);
+}
+.bltn-reskin .bltn-reskin__body #bbpress-forums #bbp-your-profile fieldset input,
+.bltn-reskin .bltn-reskin__body #bbpress-forums #bbp-your-profile fieldset select,
+.bltn-reskin .bltn-reskin__body #bbpress-forums #bbp-your-profile fieldset textarea {
+	inline-size: 100%;
+	max-inline-size: 100%;
+}
+/* Except the checkboxes, which upstream already excludes from its 60% and which would
+   otherwise become a full-width box with a tick in the corner. */
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	#bbp-your-profile
+	fieldset
+	input[type="checkbox"] {
+	inline-size: auto;
+}
+
 /* Section nav → one segmented control. Every tab is a chip on a shared track,
    so there is no active-pill-vs-plain-text split — the active tab is simply the
    filled teal one. The row wraps so EVERY tab stays visible (never a truncating
@@ -1488,7 +1557,10 @@ body.admin-bar .bltn-app {
 	#bbp-single-user-details
 	#bbp-user-navigation {
 	float: none;
-	margin: 0;
+	/* Its own line under the avatar row — see the flex container above. The top margin
+	   is what the identity block used to carry as a bottom one. */
+	flex: 1 0 100%;
+	margin: 16px 0 0;
 }
 .bltn-reskin__body
 	#bbpress-forums
