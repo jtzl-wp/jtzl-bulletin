@@ -21,6 +21,7 @@ use JTZL\Bulletin\Chrome\PasswordForm;
 use JTZL\Bulletin\Chrome\ProtectedTitle;
 use JTZL\Bulletin\Chrome\ReplyToLink;
 use JTZL\Bulletin\Chrome\RowActionLabels;
+use JTZL\Bulletin\Chrome\SubForumCountLabels;
 use JTZL\Bulletin\Query\SearchVisibility;
 use JTZL\Bulletin\Query\StableOrder;
 use JTZL\Bulletin\Query\StickyHoisting;
@@ -158,6 +159,8 @@ class Bootstrap {
 		assert( $order instanceof StableOrder );
 		$stickies = $this->container->get( StickyHoisting::class );
 		assert( $stickies instanceof StickyHoisting );
+		$counts = $this->container->get( SubForumCountLabels::class );
+		assert( $counts instanceof SubForumCountLabels );
 		$subscriptions = $this->container->get( SubscribedForumQuery::class );
 		assert( $subscriptions instanceof SubscribedForumQuery );
 		$subscribed_more = $this->container->get( SubscribedForumsMore::class );
@@ -188,6 +191,12 @@ class Bootstrap {
 		// And decline bbPress's sticky hoisting there, which serves a sticky twice and
 		// miscounts the page it hoisted onto. Same hook, separate decision.
 		$wp->add_filter( 'bbp_after_has_topics_parse_args', array( $stickies, 'filter_topic_args' ), 11 );
+
+		// Name the two numbers bbPress prints beside each child forum, which it renders
+		// as a bare `(2, 0)` — a pair no label explains and which cannot be reconciled
+		// with the labelled `Topics`/`Posts` on the same forum's own row (issue #74).
+		// After the parse, so the counts bbPress decided to show are the ones named.
+		$wp->add_filter( 'bbp_after_list_forums_parse_args', array( $counts, 'filter_list_args' ) );
 
 		// Keep WordPress's password form out of the description slot of a loop row,
 		// where bbPress's own row templates would otherwise print it as though it were
