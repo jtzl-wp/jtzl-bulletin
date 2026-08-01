@@ -182,7 +182,7 @@ body.admin-bar .bltn-app {
 	margin: 0;
 	flex: 1 1 auto;
 	min-inline-size: 0;
-	font-size: 14px;
+	font-size: 13.5px;
 	font-weight: 600;
 	color: var(--bltn-ink);
 	white-space: nowrap;
@@ -193,7 +193,7 @@ body.admin-bar .bltn-app {
 .bltn-appbar__title small {
 	display: block;
 	font-weight: 500;
-	font-size: 11px;
+	font-size: 10.5px;
 	color: var(--bltn-ink-3);
 	letter-spacing: 0.01em;
 }
@@ -271,7 +271,7 @@ body.admin-bar .bltn-app {
 	color: var(--bltn-ink);
 }
 .bltn-row__desc {
-	font-size: 12.5px;
+	font-size: 12px;
 	color: var(--bltn-ink-2);
 	margin: 0 0 5px;
 }
@@ -313,13 +313,13 @@ body.admin-bar .bltn-app {
 }
 .bltn-fhead__name {
 	font-family: var(--bltn-serif);
-	font-size: 22px;
+	font-size: 20px;
 	font-weight: 600;
 	margin: 0 0 3px;
 	letter-spacing: -0.01em;
 }
 .bltn-fhead__desc {
-	font-size: 13px;
+	font-size: 13.5px;
 	color: var(--bltn-ink-2);
 	margin: 0 0 12px;
 }
@@ -363,7 +363,7 @@ body.admin-bar .bltn-app {
 	padding: 18px 20px 26px;
 }
 .bltn-thread__label {
-	font-size: 11px;
+	font-size: 10.5px;
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	color: var(--bltn-accent-ink);
@@ -384,7 +384,7 @@ body.admin-bar .bltn-app {
 	display: flex;
 	align-items: center;
 	gap: 14px;
-	font-size: 12.5px;
+	font-size: 12px;
 	color: var(--bltn-ink-3);
 	margin: 0 0 4px;
 }
@@ -417,7 +417,7 @@ body.admin-bar .bltn-app {
 	gap: 6px;
 	margin: 2px 0 10px;
 	font-family: var(--bltn-sans);
-	font-size: 11px;
+	font-size: 10.5px;
 	line-height: 1.4;
 	color: var(--bltn-ink-2);
 }
@@ -464,7 +464,7 @@ body.admin-bar .bltn-app {
 .bltn-replyto {
 	margin: 0 0 7px;
 	font-family: var(--bltn-sans);
-	font-size: 11.5px;
+	font-size: 12px;
 	line-height: 1.3;
 }
 .bltn-replyto a {
@@ -508,7 +508,7 @@ body.admin-bar .bltn-app {
 	color: var(--bltn-line);
 }
 .bltn-chip {
-	font-size: 10px;
+	font-size: 10.5px;
 	font-weight: 700;
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
@@ -611,7 +611,7 @@ body.admin-bar .bltn-app {
 	border-inline-start: 2px solid var(--bltn-accent);
 	color: var(--bltn-ink-2);
 	font-style: italic;
-	font-size: 16px;
+	font-size: 17px;
 }
 /* Code: wrap the box in its own horizontal scroll rather than blowing out the
    column on a 200-column line. */
@@ -750,7 +750,7 @@ body.admin-bar .bltn-app {
 }
 .bltn-mod a {
 	font-family: var(--bltn-sans);
-	font-size: 12.5px;
+	font-size: 12px;
 	font-weight: 600;
 	line-height: 1.2;
 	color: var(--bltn-ink-2);
@@ -833,7 +833,7 @@ body.admin-bar .bltn-app {
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
-	font-size: 13px;
+	font-size: 13.5px;
 	font-weight: 600;
 	color: var(--bltn-ink);
 	background: var(--bltn-wash);
@@ -859,7 +859,7 @@ body.admin-bar .bltn-app {
 	justify-self: end;
 }
 .bltn-navbar__count {
-	font-size: 11px;
+	font-size: 10.5px;
 	color: var(--bltn-ink-3);
 	text-align: center;
 	white-space: nowrap;
@@ -880,7 +880,7 @@ body.admin-bar .bltn-app {
 }
 .bltn-empty__title {
 	font-family: var(--bltn-serif);
-	font-size: 18px;
+	font-size: 17px;
 	font-weight: 600;
 	color: var(--bltn-ink);
 	margin: 0 0 6px;
@@ -916,7 +916,7 @@ body.admin-bar .bltn-app {
 	border-radius: 10px;
 	padding: 10px 12px;
 	font-family: var(--bltn-sans);
-	font-size: 14px;
+	font-size: 13.5px;
 	line-height: 1.3;
 	color: var(--bltn-ink);
 	background: var(--bltn-surface);
@@ -951,7 +951,7 @@ body.admin-bar .bltn-app {
    what the cap deliberately kept. */
 .bltn-result__sub {
 	margin: 6px 0 0;
-	font-size: 13px;
+	font-size: 13.5px;
 	line-height: 1.45;
 	color: var(--bltn-ink-2);
 }
@@ -1023,7 +1023,7 @@ body.admin-bar .bltn-app {
 }
 .bltn-protected__title {
 	font-family: var(--bltn-serif);
-	font-size: 22px;
+	font-size: 20px;
 	font-weight: 600;
 	letter-spacing: -0.01em;
 	margin: 0 0 16px;
@@ -1049,18 +1049,24 @@ body.admin-bar .bltn-app {
    fixture, 390px).
 
    So the error becomes the strongest text in the block instead of the quietest:
-   near-black at 600, one step up in size, behind a solid rule. Deliberately NOT a
-   new colour. This palette has one accent and an amber reserved for unread, and
-   there is no alert token — introducing red for one string is a palette decision
-   for JT, not a side effect of a design pass. Weight, size and the rule carry it
-   without one. See Chrome\PasswordForm for the other half (the caret). */
+   near-black at 600, behind a solid rule. Deliberately NOT a new colour. This palette
+   has one accent and an amber reserved for unread, and there is no alert token —
+   introducing red for one string is a palette decision for JT, not a side effect of a
+   design pass. Weight, ink and the rule carry it without one.
+
+   This note used to claim a size step as well — the error was 14px against the
+   instruction's 13.5. That was half a pixel, which is to say it was never doing any
+   work, and the type scale (#77) collapsed both onto 13.5. The three differentiators
+   above are the ones that were always carrying it. Going a real step up, to 15px,
+   would mean setting sans chrome at the serif reading step; the error belongs on 13.5
+   with the rest of the form. See Chrome\PasswordForm for the other half (the caret). */
 .bltn .post-password-form-invalid-password {
 	padding-inline-start: 12px;
 	border-inline-start: 2px solid var(--bltn-ink);
 	margin: 0 0 14px;
 }
 .bltn .post-password-form-invalid-password p {
-	font-size: 14px;
+	font-size: 13.5px;
 	font-weight: 600;
 	color: var(--bltn-ink);
 	margin: 0;
@@ -1084,7 +1090,9 @@ body.admin-bar .bltn-app {
 	background: var(--bltn-surface);
 	border: 1px solid var(--bltn-line-soft);
 	border-radius: 10px;
-	padding: 11px 13px;
+	/* 10px, not 11: the field lands on the control scale's 40px step. See the scale
+	   note in DESIGN.md — this pair was 42 and 38, which is two heights for one idea. */
+	padding: 10px 13px;
 	margin-block: 6px 12px;
 }
 .bltn .post-password-form input[type="password"]:focus-visible {
@@ -1103,7 +1111,10 @@ body.admin-bar .bltn-app {
 	background: var(--bltn-wash);
 	border: 0;
 	border-radius: 11px;
-	padding: 11px 18px;
+	/* 12px, not 11: the submit joins the field on 40px. #75 declined to grow it to the
+	   review's 44px floor because that made it the tallest control in the app; 40 is
+	   the app bar's own height, so it is the tallest nothing. */
+	padding: 12px 18px;
 	transition: background 0.15s ease;
 }
 .bltn .post-password-form input[type="submit"]:hover {
@@ -1164,7 +1175,7 @@ body.admin-bar .bltn-app {
 	background: var(--bltn-surface);
 	color: var(--bltn-ink);
 	font-family: var(--bltn-sans);
-	font-size: 14px;
+	font-size: 13.5px;
 	line-height: 1.5;
 }
 .bltn-reskin__body #bbpress-forums {
@@ -1394,7 +1405,7 @@ body.admin-bar .bltn-app {
 	display: block;
 	margin-top: 3px;
 	font-family: var(--bltn-sans);
-	font-size: 12.5px;
+	font-size: 12px;
 	color: var(--bltn-ink-3);
 }
 /* Section nav → one segmented control. Every tab is a chip on a shared track,
@@ -1445,7 +1456,7 @@ body.admin-bar .bltn-app {
 	display: block;
 	padding: 7px 13px;
 	border-radius: 999px;
-	font-size: 12.5px;
+	font-size: 12px;
 	font-weight: 600;
 	line-height: 1;
 	color: var(--bltn-ink-2);
@@ -1597,7 +1608,7 @@ body.admin-bar .bltn-app {
 }
 .bltn-reskin__body #bbpress-forums a.bbp-topic-permalink {
 	font-family: var(--bltn-serif);
-	font-size: 16px;
+	font-size: 17px;
 	font-weight: 600;
 	line-height: 1.3;
 	color: var(--bltn-ink);
@@ -1898,7 +1909,7 @@ body.admin-bar .bltn-app {
 }
 .bltn-reskin .bltn-reskin__body #bbpress-forums a.bbp-forum-title {
 	font-family: var(--bltn-serif);
-	font-size: 16px;
+	font-size: 17px;
 	font-weight: 600;
 	line-height: 1.3;
 	color: var(--bltn-ink);
@@ -1906,7 +1917,7 @@ body.admin-bar .bltn-app {
 .bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-forum-content {
 	margin: 4px 0 0;
 	padding: 0;
-	font-size: 12.5px;
+	font-size: 12px;
 	color: var(--bltn-ink-2);
 }
 /* A password-protected post contributes nothing to its row — the description is
@@ -1996,7 +2007,7 @@ body.admin-bar .bltn-app {
 	background: var(--bltn-wash);
 	color: var(--bltn-accent-ink);
 	font-family: var(--bltn-sans);
-	font-size: 13px;
+	font-size: 13.5px;
 	font-weight: 600;
 	line-height: 1.2;
 	text-align: center;
@@ -2058,7 +2069,7 @@ body.admin-bar .bltn-app {
 .bltn-reskin__body #bbpress-forums div.bbp-template-notice.error li,
 .bltn-reskin__body #bbpress-forums div.bbp-template-notice.warning li {
 	font-family: var(--bltn-sans);
-	font-size: 13px;
+	font-size: 13.5px;
 	color: var(--bltn-ink-2);
 }
 .bltn-reskin__body #bbpress-forums div.bbp-template-notice.error,
@@ -2085,7 +2096,7 @@ body.admin-bar .bltn-app {
 	padding-inline: 20px;
 	margin: 0 0 10px;
 	font-family: var(--bltn-sans);
-	font-size: 11.5px;
+	font-size: 12px;
 	color: var(--bltn-ink-3);
 }
 .bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-topic-tags p {
@@ -2142,7 +2153,7 @@ body.admin-bar .bltn-app {
 	background: var(--bltn-accent);
 	color: #fff;
 	font-weight: 600;
-	font-size: 13px;
+	font-size: 13.5px;
 	cursor: pointer;
 }
 
@@ -2332,7 +2343,7 @@ body.admin-bar .bltn-app {
 	float: none;
 	margin: 0;
 	font-family: var(--bltn-sans);
-	font-size: 11.5px;
+	font-size: 12px;
 	color: var(--bltn-ink-3);
 }
 .bltn-reskin .bltn-reskin__body #bbpress-forums > div.bbp-breadcrumb p {
