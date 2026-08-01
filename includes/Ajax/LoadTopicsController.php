@@ -77,18 +77,17 @@ class LoadTopicsController {
 		$forum_id = isset( $_POST['forum'] ) ? (int) $_POST['forum'] : 0;
 		$page     = $this->paging->requested();
 
-		// send_json_error() ends the request, so there is nothing to return to.
-		if ( $forum_id <= 0 || $this->wp->get_forum_post_type() !== $this->wp->get_post_type( $forum_id ) ) {
+		// send_json_error() ends the request, so there is nothing to return to. A
+		// forum the caller may not view answers exactly like one that doesn't exist
+		// — bbPress's own singular views present inaccessible private/hidden
+		// resources as not found, and this route must not let an anonymous caller
+		// distinguish "no such forum" from "a forum you can't see" (issue #78).
+		// Gating on capability rather than the forum's status label also means a
+		// keymaster, moderator, or member of a private forum still gets their
+		// threads, while an unauthorised visitor is refused — including for a
+		// public forum nested under a restricted ancestor.
+		if ( ! $this->forum_is_readable( $forum_id ) ) {
 			$this->wp->send_json_error( array( 'message' => 'bad_forum' ), 400 );
-		}
-
-		// Gate on what the *user* may view rather than on the forum's status
-		// label: a keymaster, moderator, or member of a private forum still gets
-		// their threads, while an unauthorised visitor is refused — including for
-		// a public forum nested under a restricted ancestor. bbPress applies this
-		// check on its own singular views but not on this AJAX route.
-		if ( ! $this->wp->user_can_view_forum( $forum_id ) ) {
-			$this->wp->send_json_error( array( 'message' => 'forbidden' ), 403 );
 		}
 
 		// A password-protected forum masks its listing behind the password form on
@@ -114,5 +113,23 @@ class LoadTopicsController {
 				'hasMore'  => $page < $max,
 			)
 		);
+	}
+
+	/**
+	 * Whether the request names a real forum the caller may view.
+	 *
+	 * Deliberately answers a nonexistent ID and an existing-but-inaccessible one
+	 * the same way, so the caller learns nothing about which it was (issue #78).
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $forum_id Forum ID.
+	 * @return bool
+	 */
+	private function forum_is_readable( int $forum_id ): bool {
+		if ( $forum_id <= 0 || $this->wp->get_forum_post_type() !== $this->wp->get_post_type( $forum_id ) ) {
+			return false;
+		}
+		return $this->wp->user_can_view_forum( $forum_id );
 	}
 }

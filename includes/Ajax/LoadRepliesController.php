@@ -122,19 +122,18 @@ class LoadRepliesController {
 	 * @param int $topic_id Topic ID.
 	 */
 	private function guard_access( int $topic_id ): void {
-		// The topic itself: a real topic whose own status is public or closed, so a
-		// private/trashed topic in a public forum cannot leak its replies.
-		if ( ! $this->topic_is_readable( $topic_id ) ) {
+		// send_json_error() ends the request, so there is nothing to return to. A
+		// topic in a forum the caller may not view answers exactly like an invalid
+		// or non-readable topic ID — bbPress's own singular views present
+		// inaccessible private/hidden resources as not found, and this route must
+		// not let an anonymous caller distinguish "no such topic" from "a topic you
+		// can't see" (issue #78). Gating on what the *user* may view, not on the
+		// forum's status label, also means a keymaster, moderator, or member of a
+		// private forum must still get their replies, while an unauthorised visitor
+		// is refused — including for a public forum nested under a restricted
+		// ancestor.
+		if ( ! $this->request_may_read_topic( $topic_id ) ) {
 			$this->wp->send_json_error( array( 'message' => 'bad_topic' ), 400 );
-		}
-
-		// Gate on what the *user* may view, not on the forum's status label: a
-		// keymaster, moderator, or member of a private forum must still get their
-		// replies, while an unauthorised visitor is refused — including for a public
-		// forum nested under a restricted ancestor.
-		$forum_id = $this->wp->get_topic_forum_id( $topic_id );
-		if ( ! $this->wp->user_can_view_forum( $forum_id ) ) {
-			$this->wp->send_json_error( array( 'message' => 'forbidden' ), 403 );
 		}
 
 		// A password-protected topic masks its content behind the password form on
@@ -144,6 +143,28 @@ class LoadRepliesController {
 		if ( $this->wp->is_password_required( $topic_id ) ) {
 			$this->wp->send_json_error( array( 'message' => 'protected' ), 403 );
 		}
+	}
+
+	/**
+	 * Whether the request names a real, readable topic in a forum the caller may
+	 * view.
+	 *
+	 * Deliberately answers a nonexistent/non-readable topic and a readable one
+	 * behind an inaccessible forum the same way, so the caller learns nothing
+	 * about which it was (issue #78). Short-circuits before asking for the
+	 * topic's forum unless the topic itself is readable, since an invalid topic
+	 * ID has no forum worth asking about.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $topic_id Topic ID.
+	 * @return bool
+	 */
+	private function request_may_read_topic( int $topic_id ): bool {
+		if ( ! $this->topic_is_readable( $topic_id ) ) {
+			return false;
+		}
+		return $this->wp->user_can_view_forum( $this->wp->get_topic_forum_id( $topic_id ) );
 	}
 
 	/**

@@ -122,18 +122,36 @@ class LoadForumsController {
 	 */
 	private function guard_parent( int $parent_id ): void {
 		// send_json_error() ends the request, so there is nothing to return to. A
-		// negative id lands here too: it has no post type, so it fails as a bad forum
+		// parent the caller may not view answers exactly like one that doesn't
+		// exist — bbPress's own singular views present inaccessible private/hidden
+		// resources as not found, and this route must not let an anonymous caller
+		// distinguish "no such forum" from "a forum you can't see" (issue #78). A
+		// negative id lands here too: it has no post type, so it fails the same way
 		// rather than reaching the query.
-		if ( $this->wp->get_forum_post_type() !== $this->wp->get_post_type( $parent_id ) ) {
+		if ( ! $this->forum_is_readable( $parent_id ) ) {
 			$this->wp->send_json_error( array( 'message' => 'bad_forum' ), 400 );
-		}
-
-		if ( ! $this->wp->user_can_view_forum( $parent_id ) ) {
-			$this->wp->send_json_error( array( 'message' => 'forbidden' ), 403 );
 		}
 
 		if ( $this->wp->is_password_required( $parent_id ) ) {
 			$this->wp->send_json_error( array( 'message' => 'protected' ), 403 );
 		}
+	}
+
+	/**
+	 * Whether the request names a real forum the caller may view.
+	 *
+	 * Deliberately answers a nonexistent ID and an existing-but-inaccessible one
+	 * the same way, so the caller learns nothing about which it was (issue #78).
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param int $parent_id Parent forum the request names.
+	 * @return bool
+	 */
+	private function forum_is_readable( int $parent_id ): bool {
+		if ( $this->wp->get_forum_post_type() !== $this->wp->get_post_type( $parent_id ) ) {
+			return false;
+		}
+		return $this->wp->user_can_view_forum( $parent_id );
 	}
 }
