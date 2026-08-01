@@ -79,6 +79,23 @@ class Icons {
 	}
 
 	/**
+	 * Home — the forums index.
+	 *
+	 * A house, not a chevron: the back control beside it already owns the arrow, and
+	 * it means "one level up", which is a different journey from "all the way out"
+	 * (issue #86). Drawn at 18px to sit with search rather than 20px like the back
+	 * chevron, because the three trailing glyphs are one group and should read as one
+	 * weight.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return string
+	 */
+	public static function home(): string {
+		return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10.5L12 4l8 6.5"/><path d="M6 9.8V19h12V9.8"/></svg>';
+	}
+
+	/**
 	 * Reply-context arrow — turns up and back to the left.
 	 *
 	 * Points the way the link goes. The parent of a reply is always older, and the

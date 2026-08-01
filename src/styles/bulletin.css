@@ -139,6 +139,10 @@ body.admin-bar .bltn-app {
 .bltn-appbar {
 	display: flex;
 	align-items: center;
+	justify-content: space-between;
+	/* The title is centred against this box, not against the space the controls
+	   leave over — see .bltn-appbar__title. */
+	position: relative;
 	gap: 8px;
 	padding: calc(10px + env(safe-area-inset-top, 0px)) 8px 10px;
 	border-bottom: 1px solid var(--bltn-line-soft);
@@ -178,9 +182,44 @@ body.admin-bar .bltn-app {
 	flex: 0 0 40px;
 	block-size: 40px;
 }
+/* The trailing group, kept as one flex item so the row has two things to push apart.
+   No gap between its buttons: they are 40px targets holding 18px glyphs, so they read
+   as spaced without being spaced, and the 16px saved goes to the title — which needs
+   every pixel, since a centred title can only be twice its clearance from this group.
+   At 390 that is the difference between "Troubleshooting" fitting and not. */
+.bltn-appbar__actions {
+	display: flex;
+	align-items: center;
+	gap: 0;
+	flex: 0 0 auto;
+}
+/* Centred on the SCREEN. Taken out of the flex row and positioned against the bar,
+   because centring it *between* the controls put it left of the middle: the leading
+   side is one button and the trailing side is three.
+
+   `--bltn-appbar-side` is the trailing group's width, set per screen because the group
+   is not the same on all of them. Doubling it is what keeps the title symmetric: a
+   centred box can only be as wide as twice its clearance from the WIDER side, and the
+   leading control has room to spare.
+
+   The `100%` resolves against the bar's PADDING box, not its content box — this is an
+   absolutely positioned element, so the 8px gutters are already inside the figure and
+   must not be subtracted twice. Worth stating because doing that arithmetic wrong is
+   how the numbers below were first written.
+
+   ⚠ The room this leaves is real and it is tight. Measured, with the trailing group at
+   three buttons (`--bltn-appbar-side: 128px`, so `calc(100% - 272px)`): the title gets
+   **118px at 390** against the 107px "Troubleshooting" needs — eleven to spare — and
+   **48px at 320**, where it truncates. That is the price of true centring with three
+   trailing controls, and it is why the ellipsis below is load-bearing rather than
+   defensive. */
 .bltn-appbar__title {
 	margin: 0;
-	flex: 1 1 auto;
+	position: absolute;
+	inset-inline: 0;
+	margin-inline: auto;
+	inline-size: fit-content;
+	max-inline-size: calc(100% - 16px - 2 * var(--bltn-appbar-side, 88px));
 	min-inline-size: 0;
 	font-size: 13.5px;
 	font-weight: 600;
@@ -362,13 +401,45 @@ body.admin-bar .bltn-app {
 .bltn-thread {
 	padding: 18px 20px 26px;
 }
-.bltn-thread__label {
+/* The kicker: the forum a thread is in, or the parent a child forum hangs off.
+   It is the way UP, now that the app bar's control is the way OUT (issue #86).
+   Both screens share the treatment; only the block name differs. */
+.bltn-thread__label,
+.bltn-fhead__parent {
 	font-size: 10.5px;
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	color: var(--bltn-accent-ink);
 	font-weight: 700;
 	margin: 0;
+}
+/* The anchor inherits the kicker entirely — this line looked exactly like this
+   before it was tappable, and that was the defect: it was painted in the accent,
+   the colour every link on the tier uses, while going nowhere. Nothing about it
+   changes except that it now does what it always looked like it did.
+
+   The hit area is grown by overlay, the way .bltn-permalink and the reskin tier's
+   targets are (§2.5.8, #76): 10.5px of uppercase renders a 13px box and the
+   criterion asks for 24. Horizontal inset is 0 so it stays within the gutter, and
+   nothing sits within 11px above or below it to collide with. */
+.bltn-thread__label a,
+.bltn-fhead__parent a {
+	color: inherit;
+	text-decoration: none;
+	position: relative;
+}
+.bltn-thread__label a::after,
+.bltn-fhead__parent a::after {
+	content: "";
+	position: absolute;
+	inset-inline: 0;
+	top: 50%;
+	transform: translateY(-50%);
+	height: 24px;
+}
+.bltn-thread__label a:hover,
+.bltn-fhead__parent a:hover {
+	text-decoration: underline;
 }
 .bltn-thread__title {
 	font-family: var(--bltn-serif);

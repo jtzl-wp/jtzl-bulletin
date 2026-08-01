@@ -86,7 +86,18 @@ $bltn_moderates = $bltn_mod->available( $bltn_topic_id );
 		<main class="bltn-scroll" id="bltn-reading">
 			<article class="bltn-thread">
 
-				<p class="bltn-thread__label"><?php echo esc_html( $bltn_forum ); ?></p>
+				<?php
+				/*
+				 * The way up, and the only one on this screen: the app bar's control
+				 * goes to the forums index now, so a reader wanting this thread's
+				 * siblings needs a route that says which forum they are in. The kicker
+				 * already said it and was painted in the accent — the exact colour
+				 * every link on the tier uses — while being inert. See issue #86.
+				 */
+				?>
+				<p class="bltn-thread__label">
+					<a class="bltn-uplink" href="<?php echo esc_url( bbp_get_forum_permalink( $bltn_forum_id ) ); ?>"><?php echo esc_html( $bltn_forum ); ?></a>
+				</p>
 				<?php // Escaped for the reason the protected heading above gives. ?>
 				<h1 class="bltn-thread__title" data-bltn-heading tabindex="-1"><?php echo esc_html( bbp_get_topic_title( $bltn_topic_id ) ); ?></h1>
 				<p class="bltn-thread__sub">

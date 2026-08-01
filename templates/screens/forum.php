@@ -130,13 +130,13 @@ if ( ! $bltn_protected ) {
 }
 
 /*
- * A sub-forum's back link returns to its parent, not the index — otherwise
- * stepping down two levels and back skips a level. Same single control either
- * way, so this costs no chrome.
+ * A sub-forum's back control returns to its parent, not the index — otherwise
+ * stepping down two levels and back skips a level. The index is the app bar's
+ * home button's job, which is a different journey (issue #86).
  */
 $bltn_parent_id = (int) bbp_get_forum_parent_id( $bltn_forum_id );
 $bltn_back_url  = $bltn_parent_id ? bbp_get_forum_permalink( $bltn_parent_id ) : bbp_get_forums_url();
-$bltn_back_text = $bltn_parent_id
+$bltn_back_label = $bltn_parent_id
 	/* translators: %s: parent forum name. */
 	? sprintf( __( 'Back to %s', 'jtzl-bulletin' ), bbp_get_forum_title( $bltn_parent_id ) )
 	: __( 'Back to forums', 'jtzl-bulletin' );
@@ -149,7 +149,7 @@ $bltn_back_text = $bltn_parent_id
 			'title'      => bbp_get_forum_title( $bltn_forum_id ),
 			'subtitle'   => __( 'Forum', 'jtzl-bulletin' ),
 			'back_url'   => $bltn_back_url,
-			'back_label' => $bltn_back_text,
+			'back_label' => $bltn_back_label,
 			'heading'    => false, // The forum header (or the protected heading) below carries the h1.
 		)
 	);
@@ -186,6 +186,20 @@ $bltn_back_text = $bltn_parent_id
 		<?php else : ?>
 
 			<div class="bltn-fhead">
+				<?php if ( $bltn_parent_id ) : ?>
+					<?php
+					/*
+					 * A child forum named only itself: "Accessories" in the bar, in the
+					 * h1, and Gear nowhere on the page. With the bar's control now going
+					 * to the index, this is the only route up — and the first time the
+					 * parent is named at all. Top-level forums have no parent and get no
+					 * kicker, so the line appears exactly where it says something.
+					 */
+					?>
+					<p class="bltn-fhead__parent">
+						<a class="bltn-uplink" href="<?php echo esc_url( bbp_get_forum_permalink( $bltn_parent_id ) ); ?>"><?php echo esc_html( bbp_get_forum_title( $bltn_parent_id ) ); ?></a>
+					</p>
+				<?php endif; ?>
 				<?php // Escaped for the reason the protected heading above gives. ?>
 				<h1 class="bltn-fhead__name" data-bltn-heading tabindex="-1"><?php echo esc_html( bbp_get_forum_title( $bltn_forum_id ) ); ?></h1>
 

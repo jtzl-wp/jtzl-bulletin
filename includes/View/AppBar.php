@@ -41,8 +41,8 @@ class AppBar {
 	 * Echo the app bar.
 	 *
 	 * Recognised keys: title (plain heading text), subtitle (small line under it),
-	 * back_url (leading back control; omit for a spacer), back_label (its label),
-	 * and heading (whether the title is the screen's focus h1).
+	 * back_url (leading back control; omit for a spacer), back_label (its accessible
+	 * name), and heading (whether the title is the screen's focus h1).
 	 *
 	 * @since 0.1.0
 	 *
@@ -66,28 +66,28 @@ class AppBar {
 		$back_label = (string) $args['back_label'];
 		$heading    = (bool) $args['heading'];
 
-		// Resolved before anything is emitted, because the leading side has to know:
-		// the title is centered in the space between the two, so a second trailing
-		// control has to be answered by a second leading spacer or the title drifts
-		// half a button off centre on every screen.
-		$search = $this->search_link();
+		$trailing = $this->trailing();
 
-		echo '<header class="bltn-appbar">';
+		/*
+		 * The title is centred on the SCREEN, not in the space the controls leave over,
+		 * so it is taken out of the flex row and positioned against the bar itself. The
+		 * row then holds two things — the leading control and the trailing group — and
+		 * pushes them apart.
+		 *
+		 * Which means the title has to be told how much room to leave, or it would run
+		 * under the buttons: centred, its half-width is bounded by the WIDER side, and
+		 * that is the trailing group. Its width travels as a custom property because the
+		 * group is not the same on every screen — search carries no search button. Forty
+		 * per button, which they are, plus one gap to keep off the title.
+		 */
+		printf(
+			'<header class="bltn-appbar" style="--bltn-appbar-side:%dpx">',
+			(int) ( count( $trailing ) * 40 + 8 )
+		);
 
-		// Leading: back control, or a spacer to keep the title centered.
-		if ( '' !== $back_url ) {
-			printf(
-				'<a class="bltn-iconbtn bltn-iconbtn--back" href="%s" aria-label="%s">%s</a>',
-				esc_url( $back_url ),
-				esc_attr( $back_label ),
-				Icons::chevron_left() // phpcs:ignore WordPress.Security.EscapeOutput -- static SVG.
-			);
-		} else {
-			echo '<span class="bltn-appbar__spacer" aria-hidden="true"></span>';
-		}
-		if ( '' !== $search ) {
-			echo '<span class="bltn-appbar__spacer" aria-hidden="true"></span>';
-		}
+		// Leading: the way out of this screen — one level up — or a spacer holding its
+		// place on the index, which has no level above it.
+		echo $this->leading( $back_url, $back_label ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- assembled from escaped parts.
 
 		// Title (+ optional subtitle). The title doubles as the screen's focus target.
 		$tag        = $heading ? 'h1' : 'span';
@@ -98,17 +98,89 @@ class AppBar {
 		}
 		printf( '</%s>', $tag ); // phpcs:ignore WordPress.Security.EscapeOutput -- internal literal.
 
-		echo $search; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- assembled by search_link() from escaped parts.
+		// Wrapped, so the flex row has exactly two items to push apart and the group
+		// keeps its own spacing whatever the title does.
+		printf( '<div class="bltn-appbar__actions">%s</div>', implode( '', $trailing ) ); // phpcs:ignore WordPress.Security.EscapeOutput -- each part assembled from escaped values.
 
-		// Trailing: account.
-		printf(
+		echo '</header>';
+	}
+
+	/**
+	 * The trailing group, in reading order: home, search, account.
+	 *
+	 * Home is a separate journey from the back control beside the title, which goes one
+	 * level up — from a thread in a nested forum that was three taps to the index, and
+	 * no control named where it went (issue #86). It leads the group because it is the
+	 * only one that leaves the reading path; search and account both open something.
+	 *
+	 * Omitted on the index itself, where it would point at the page it is on.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return list<string>
+	 */
+	private function trailing(): array {
+		$out = array();
+
+		if ( ! $this->wp->is_forum_archive() ) {
+			$out[] = sprintf(
+				'<a class="bltn-iconbtn" href="%s" aria-label="%s">%s</a>',
+				esc_url( $this->wp->get_forums_url() ),
+				esc_attr__( 'Forums home', 'jtzl-bulletin' ),
+				Icons::home()
+			);
+		}
+
+		$search = $this->search_link();
+		if ( '' !== $search ) {
+			$out[] = $search;
+		}
+
+		$out[] = sprintf(
 			'<a class="bltn-iconbtn" href="%s" aria-label="%s">%s</a>',
 			esc_url( $this->account_url() ),
 			esc_attr( $this->account_label() ),
-			Icons::account() // phpcs:ignore WordPress.Security.EscapeOutput -- static SVG.
+			Icons::account()
 		);
 
-		echo '</header>';
+		return $out;
+	}
+
+	/**
+	 * The leading control: one level up, or a spacer holding its place.
+	 *
+	 * Its destination is the screen's own — a thread's forum, a sub-forum's parent —
+	 * so it is the way back along the path a reader walked. Leaving the forums
+	 * entirely is the home button's job, in the trailing group.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param string $url   Destination, or '' for no control.
+	 * @param string $label Accessible name.
+	 * @return string
+	 */
+	private function leading( string $url, string $label ): string {
+		if ( '' === $url ) {
+			return $this->spacer();
+		}
+
+		return sprintf(
+			'<a class="bltn-iconbtn bltn-iconbtn--back" href="%s" aria-label="%s">%s</a>',
+			esc_url( $url ),
+			esc_attr( $label ),
+			Icons::chevron_left()
+		);
+	}
+
+	/**
+	 * A 40px hole the width of an icon button, keeping the title centered.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @return string
+	 */
+	private function spacer(): string {
+		return '<span class="bltn-appbar__spacer" aria-hidden="true"></span>';
 	}
 
 	/**
