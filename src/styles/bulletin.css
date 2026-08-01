@@ -1538,14 +1538,20 @@ body.admin-bar .bltn-app {
 	max-inline-size: 100%;
 }
 /* Except the checkboxes, which upstream already excludes from its 60% and which would
-   otherwise become a full-width box with a tick in the corner. */
+   otherwise become a full-width box with a tick in the corner. They are sized here
+   rather than left at `auto` because this selector carries one more type than the
+   tier-wide control rule (issue #90) and would win against it: same 24px floor, stated
+   where the cascade actually lands. */
 .bltn-reskin
 	.bltn-reskin__body
 	#bbpress-forums
 	#bbp-your-profile
 	fieldset
-	input[type="checkbox"] {
-	inline-size: auto;
+	:is(input[type="checkbox"], input[type="radio"]) {
+	inline-size: 24px;
+	block-size: 24px;
+	accent-color: var(--bltn-accent);
+	vertical-align: middle;
 }
 
 /* Section nav → one segmented control. Every tab is a chip on a shared track,
@@ -2298,6 +2304,564 @@ body.admin-bar .bltn-app {
 	font-weight: 600;
 	font-size: 13.5px;
 	cursor: pointer;
+}
+
+/* ==== SHARED LAYER: every form the tier renders (issue #90) ====
+
+   Until this, the tier dressed exactly one form — the per-tab search above — and
+   every other control on it was on bbPress's or the browser's defaults. Measured at
+   390px, nine surfaces render controls and not one of them was ours:
+
+     profile edit          11  (14 once Generate Password reveals the rest)
+     profile edit, keymaster  13  (adds the two role selects)
+     topic merge            4      topic split            6
+     topic-tag edit         7
+     [bbp-login]            4      [bbp-register]         3   [bbp-lost-pass]  2
+
+   ⚠ FOURTEEN of those breached the 24px floor (§2.5.8), not the two #90 measured.
+   The rest were behind a click (Generate Password reveals Hide and Cancel, both
+   21px), behind a role (merge/split/tag need a moderator) or behind a shortcode. Every
+   checkbox and radio on the tier renders at the browser's 13px, which is half the
+   floor, and each one is a moderator's "copy subscribers to the new topic" or a
+   reader's "keep me signed in".
+
+   ⚠ The account forms are NOT excluded from this tier, though #90 assumed they were.
+   `is_bbpress()` ends on `bbp_has_shortcode()`, so a page carrying [bbp-login] IS a
+   bbPress screen; ScreenClassifier excludes only the topic/reply/forum edit forms, so
+   the reskin catch-all wraps it. Verified in-shell: the login form rendered flush to
+   both screen edges with no gutter at all, because it is the one form bbPress puts
+   OUTSIDE #bbpress-forums — and every rule on this tier, the gutter included, is
+   anchored on that ID.
+
+   THREE BRANCHES, and they are specificity, not meaning. Each rule below states one
+   thing — "this is a form control on this tier" — and has to state it up to three
+   times because bbPress dresses the same markup at three different weights:
+
+     1. `#bbpress-forums #bbp-your-profile` — the profile edit form, which bbPress
+        reaches at TWO ids (`#bbpress-forums #bbp-your-profile fieldset input`).
+     2. `#bbpress-forums fieldset.bbp-form` — merge, split, topic-tag edit; the
+        competing rule is one id (`fieldset.bbp-form input[type="text"]`, the
+        `height: 28px` that sets every field on the tier).
+     3. `.bbp-login-form` — the three account forms, outside #bbpress-forums entirely.
+
+   The tails stay narrow deliberately: fields are matched only inside
+   `fieldset.bbp-form`, the one wrapper all nine surfaces share and the one the search
+   form is NOT in. So the per-tab search field keeps its own rules by construction
+   rather than by winning a cascade race — check that before widening any tail here.
+
+   The look is the password form's (#18), which is the precedent #90 names: our
+   surface, our line, 10px radius, and the control scale's 40px step reached the same
+   way (15px on 10px of padding). One deviation, recorded: the border is `--bltn-line`
+   rather than the prompt's `--bltn-line-soft`. On a one-field prompt the softer line
+   is enough; on an eleven-field form the boundary is doing more work, and
+   `--bltn-line` is already this tier's field border on the search box above. */
+
+/* The frame first. bbPress draws each fieldset as a bordered box with its own 20px
+   padding, which on the profile edit sits INSIDE #bbp-user-body's 20px — two nested
+   insets, 82px of the 390 spent before a field starts. The border goes (the label and
+   the section heading say where a group begins), and the padding becomes the tier's
+   gutter on the screens that have none of their own. */
+.bltn-reskin .bltn-reskin__body #bbpress-forums fieldset.bbp-form,
+.bltn-reskin .bltn-reskin__body .bbp-login-form fieldset.bbp-form {
+	border: 0;
+	padding: 0 20px;
+	margin: 0 0 20px;
+}
+/* The account forms are the whole screen, and nothing above them opens a gutter —
+   they are the one form outside #bbpress-forums, so the top inset is theirs to set. */
+.bltn-reskin .bltn-reskin__body .bbp-login-form {
+	margin: 0;
+	padding-block-start: 20px;
+}
+/* Merge, split and topic-tag edit nest a fieldset inside a fieldset; the gutter is
+   the outer one's job, or it compounds to 40 and 60px. */
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	fieldset.bbp-form
+	fieldset.bbp-form {
+	padding-inline: 0;
+	margin-block-end: 16px;
+}
+/* The profile edit already sits in #bbp-user-body's gutter. `fieldset` bare, so the
+   submit's own fieldset.submit is included. */
+.bltn-reskin .bltn-reskin__body #bbpress-forums #bbp-your-profile fieldset {
+	border: 0;
+	padding-inline: 0;
+}
+/* A group's name. bbPress hides the legend on the profile edit and shows it on
+   merge/split/tag ("Split Method", "Topic Extras"), where it is the only thing naming
+   the group — so it is kept and quieted to the tier's section label, the same
+   treatment the profile's own section headings take. The edit form's four <h2>s
+   ("Name", "Contact Info", "About Yourself", "Account") are the same species arriving
+   as headings, and were rendering at the browser's 26px bold. */
+.bltn-reskin .bltn-reskin__body #bbpress-forums fieldset.bbp-form legend,
+.bltn-reskin .bltn-reskin__body .bbp-login-form fieldset.bbp-form legend,
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	#bbp-your-profile
+	> .entry-title {
+	display: block;
+	float: none;
+	inline-size: auto;
+	padding: 0 0 10px;
+	border: 0;
+	font-family: var(--bltn-sans);
+	font-size: 10.5px;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--bltn-ink-3);
+}
+/* The account forms' labels, reflowed above their fields — bbPress gives them a
+   140px inline-block column, which is the same desktop shape #88 took off the profile
+   edit, on the one form that renders outside #bbpress-forums. The checkbox row is
+   excluded: there the label follows its input on one line and belongs there. */
+.bltn-reskin .bltn-reskin__body .bbp-login-form .bbp-username label,
+.bltn-reskin .bltn-reskin__body .bbp-login-form .bbp-email label,
+.bltn-reskin .bltn-reskin__body .bbp-login-form .bbp-password label,
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	fieldset.bbp-form
+	div
+	> label[for] {
+	display: block;
+	inline-size: auto;
+	padding: 0 0 5px;
+	margin: 0;
+	font-family: var(--bltn-sans);
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--bltn-ink-2);
+}
+/* Rows. bbPress spaces them with a 20px bottom margin on the profile edit and
+   nothing anywhere else. The topic-tag screen puts a <form> between the fieldset and
+   its rows, which is why the child combinator is stated twice rather than once. */
+.bltn-reskin .bltn-reskin__body .bbp-login-form fieldset.bbp-form > div,
+.bltn-reskin .bltn-reskin__body #bbpress-forums fieldset.bbp-form > div,
+.bltn-reskin .bltn-reskin__body #bbpress-forums fieldset.bbp-form > form > div {
+	margin-block-end: 16px;
+}
+/* The register form's notice, which the tier's notice rules never reached — they are
+   anchored on #bbpress-forums, and this form is the one outside it, so bbPress's raw
+   yellow box was rendering above the first field.
+
+   It takes the tinted-band treatment rather than the plain notice's centred empty-state
+   voice, and that is not a shortcut: the voice up there reads "no topics were found
+   here", while this notice is two sentences telling a stranger what registering will
+   do. Same shape as `.info` — informational, so it keeps a band. */
+.bltn-reskin .bltn-reskin__body .bbp-login-form div.bbp-template-notice {
+	margin: 0 0 16px;
+	padding: 12px 14px;
+	border: 0;
+	border-radius: 10px;
+	background: var(--bltn-bg);
+	color: var(--bltn-ink-2);
+	text-align: start;
+}
+.bltn-reskin .bltn-reskin__body .bbp-login-form div.bbp-template-notice ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.bltn-reskin .bltn-reskin__body .bbp-login-form div.bbp-template-notice li {
+	margin: 0;
+	padding: 0;
+	font-family: var(--bltn-sans);
+	font-size: 13.5px;
+	color: var(--bltn-ink-2);
+}
+/* The severity band, mirroring the one the notice rules above give `.error` and
+   `.warning` inside #bbpress-forums. Nothing reaches it today — measured: bbPress
+   renders exactly one notice inside these forms (the register template's plain
+   instruction list), and a failed login or registration never comes back here at all,
+   because the form posts to wp-login.php, which renders WordPress's own error page
+   outside Bulletin. It is stated because the base rule above matches every variant, so
+   without it an error arriving one day would be flattened into the informational band
+   rather than merely left undressed. Found in review. */
+.bltn-reskin .bltn-reskin__body .bbp-login-form div.bbp-template-notice.error,
+.bltn-reskin
+	.bltn-reskin__body
+	.bbp-login-form
+	div.bbp-template-notice.warning {
+	border-inline-start: 3px solid var(--bltn-unread);
+}
+/* bbPress floats the submit row right, which makes it a shrink-to-fit box — a button
+   asking for 100% inside it resolves against its own text and lands at 86px. Unfloated,
+   the width below means what it says. */
+.bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-submit-wrapper,
+.bltn-reskin .bltn-reskin__body .bbp-login-form div.bbp-submit-wrapper {
+	float: none;
+	margin-block-start: 16px;
+	text-align: start;
+}
+/* Field help. bbPress prints it as an italic blue-bordered box indented to the
+   20% label column that no longer exists — a leftover of the desktop layout #88
+   reflowed. Quiet meta text under its field, like every other secondary line here. */
+.bltn-reskin .bltn-reskin__body #bbpress-forums #bbp-your-profile p.description,
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	#bbp-your-profile
+	span.description {
+	display: block;
+	float: none;
+	inline-size: auto;
+	margin: 6px 0 0;
+	padding: 0;
+	border: 0;
+	background: none;
+	font-family: var(--bltn-sans);
+	font-size: 12px;
+	font-style: normal;
+	color: var(--bltn-ink-3);
+}
+
+/* The field. Same arithmetic as the password prompt's: 15px (the scale's form-field
+   step) on 10px of padding and a 1px border lands on the control scale's 40px. */
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	#bbp-your-profile
+	:is(
+		input[type="text"],
+		input[type="password"],
+		input[type="email"],
+		input[type="url"],
+		input[type="tel"],
+		input[type="number"],
+		select,
+		textarea
+	),
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	fieldset.bbp-form
+	:is(
+		input[type="text"],
+		input[type="password"],
+		input[type="email"],
+		input[type="url"],
+		input[type="tel"],
+		input[type="number"],
+		select,
+		textarea
+	),
+.bltn-reskin
+	.bltn-reskin__body
+	.bbp-login-form
+	:is(
+		input[type="text"],
+		input[type="password"],
+		input[type="email"],
+		input[type="url"],
+		select,
+		textarea
+	) {
+	appearance: none;
+	display: block;
+	inline-size: 100%;
+	max-inline-size: 100%;
+	/* Undoing bbPress's fixed 28px, which is where every short field on the tier came
+	   from; the padding sets the height now. */
+	block-size: auto;
+	min-block-size: 0;
+	font-family: var(--bltn-sans);
+	font-size: 15px;
+	line-height: 1.2;
+	color: var(--bltn-ink);
+	background-color: var(--bltn-surface);
+	border: 1px solid var(--bltn-line);
+	border-radius: 10px;
+	padding-block: 10px;
+	/* The inline end is a variable, and that is a specificity fix rather than a taste
+	   one. The select rule below has to reserve room for its chevron, and it cannot do
+	   it with `padding-inline-end`: this selector's `:is()` grants it one more class
+	   than the select's own (its most specific argument is `input[type="text"]`), so the
+	   shorthand here won and the reserved 36px was never applied on any branch — the
+	   chevron sat on top of a long option's last characters. A custom property is not
+	   in the cascade race at all: the select sets it on itself, and this declaration
+	   reads it. */
+	padding-inline: 13px var(--bltn-field-inline-end, 13px);
+	margin: 0;
+	box-shadow: none;
+}
+/* One ring on focus, not two — the field's own border would otherwise sit inside the
+   global accent outline. Same move as the password prompt. */
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	#bbp-your-profile
+	:is(input, select, textarea):focus-visible,
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	fieldset.bbp-form
+	:is(input, select, textarea):focus-visible,
+.bltn-reskin
+	.bltn-reskin__body
+	.bbp-login-form
+	:is(input, select, textarea):focus-visible {
+	border-color: transparent;
+}
+/* Biographical Info: prose, so it reads at the prose line-height and keeps a
+   handle to grow. bbPress leaves it at the browser's monospace default. */
+.bltn-reskin .bltn-reskin__body #bbpress-forums #bbp-your-profile textarea {
+	min-block-size: 116px;
+	line-height: 1.5;
+	resize: vertical;
+}
+/* A select has to keep saying it is a picker. `appearance: none` is what makes the
+   40px hold across engines, and it takes the native arrow with it, so the chevron is
+   drawn back on — the row chevron's shape, in --bltn-ink-3.
+   ⚠ The colour is a literal, not var(--bltn-ink-3): a data URI cannot read a custom
+   property, and CLAUDE.md trap #1 is iOS Safari silently dropping var() inside SVG
+   anyway. If the token moves, this moves with it.
+   ⚠ Physical `right`, the one place this stylesheet has one. There is no RTL layer
+   here yet; when there is, this is the declaration it has to mirror.
+
+   All THREE branches, including the account forms, which render no select on a stock
+   install. That is exactly why it is stated: the field rule above already strips their
+   arrow, so a select arriving through `do_action( 'login_form' )` or
+   `bbp_user_register_form_fields` would be a flat box with nothing saying it opens.
+   The two rules have to name the same branches or they drift apart silently. */
+.bltn-reskin .bltn-reskin__body #bbpress-forums #bbp-your-profile select,
+.bltn-reskin .bltn-reskin__body #bbpress-forums fieldset.bbp-form select,
+.bltn-reskin .bltn-reskin__body .bbp-login-form select {
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%2369716a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 13px center;
+	background-size: 12px 8px;
+	/* Read by the field rule's `padding-inline` above; see the note there for why this
+	   is not a `padding-inline-end` declaration. */
+	--bltn-field-inline-end: 36px;
+}
+/* Username is `disabled` on this form — bbPress will not change a login. Dressed
+   like every editable field it read as one; muted, it reads as the fact it is. */
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	#bbp-your-profile
+	:is(input, select, textarea):disabled {
+	background-color: var(--bltn-bg);
+	color: var(--bltn-ink-2);
+	cursor: not-allowed;
+}
+
+/* Buttons, split by the semantics the markup already carries: `type="submit"` is the
+   thing the screen exists to do (Update Profile, Log In, Split, Merge, Delete), and
+   `type="button"` is the password generator's three helpers. So the split needs no
+   class of ours and cannot drift out of step with the markup.
+
+   Primary is the tier's own filled teal — the current tab chip and the search submit
+   are already that, and the profile's Edit pill next to this form is too. It is NOT
+   the password prompt's wash button: that one is on the takeover tier, where teal is
+   spent on links inside a reading column. White on --bltn-accent measures 4.69:1.
+   Full width because at 390px an isolated 100px button floated right is the smallest
+   possible target for the largest possible action. */
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	#bbp-your-profile
+	button[type="submit"],
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	fieldset.bbp-form
+	button[type="submit"],
+.bltn-reskin .bltn-reskin__body .bbp-login-form button[type="submit"] {
+	appearance: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	inline-size: 100%;
+	min-block-size: 40px;
+	float: none;
+	padding: 0 20px;
+	border: 0;
+	border-radius: 11px;
+	background: var(--bltn-accent);
+	color: #fff;
+	font-family: var(--bltn-sans);
+	font-size: 13.5px;
+	font-weight: 600;
+	line-height: 1.2;
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	#bbp-your-profile
+	button[type="submit"]:hover,
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	fieldset.bbp-form
+	button[type="submit"]:hover,
+.bltn-reskin .bltn-reskin__body .bbp-login-form button[type="submit"]:hover {
+	background: var(--bltn-accent-ink);
+}
+/* One exception, and it is about weight rather than kind. The topic-tag screen stacks
+   three forms — Rename, Merge, Delete — each with its own submit, so painting all
+   three primary gives a destructive action the same voice as renaming a tag. Delete
+   steps down to the secondary fill. It is still 40px: the floor is not what is being
+   traded here, the loudness is. */
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	fieldset.bbp-form
+	form#delete_tag
+	button[type="submit"] {
+	background: var(--bltn-wash);
+	color: var(--bltn-accent-ink);
+}
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	fieldset.bbp-form
+	form#delete_tag
+	button[type="submit"]:hover {
+	background: color-mix(in srgb, var(--bltn-accent) 12%, var(--bltn-wash));
+}
+
+/* Generate Password, Hide, Cancel: secondary, so the control scale's 36px step and
+   the wash fill the password prompt's submit already uses. */
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	#bbp-your-profile
+	button[type="button"] {
+	appearance: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	inline-size: auto;
+	min-block-size: 36px;
+	padding: 0 14px;
+	border: 0;
+	border-radius: 10px;
+	background: var(--bltn-wash);
+	color: var(--bltn-accent-ink);
+	font-family: var(--bltn-sans);
+	font-size: 13.5px;
+	font-weight: 600;
+	line-height: 1.2;
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	#bbp-your-profile
+	button[type="button"]:hover {
+	background: color-mix(in srgb, var(--bltn-accent) 12%, var(--bltn-wash));
+}
+
+/* Checkboxes and radios — every one on this tier rendered at the browser's 13px.
+   Grown to the floor itself rather than past it: 24px is the smallest thing §2.5.8
+   permits, and these sit in runs of three ("copy subscribers / favoriters / tags"), so
+   anything larger spends rows on a control that is read once. The row is given a 24px
+   line so the label beside it is the same target height as the box.
+   `accent-color` keeps the checked state on the one accent instead of the UA blue —
+   the same fill as the active tab chip. */
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	#bbp-your-profile
+	:is(input[type="checkbox"], input[type="radio"]),
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	fieldset.bbp-form
+	:is(input[type="checkbox"], input[type="radio"]),
+.bltn-reskin
+	.bltn-reskin__body
+	.bbp-login-form
+	:is(input[type="checkbox"], input[type="radio"]) {
+	appearance: auto;
+	inline-size: 24px;
+	block-size: 24px;
+	min-block-size: 0;
+	flex: none;
+	/* The vertical 4px is doing real work: merge and split put a run of three
+	   checkboxes in ONE div separated by <br>, so the boxes are inline content on
+	   consecutive lines. At the floor exactly they butt edge to edge and read as one
+	   teal column; the margin makes the line box 32px and gives each its own row. */
+	margin: 4px 8px 4px 0;
+	padding: 0;
+	vertical-align: middle;
+	accent-color: var(--bltn-accent);
+	cursor: pointer;
+}
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	fieldset.bbp-form
+	:is(input[type="checkbox"], input[type="radio"])
+	+ label,
+.bltn-reskin .bltn-reskin__body .bbp-login-form .bbp-remember-me label {
+	display: inline;
+	inline-size: auto;
+	line-height: 24px;
+	vertical-align: middle;
+	cursor: pointer;
+}
+
+/* The password generator, whose whole cluster was still laid out for the desktop
+   form: bbPress gives it `width: 60%; margin-left: 20%` — the old label column — so
+   the field, its two buttons and the strength meter sat indented from every other
+   field on the screen and stopped 40% short of the gutter. Reflowed like the rest
+   (#88's move, on the block that click reveals).
+
+   The strength meter keeps its four colours. They are core WordPress's own signal and
+   the only thing distinguishing "Weak" from "Strong" at a glance; this palette has no
+   token for them and inventing one — see the invalid-password note above, which
+   declined to add a red — would be a palette decision for JT rather than a side effect
+   of a control pass. What it takes here is our geometry: full width, our radius, our
+   type. */
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	#bbp-your-profile
+	fieldset.password {
+	inline-size: auto;
+	margin: 8px 0 0;
+}
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	#bbp-your-profile
+	:is(.password-input-wrapper, .password-button-wrapper) {
+	display: block;
+	inline-size: 100%;
+	margin: 0;
+}
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	#bbp-your-profile
+	.password-button-wrapper
+	button {
+	inline-size: auto;
+	margin: 10px 8px 0 0;
+}
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	#bbp-your-profile
+	#pass-strength-result {
+	display: block;
+	inline-size: 100%;
+	margin: 10px 0 0;
+	padding: 9px 13px;
+	border-radius: 10px;
+	font-family: var(--bltn-sans);
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--bltn-ink);
 }
 
 /* Pagination, quietened. Vertical padding only: on the profile it already sits in
