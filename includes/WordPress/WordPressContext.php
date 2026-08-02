@@ -1899,6 +1899,54 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * A WHERE fragment withholding a reply whose parent topic exists and is one
+	 * the reader may not read.
+	 *
+	 * "Exists" is deliberate. `orphan()` in SearchScreenTest and CLAUDE.md's
+	 * pitfall #5 both name the same real state — an import can leave `post_parent`
+	 * on 0, or pointing at nothing — and this codebase's answer to it is to keep
+	 * the reply discoverable under its own title, not to swallow it. So a reply
+	 * is withheld only when a row of the topic post type actually sits at
+	 * `post_parent` and that row's status is not in the captured list, or its
+	 * password is set; a missing or wrongly-typed parent (also possible from a
+	 * corrupt import) admits the reply exactly like a real, readable one does.
+	 * One `NOT EXISTS` says that directly — it matches only a parent that is
+	 * both a topic and unreadable, so a missing or readable parent never makes
+	 * it true, with no second subquery needed to say so.
+	 *
+	 * Not cookie-aware: `post_password` is read as stored, not checked against
+	 * `post_password_required()`, which additionally consults the `wp-postpass_*`
+	 * cookie and can only be evaluated in PHP, per row, against the password the
+	 * reader actually typed. So a reader who has already unlocked a topic still
+	 * has its replies withheld from search until the DB row's own password is
+	 * cleared. Conservative rather than wrong: it can hide a reply the reader is
+	 * in fact entitled to, never the reverse. Not solved here — see the #72
+	 * PR thread.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param string   $reply_post_type Post type this predicate applies to; every
+	 *                                  other post type is admitted untouched.
+	 * @param string   $topic_post_type Post type a parent must carry to count.
+	 * @param string[] $topic_statuses  Statuses the reader may see a topic in.
+	 * @return string A fragment beginning with AND, or '' if there is nothing to say.
+	 */
+	public function reply_parent_where_clause( string $reply_post_type, string $topic_post_type, array $topic_statuses ): string {
+		global $wpdb;
+
+		if ( '' === $reply_post_type || '' === $topic_post_type || array() === $topic_statuses ) {
+			return '';
+		}
+
+		$placeholders = implode( ', ', array_fill( 0, count( $topic_statuses ), '%s' ) );
+
+		return (string) $wpdb->prepare(
+			" AND ( {$wpdb->posts}.post_type != %s OR NOT EXISTS ( SELECT 1 FROM {$wpdb->posts} AS bltn_parent WHERE bltn_parent.ID = {$wpdb->posts}.post_parent AND bltn_parent.post_type = %s AND ( bltn_parent.post_status NOT IN ( {$placeholders} ) OR ( bltn_parent.post_password <> '' AND bltn_parent.post_password IS NOT NULL ) ) ) )", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			array_merge( array( $reply_post_type, $topic_post_type ), array_values( $topic_statuses ) )
+		);
+	}
+
+	/**
 	 * Read a query variable off a query object.
 	 *
 	 * @since 0.3.0

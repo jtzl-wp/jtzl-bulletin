@@ -1280,6 +1280,39 @@ interface ContextInterface {
 	public function post_status_where_clause( string $exempt_post_type, array $statuses ): string;
 
 	/**
+	 * A WHERE fragment withholding a reply whose parent topic exists and is one
+	 * the reader may not read — its status is not in a list, or it carries a
+	 * password.
+	 *
+	 * A reply's own row cannot say either of those things: bbPress rewrites no
+	 * reply status when its topic's changes, and a reply inherits no password of
+	 * its own, so `post_status_where_clause()` — which reads only the row being
+	 * filtered — passes a reply through whatever its topic's state (issue #72). A
+	 * reply whose parent does not exist, or is not itself a topic, is admitted
+	 * rather than withheld: that is the orphaned-reply state CLAUDE.md's pitfall
+	 * #5 names, and this codebase's answer to it is to keep the reply
+	 * discoverable under its own title, not to swallow it here.
+	 *
+	 * The password half reads the stored column, not `post_password_required()`
+	 * — which is cookie-aware but only callable per row, in PHP, against the
+	 * password a specific reader typed. So this can withhold a reply from a
+	 * reader who has already unlocked its topic; it will never do the reverse.
+	 *
+	 * The seam owns this one for the same reason it owns
+	 * `post_status_where_clause()`: it is SQL run against the posts table
+	 * directly, and the caller never sees a table name.
+	 *
+	 * @since 0.3.0
+	 *
+	 * @param string   $reply_post_type Post type this predicate applies to; every
+	 *                                  other post type is admitted untouched.
+	 * @param string   $topic_post_type Post type a parent must carry to count.
+	 * @param string[] $topic_statuses  Statuses the reader may see a topic in.
+	 * @return string A fragment beginning with AND, or '' if there is nothing to say.
+	 */
+	public function reply_parent_where_clause( string $reply_post_type, string $topic_post_type, array $topic_statuses ): string;
+
+	/**
 	 * Read a query variable off a query object.
 	 *
 	 * Typed loosely on purpose. The callers are hooks that WordPress hands a

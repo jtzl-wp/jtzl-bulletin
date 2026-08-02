@@ -83,6 +83,16 @@ use JTZL\Bulletin\WordPress\ContextInterface;
  * Trunk (2.7.0-alpha-2) still performs the same substitution but has broadened the
  * guard around it and added a re-entry flag, so nothing here reads its shape.
  *
+ * ## The one row a status list still could not cover
+ *
+ * A reply's own `post_status` is honest but incomplete: bbPress has no write path
+ * that rewrites a reply when its topic's status or password changes, so a public
+ * reply under a topic the reader may not read — private, hidden, or merely
+ * password-protected — passed the clause above on its own row. `restrict_statuses()`
+ * closes that with a second, independent predicate naming the reply's parent
+ * (issue #72); it reuses the same captured list rather than adding a rule of its
+ * own.
+ *
  * @since 0.3.0
  */
 class SearchVisibility {
@@ -198,7 +208,9 @@ class SearchVisibility {
 	/**
 	 * And subtract again what only the forums half of that union was for: admit
 	 * every forum row, and otherwise only a status bbPress said this reader may
-	 * see. Hooked on `posts_where`.
+	 * see. Also withholds a reply whose parent topic the reader may not itself
+	 * read (issue #72) — a status the reply's own row cannot carry, since bbPress
+	 * has no write path that would put it there. Hooked on `posts_where`.
 	 *
 	 * Forums are exempted rather than status-checked because their protection is
 	 * the exclusion list, not the status — see the class docblock.
@@ -216,7 +228,14 @@ class SearchVisibility {
 			return $where;
 		}
 
-		return $where . $this->wp->post_status_where_clause( $this->wp->get_forum_post_type(), $captured );
+		$where .= $this->wp->post_status_where_clause( $this->wp->get_forum_post_type(), $captured );
+		$where .= $this->wp->reply_parent_where_clause(
+			$this->wp->get_reply_post_type(),
+			$this->wp->get_topic_post_type(),
+			$captured
+		);
+
+		return $where;
 	}
 
 	/**
