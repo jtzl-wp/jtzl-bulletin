@@ -5,7 +5,7 @@ Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.2
 Requires Plugins: bbpress
-Stable tag: 0.2.0
+Stable tag: 0.3.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -15,23 +15,26 @@ A mobile-first, decluttered reading layer for bbPress. The post is the hero; nav
 
 Bulletin makes a bbPress forum genuinely pleasant to read on a phone.
 
-On the three reading screens — the forums index, a single forum's threads, and a thread itself — Bulletin renders its own minimal document instead of your theme's, in a comfortable serif reading face with quiet chrome. Everywhere else on your site, including bbPress screens Bulletin does not cover, your theme is left completely untouched.
+On the reading screens — the forums index, a single forum's threads, a thread itself, and search — Bulletin renders its own minimal document instead of your theme's, in a comfortable serif reading face with quiet chrome. Every other bbPress screen a reader can reach — member profiles, the topic archive, tag archives, registered views — keeps bbPress's own markup, but inside Bulletin's chrome, so the forum reads as one place. Nothing outside bbPress is touched: the rest of your site renders exactly as it does now.
 
 It is a companion plugin. It never modifies bbPress, and it can be deactivated at any time with no trace.
 
 **What it does**
 
-* Full mobile takeover of the forums index, single forum, and reading view
+* Full mobile takeover of the forums index, single forum, reading view and search
+* Every other bbPress screen wrapped in the same chrome rather than dropped on your theme
 * Continuous, decluttered reading — the thread is the content, not a card stack
+* Threaded replies placed under the reply they answer, when bbPress threading is on
 * Inline "load more replies" instead of jarring pagination
 * Thread-to-thread previous/next, scoped to the current forum, with boundary stops
 * Deep links to any specific reply keep working, including past the first page
-* Native bbPress subscribe is retained
+* Moderation as a mode, off by default — the controls appear only when asked for
+* Native bbPress subscribe is retained, on forums and on threads
 * Fully responsive — built for a phone, scales cleanly to desktop
 
 **What it deliberately does not do**
 
-Bulletin is subtractive by design. It adds no navigational furniture, no "best posts" ranking, and no controls that compete with the content. Screens it has no design for are left on your theme rather than half-styled.
+Bulletin is subtractive by design. It adds no navigational furniture, no "best posts" ranking, and no controls that compete with the content. bbPress's own edit forms for a topic, reply or forum are left on your theme rather than half-styled.
 
 == Installation ==
 
@@ -43,7 +46,7 @@ Bulletin is subtractive by design. It adds no navigational furniture, no "best p
 
 = Does it change my theme? =
 
-Only on the three bbPress reading screens, and only while it is active. Every other page renders exactly as it does now.
+Only on bbPress screens, and only while it is active. Every other page on your site renders exactly as it does now.
 
 = Does it modify bbPress? =
 
@@ -58,6 +61,33 @@ Developed and tested against bbPress 2.6.x, the current stable release line.
 Yes. Bulletin defers to bbPress's own access control, including forums nested under a restricted parent.
 
 == Changelog ==
+
+= 0.3.0 =
+
+The complete forum surface. Bulletin no longer covers only the three reading screens — every bbPress screen a reader can reach now renders inside Bulletin's chrome, so the forum stops changing character halfway through.
+
+* Added: Search is a Bulletin screen, reachable from a magnifier in the app bar everywhere. Forums, threads and replies are interleaved by date, and each row says which of the three it is.
+* Added: Threaded replies. With bbPress threading on, each reply is placed under the one it answers and carries a link back to it — an order, not an indent that runs out of width on a phone.
+* Added: Member profiles and their tabs, the topic archive, tag archives and registered views now render inside Bulletin's chrome instead of dropping to your theme.
+* Added: Moderation is a mode on the reading view, off by default — a moderator turns it on, and everyone else never sees the controls.
+* Added: A thread's tags sit with the thread rather than in a separate strip.
+* Added: A home button in the app bar, and the way back up is named instead of an unlabelled chevron.
+* Added: Password-protected forums and threads keep the reader in Bulletin. WordPress's own password form renders in place of the content until the password is supplied, and a protected post gives nothing away in a list row.
+* Added: "Load more" for forum lists past bbPress's 50-forum ceiling, for the thread list past its first page, and for the Subscribed Forums profile tab.
+* Changed: One type scale across the whole plugin, replacing eighteen ad-hoc font sizes.
+* Changed: Every touch target in bbPress's own markup is at least 24px, meeting WCAG 2.2 target size, without moving a single row.
+* Changed: bbPress's forms — profile edit, moderation, and the login, register and lost-password shortcodes — are dressed to match the rest of Bulletin instead of sitting on browser defaults.
+* Changed: The WordPress admin bar is hidden for everyone but administrators, so a logged-in reader gets the whole screen.
+* Changed: Thread previous/next seeks the adjacent thread instead of listing every thread in the forum.
+* Fixed: Reply and thread paging could duplicate or drop rows when two posts shared a timestamp.
+* Fixed: Search could return private or hidden topics, and replies belonging to a topic the reader cannot read.
+* Fixed: A closed thread now says it is closed, in search results as well as in lists.
+* Fixed: Super stickies sit above forum stickies, and a forum-level sticky is no longer hoisted onto the topic archive.
+* Fixed: A long screen title could set the width of the whole app, clipping the right edge of every screen — worst at 200% zoom, where it cut content.
+* Fixed: The shell could be pushed out of position by anything that scrolls the page programmatically: a deep link, find-in-page, or assistive technology.
+* Fixed: Each reply has its own permalink, on its timestamp, and it survives past the first page.
+* Security: AJAX responses no longer let a restricted forum be told apart from one that does not exist.
+* Security: Screen headings are escaped, and a continuation request is bounded to the page it answers for.
 
 = 0.2.0 =
 * Added: reading-view Subscribe control — subscribe to the thread you are reading, matching the native forum-level subscribe. Gated on active subscriptions and a logged-in user.

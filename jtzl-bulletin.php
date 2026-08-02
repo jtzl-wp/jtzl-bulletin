@@ -2,8 +2,8 @@
 /**
  * Plugin Name:       Bulletin for bbPress
  * Plugin URI:        https://github.com/jtzl-wp/jtzl-bulletin
- * Description:       A mobile-first, decluttered reading layer for bbPress. The post is the hero; navigation is deliberately secondary. Renders its own minimal document on the reading screens and leaves every other page on the site's own theme.
- * Version:           0.2.0
+ * Description:       A mobile-first, decluttered reading layer for bbPress. The post is the hero; navigation is deliberately secondary. Renders its own minimal document on the reading screens, wraps every other bbPress screen in the same chrome, and leaves the rest of the site on its own theme.
+ * Version:           0.3.0
  * Requires at least: 6.0
  * Requires PHP:      8.2
  * Requires Plugins:  bbpress
@@ -14,12 +14,14 @@
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  *
- * Bulletin is a companion plugin — it never edits bbPress core. On the three
- * reading screens (forums index, a single forum, a single topic) it takes over
- * the `bbp_template_include` filter and renders its own minimal document, while
- * still firing wp_head()/wp_footer() so WordPress core and other plugins keep
- * working. Non-forum pages — and, in v1, bbPress pages we have no design for —
- * are left untouched on the active theme.
+ * Bulletin is a companion plugin — it never edits bbPress core. On the four
+ * reading screens (forums index, a single forum, a single topic, search) it takes
+ * over the `bbp_template_include` filter and renders its own minimal document,
+ * while still firing wp_head()/wp_footer() so WordPress core and other plugins
+ * keep working. Every other reader-reachable bbPress screen keeps bbPress's own
+ * markup and renders inside the same chrome; the only ones left on the active
+ * theme are bbPress's topic, reply and forum edit forms, which
+ * Screen\ScreenClassifier excludes by name. Non-bbPress pages are untouched.
  *
  * @package JTZL\Bulletin
  * @since 0.1.0
@@ -30,7 +32,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'JTZL_BLTN_VERSION', '0.2.0' );
+define( 'JTZL_BLTN_VERSION', '0.3.0' );
 define( 'JTZL_BLTN_FILE', __FILE__ );
 define( 'JTZL_BLTN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'JTZL_BLTN_URL', plugin_dir_url( __FILE__ ) );
