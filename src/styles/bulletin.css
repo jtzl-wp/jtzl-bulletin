@@ -1764,6 +1764,29 @@ body.admin-bar .bltn-app {
 	border-top: 1px solid var(--bltn-line-soft);
 	margin: 18px 0 0;
 }
+/* The loop cards are pulled full-bleed out of this section's 20px gutter (see the
+   shared layer's card rule), and on the profile tabs alone that pull-out was being
+   clipped away: bbPress gives this box `overflow: auto` (bbpress.css:1278), which
+   makes it a scroll container, and a scroll container clips at its padding box.
+
+   The cards are the section's own width, so the clip landed exactly on their text
+   box — measured at 390px, the row's background and its divider both spanned 20–370
+   instead of 0–390. Full-bleed is what DESIGN.md specifies for this card and what the
+   archive screens, which have no such wrapper, already got; here it was recorded and
+   not delivered. Found by shooting the surfaces for #96, and it is the second defect
+   from this wrapper — the first is the pagination note further down.
+
+   ⚠ `overflow: visible` alone would give the floats back. That rule is float
+   containment (note the `clear: right` beside it, and bbPress floats plenty on this
+   screen), so `display: flow-root` replaces the containment without the clipping —
+   verified on Topics Started and Replies Created: the section keeps its height and
+   the body gains no horizontal overflow. `overflow: clip visible` was the other
+   candidate and is wrong for the same reason: it un-clips one axis and contains
+   nothing. */
+.bltn-reskin .bltn-reskin__body #bbpress-forums .bbp-user-section {
+	overflow: visible;
+	display: flow-root;
+}
 
 /* ==== SHARED LAYER: the three loops and one card ====
 
@@ -2962,60 +2985,53 @@ body.admin-bar .bltn-app {
 	opacity: 1;
 }
 
-/* bbPress's own row emphasis, recoloured into the palette rather than dropped.
+/* bbPress's own row emphasis, answered in one place: neither stripe nor sticky is a
+   tone on this tier, and every row is the one surface (issue #96).
 
-   even/odd striping softens from bbPress's #fbfbfb to our paper/surface pair
-   (Yoren's call — it reads as a card boundary now the rows are full-bleed).
+   ⚠ Neutralised, NOT deleted. bbPress paints .even/.odd itself — #ffffff / #fbfbfb at
+   `#bbpress-forums div.even` (bbpress.css:65) — and the tier re-admits its stylesheet
+   rather than dequeuing it, so removing these rules hands the rows back to bbPress's
+   own striping instead of ending it.
 
-   The reply loop needs one extra rule to join in. bbp_reply_class() classes only
-   div.reply, and a reply's meta band is an unclassed *preceding* sibling, so the
-   stripe would paint the bottom half of every card and leave the top half white.
-   :has() reaches back for it — the band takes the tint of the reply it belongs to,
-   off bbPress's own even/odd rather than a fragile :nth-child count of the two-divs-
-   per-reply sequence. Where :has() is unsupported the band simply stays white, which
-   is the untinted state, not a broken layout.
+   The striping used to be recoloured into the palette here (#ffffff / #f1f3f0) rather
+   than dropped, reasoned as a card boundary now the rows are full-bleed. Shooting the
+   surfaces at 390 retired that reason on its own terms:
 
-   Sticky is not marked here at all, and a pinned row simply takes its turn in the
-   alternation. On a profile tab, "pinned" is a property of a topic *within its forum*
-   and the list has no forum: its rows come from several, so there is nothing for
-   "first" to be relative to, and a moderator's pin in one forum has no claim over a
-   member's own record of what they started. So the signal lives where it is true: the
-   takeover's forum screen, which queries its pinned topics separately under a "Pinned"
-   section label. (Reverted, Yoren 2026-07-25: a label here promised a position the list
-   never had, and hoisting to deliver it put housekeeping threads at the top of a member's
-   profile in place of what they'd actually been discussing.)
+   - The divider was doing the job at half strength, not failing at it. --bltn-line-soft
+     (#eef0ec) is Δ(17,15,20) against white and Δ(3,3,4) against the paper tint, so every
+     divider rendered on its white side and vanished on its tinted one. One surface takes
+     both sides to Δ(17,15,20) — the boundary the stripe was kept for, delivered by the
+     line that was already there, which is how the takeover screens read.
+   - Row banding is a wide-table device: it carries the eye horizontally, from a value in
+     the last column back to its label in the first. This tier's `<ul>`-as-table is
+     already reflowed to a single-column stacked card, so there is no horizontal tracking
+     task left for it to serve.
+   - Tone is wanted for something that means something. Trash / spam / pending / closed
+     are all owed one legible treatment (#36), and they arrive on this same .even/.odd
+     chain — so the meaningless tone was holding the channel the meaningful one needs.
 
-   ⚠ The topic archive is the one place this is UNSETTLED (#43). bbp_has_topics()
-   hoists stickies when bbp_is_single_forum() || bbp_is_topic_archive(), and of those
-   two only the archive is a reskin screen — so there, a row at the top genuinely is
-   pinned. But only SUPER-stickies hoist on the archive; a forum-level sticky keeps
-   the .sticky class in its ordinary date position, which is precisely the "promises a
-   position the list never had" problem again, for the majority of pinned rows. The
-   parity rules below meanwhile strip the yellow bbPress used to say anything at all.
-   Unmarked is therefore the shipped treatment and the defensible one; Yoren has the
-   screenshots if she wants the other reading.
+   Pinned is unmarked here for its own reasons, unchanged by the above: "pinned" is a
+   property of a topic *within its forum*, and a reskin list has no forum — its rows come
+   from several, so there is nothing for "first" to be relative to, and a moderator's pin
+   has no claim over a member's own record of what they started. The signal lives where it
+   is true: the takeover's forum screen, which queries its pinned topics separately under a
+   "Pinned" section label. (Reverted, Yoren 2026-07-25: a label here promised a position the
+   list never had, and hoisting to deliver it put housekeeping threads at the top of a
+   member's profile in place of what they'd actually been discussing.)
 
-   Two rules still have to answer bbPress, though, since it keeps painting pinned rows:
-   parity is `!important` because its yellow is (both important, so specificity decides
-   and ours is the more specific), and the 1.1em bump is reset so "pinned" cannot quietly
-   mean "bigger". */
-.bltn-reskin .bltn-reskin__body #bbpress-forums .even {
-	background: var(--bltn-bg) !important;
-}
+   Two rules still have to answer bbPress, since it keeps painting pinned rows: parity is
+   `!important` because its yellow is (both important, so specificity decides and ours is
+   the more specific), and the 1.1em bump is reset so "pinned" cannot quietly mean
+   "bigger". Both survive this change — what went is only the tone difference between the
+   two parities.
+
+   The reply loop needed a third rule under striping and does not need one now: bbp_reply_class()
+   classes only div.reply, and a reply's meta band is an unclassed *preceding* sibling, so a
+   :has() rule reached back to tint the pair as one card. With no tint, the pair is bounded by
+   the divider under div.reply the same way every other card is. */
+.bltn-reskin .bltn-reskin__body #bbpress-forums .even,
 .bltn-reskin .bltn-reskin__body #bbpress-forums .odd {
 	background: var(--bltn-surface) !important;
-}
-.bltn-reskin
-	.bltn-reskin__body
-	#bbpress-forums
-	div.bbp-reply-header:has(+ div.reply.even) {
-	background: var(--bltn-bg);
-}
-.bltn-reskin
-	.bltn-reskin__body
-	#bbpress-forums
-	div.bbp-reply-header:has(+ div.reply.odd) {
-	background: var(--bltn-surface);
 }
 /* The 1.1em reset. Every card field happens to override it with an explicit size
    already, so this only guards the ones that don't; the selector matches the card rule's
