@@ -358,18 +358,19 @@ function initReading(): void {
 	// null-check in here would be unreachable.
 	//
 	// The app's own scroller is moved directly rather than through
-	// scrollIntoView(), and that is a fix rather than a preference. scrollIntoView()
-	// scrolls every scrollable ancestor, and `overflow: hidden` does NOT make a box
-	// unscrollable — it only stops the *user* scrolling it. The takeover's frame is
-	// a clipped 100dvh box around a taller document, so the viewport is
-	// programmatically scrollable by about 1.1k px on the fixture; scrollIntoView()
-	// took it up with the scroller and left the app bar above the top of the screen,
-	// with a band of bare page under the nav bar. Measured on both an arriving
-	// permalink and a reply-context tap (issue #37) before it was believed.
+	// scrollIntoView(), which scrolls every scrollable ancestor. That used to be
+	// load-bearing: the shell clipped with `overflow: hidden`, which stops a *user*
+	// scrolling a box and does nothing about the API, so the viewport went up with
+	// the scroller and left the app bar above the top of the screen. Measured on an
+	// arriving permalink and on a reply-context tap (issue #37).
 	//
-	// Moving one element by a measured delta cannot do that. scrollIntoView() stays
-	// as the fallback for a target outside a .bltn-scroll — nothing renders one
-	// today, and if something does, the old behaviour is better than none.
+	// #66 closed that in CSS — `.bltn-app` now establishes the containing block and
+	// clips without being a scroll container, so no ancestor of a target is
+	// scrollable any more. This stays anyway: it says which box moves and by how
+	// much, rather than asking the browser to work it out, and it is the same one
+	// line either way. scrollIntoView() remains the fallback for a target outside a
+	// .bltn-scroll — nothing renders one today, and if something does, the old
+	// behaviour is better than none.
 	function scrollToTarget(el: HTMLElement): void {
 		const reduce = window.matchMedia(
 			'(prefers-reduced-motion: reduce)'
@@ -481,20 +482,21 @@ function initReading(): void {
 	 *  1. No highlight. `.bltn-post--target` is a class this file adds, not `:target`,
 	 *     so a jump the browser performs lands the reader somewhere with nothing to
 	 *     say which post they were sent to.
-	 *  2. The shell comes apart. `.bltn-scroll` sits in a `1fr` grid track whose
-	 *     default `min-block-size: auto` lets it grow past the track, so the ROOT
-	 *     document is scrollable on every takeover screen (~1.1k px on the fixture,
-	 *     and on an unthreaded thread too — this predates the feature). A native jump
-	 *     scrolls the root as well as the scroller, taking the app bar off the top of
-	 *     the screen and leaving a band of page below the nav bar.
+	 *  2. The shell came apart — fixed in CSS since, by #66. The root document was
+	 *     scrollable on any long screen, so a native jump scrolled it as well as the
+	 *     scroller and took the app bar off the top. Recorded because the cause was
+	 *     not the one first written here: it was never the `1fr` track's automatic
+	 *     minimum, but an absolutely positioned box with no positioned ancestor,
+	 *     which the shell's clip could not reach. See `.bltn-app` in bulletin.css.
 	 *  3. A parent that is not loaded yet does nothing at all. Rare — a parent is
 	 *     normally older than its child and the view loads forward from page 1 — but
 	 *     an import writing `_bbp_reply_to` directly, or a moderator repointing one
 	 *     (bbp_validate_reply_to() checks neither date nor order), can put it on a
 	 *     later page.
 	 *
-	 * preventDefault() answers all three: no root scroll, the highlight fires, and
-	 * goToPost() pages forward when it has to. Without this script the link still
+	 * preventDefault() answers 1 and 3 — the highlight fires, and goToPost() pages
+	 * forward when it has to — and answered 2 on this one path until #66 answered it
+	 * everywhere. Without this script the link still
 	 * navigates — degraded, not broken — which is why it can live behind the config
 	 * gate rather than beside the moderation toggle.
 	 */

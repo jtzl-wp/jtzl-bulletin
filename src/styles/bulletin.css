@@ -79,11 +79,68 @@ body.bltn {
 }
 
 /* ---- app frame ---- */
+/* The two properties that make this box unscrollable are `position` and the
+   second `overflow`, and NEITHER works without the other (#66).
+
+   What was wrong: the root document was programmatically scrollable by up to
+   1.5k px on any screen whose content ran long — measured on the reading view,
+   the topic archive and the tag archive, logged out and as keymaster, at 390 and
+   at 900. `overflow: hidden` stops a *user* scrolling a box; it does nothing
+   about window.scrollTo(), scrollIntoView(), focus(), find-in-page or assistive
+   tech. When one of those moved the root, the whole frame slid up: the app bar
+   went above the top of the screen and a band of bare page appeared under the
+   nav bar.
+
+   Why a clipped 100dvh shell leaked at all: an absolutely positioned box with no
+   positioned ancestor is contained by the INITIAL containing block, and overflow
+   clipping only reaches descendants whose containing-block chain runs through the
+   clipping box. So `.bltn-sr-only` — the load-more live region, sitting at the
+   foot of a 2.3k px content flow — was outside every clip the shell had, and the
+   viewport's scrollable region grew to meet it. One 1px box: removing it took the
+   root overflow from 1542 to exactly 0, and putting it back brought all 1542
+   with it.
+
+   `position: relative` alone is therefore half a fix, and the dangerous half. It
+   gives those boxes a containing block inside the shell and the root does go to
+   0 — but their overflow lands in THIS box instead, and `overflow: hidden` makes
+   this box a scroll container too. Measured: `.bltn-app` went from 0 to 1542,
+   with `scrollTop = 500` reaching 500. Identical symptom, one level in.
+
+   `overflow: clip` closes it: same clipping as `hidden`, but not a scroll
+   container, so there is nothing to scroll. The `hidden` above it is a fallback
+   and not a leftover — Safari before 16 drops the `clip` declaration, and with no
+   `hidden` ahead of it the box would fall back to `visible` and stop clipping
+   altogether, which is worse than the bug.
+
+   ⚠ But that fallback keeps the *clipping*, not the fix: on a pre-16 Safari this
+   box renders as `position: relative` + `overflow: hidden`, which is exactly the
+   dangerous half above. Raised in review of #92, and answered one box down —
+   `.bltn-scroll` carries a `position: relative` of its own, so every escapee
+   measured is contained by the scroll region and never reaches this box at all.
+   That containment needs no feature and holds in every browser. Measured with
+   `clip` forced off across the routes that failed: this box scrolls 700px without
+   that line and 0 with it. Two independent containments, and only the outer one
+   depends on `clip`.
+
+   What does NOT fix it, all measured rather than reasoned: `min-block-size: 0` on
+   the `1fr` track, `minmax(0, 1fr)` in place of `1fr`, and `overflow: clip` on
+   `html`/`body` — the first two because the escaping box is out of flow and no
+   track ever sizes it, the third because a clip on a box that is not the
+   escapee's containing block does not reach it. Those three were the candidates
+   #66 proposed; none of them moved the number.
+
+   One knock-on, and it is the only visible one: bbPress's own
+   `.screen-reader-text` parks itself at `left: -999em`, and its containing block
+   changes from the viewport to this box. On a phone the two share an origin. At
+   ≥600px this box is centred, so the label moves with it — still ~13,000px off
+   canvas, and now clipped rather than merely off-screen. */
 .bltn-app {
+	position: relative;
 	inline-size: 100%;
 	block-size: 100dvh;
 	background: var(--bltn-surface);
 	overflow: hidden;
+	overflow: clip;
 }
 
 /* Responsive: the phone-width lock is gone. On wider screens the frame settles
@@ -132,7 +189,12 @@ body.admin-bar .bltn-app {
 	   63% of the width (WCAG 1.4.4, 1.4.10). */
 	grid-template-columns: minmax(0, 1fr);
 	background: var(--bltn-surface);
+	/* Clipped, and not a scroll container — the same pair of declarations as
+	   .bltn-app, for the same reason (#66). This box has no scrollable overflow
+	   today, so `clip` changes nothing that can be seen; it means a future one
+	   cannot be scrolled into view by anything, rather than happening not to be. */
 	overflow: hidden;
+	overflow: clip;
 }
 
 /* ---- app bar (minimal top strip) ---- */
@@ -239,6 +301,17 @@ body.admin-bar .bltn-app {
 
 /* ---- scroll region ---- */
 .bltn-scroll {
+	/* The containing block for everything inside the scroll region, and the first
+	   line of the #66 defence rather than an afterthought. `.bltn-app` establishes
+	   one too, but only usefully where `overflow: clip` is supported; here the
+	   escaping boxes land in the box that is *supposed* to scroll, which needs no
+	   feature at all. Measured with `clip` forced off: `.bltn-app` is scrollable by
+	   700px without this line and by 0 with it, on every route that failed. And it
+	   costs the scroll region nothing — its scrollable overflow is identical to the
+	   pixel either way (1625 / 1388 / 1085 / 1179 on the four failing routes),
+	   because the boxes it now contains sit at their static position at the foot of
+	   content that was already that tall. */
+	position: relative;
 	overflow-y: auto;
 	overscroll-behavior: contain;
 	-webkit-overflow-scrolling: touch;
