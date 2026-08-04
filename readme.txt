@@ -5,7 +5,7 @@ Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.2
 Requires Plugins: bbpress
-Stable tag: 0.3.0
+Stable tag: 0.4.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -61,6 +61,13 @@ Developed and tested against bbPress 2.6.x, the current stable release line.
 Yes. Bulletin defers to bbPress's own access control, including forums nested under a restricted parent.
 
 == Changelog ==
+
+= 0.4.0 =
+
+One surface for every list. The bbPress screens Bulletin wraps rather than replaces were striping their rows while the reading screens were not, so a list of threads changed appearance one tap apart.
+
+* Changed: List rows on member profiles, the topic archive, tag archives and registered views no longer alternate between two background tints. Every row sits on the same surface, and the divider between rows now reads at full strength on all of them — carrying the boundary the tint was kept for, the way the reading screens already did.
+* Fixed: On the five member profile tabs, a row's background and the divider under it stopped short of both screen edges. They run the full width now, like every other list in the plugin.
 
 = 0.3.0 =
 

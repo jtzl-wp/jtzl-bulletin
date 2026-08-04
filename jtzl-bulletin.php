@@ -3,7 +3,7 @@
  * Plugin Name:       Bulletin for bbPress
  * Plugin URI:        https://github.com/jtzl-wp/jtzl-bulletin
  * Description:       A mobile-first, decluttered reading layer for bbPress. The post is the hero; navigation is deliberately secondary. Renders its own minimal document on the reading screens, wraps every other bbPress screen in the same chrome, and leaves the rest of the site on its own theme.
- * Version:           0.3.0
+ * Version:           0.4.0
  * Requires at least: 6.0
  * Requires PHP:      8.2
  * Requires Plugins:  bbpress
@@ -32,7 +32,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'JTZL_BLTN_VERSION', '0.3.0' );
+define( 'JTZL_BLTN_VERSION', '0.4.0' );
 define( 'JTZL_BLTN_FILE', __FILE__ );
 define( 'JTZL_BLTN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'JTZL_BLTN_URL', plugin_dir_url( __FILE__ ) );
