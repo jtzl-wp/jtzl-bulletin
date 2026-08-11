@@ -25,6 +25,14 @@
 	   mark) where wash's 6% is a button fill. */
 	--bltn-mark: rgba(14, 124, 107, 0.18);
 	--bltn-unread: #cf7726; /* Amber — unread only. */
+	/* Caution. Its own token because amber is spoken for: unread is a row-level mark and
+	   an error is a block-level one, and #32 puts both on the profile screens at once.
+	   L 0.44 in OKLCH — where --bltn-accent-ink sits (0.436), this palette's depth for
+	   colour that carries text — so it reads as a sibling of the teal, not an import.
+	   Separated from --bltn-unread by LIGHTNESS, not hue, which is the only separation a
+	   dichromat keeps: ΔE 0.223 under deuteranopia, where a stock red (#d63638) collapses
+	   to 0.065 against the same amber. 8.32:1 on surface, 7.45:1 on bg. See DESIGN.md. */
+	--bltn-caution: #8a2f2d;
 
 	--bltn-sans:
 		ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
@@ -43,7 +51,12 @@
      --bltn-ink:#eceee9; --bltn-ink-2:#9ba39c; --bltn-ink-3:#6a726b;
      --bltn-line:#262b27; --bltn-line-soft:#1f231f;
      --bltn-accent:#3cc2a9; --bltn-accent-ink:#3cc2a9; --bltn-unread:#e0975a;
-     --bltn-mark:rgba(60,194,169,.26); */
+     --bltn-mark:rgba(60,194,169,.26); --bltn-caution:#c06a64;
+   ⚠ The parked caution value is the one token here that does NOT carry the light theme's
+   guarantee, and it cannot: the parked accent and unread both sit at L 0.736, so a caution
+   at readable contrast on #171a18 has nowhere darker to stand — #c06a64 clears 4.58:1 but
+   separates from the parked amber by only ΔE 0.127 deutan, against 0.223 in light. Signing
+   off dark means moving the amber up or the caution down, not shipping this as-is. */
 
 .bltn *,
 .bltn *::before,
@@ -1192,11 +1205,14 @@ body.admin-bar .bltn-app {
    reader who mistyped saw one extra grey line and no other change (measured on the
    fixture, 390px).
 
-   So the error becomes the strongest text in the block instead of the quietest:
-   near-black at 600, behind a solid rule. Deliberately NOT a new colour. This palette
-   has one accent and an amber reserved for unread, and there is no alert token —
-   introducing red for one string is a palette decision for JT, not a side effect of a
-   design pass. Weight, ink and the rule carry it without one.
+   So the error becomes the strongest text in the block instead of the quietest: 600
+   weight, behind a solid rule. It was near-black, and this note used to say the colour
+   was deliberately withheld because introducing red for one string is a palette
+   decision for JT rather than a side effect of a design pass. That reasoning has been
+   overtaken twice: the palette now HAS a caution token (#100 — unread needed amber
+   back, so caution had to go somewhere), and the decision was ours to make, not JT's.
+   The differentiators are unchanged; only the colour they are made of is. The rule
+   comes down 2px → 1px so the app has exactly one caution treatment rather than two.
 
    This note used to claim a size step as well — the error was 14px against the
    instruction's 13.5. That was half a pixel, which is to say it was never doing any
@@ -1206,13 +1222,13 @@ body.admin-bar .bltn-app {
    with the rest of the form. See Chrome\PasswordForm for the other half (the caret). */
 .bltn .post-password-form-invalid-password {
 	padding-inline-start: 12px;
-	border-inline-start: 2px solid var(--bltn-ink);
+	border-inline-start: 1px solid var(--bltn-caution);
 	margin: 0 0 14px;
 }
 .bltn .post-password-form-invalid-password p {
 	font-size: 13.5px;
 	font-weight: 600;
-	color: var(--bltn-ink);
+	color: var(--bltn-caution);
 	margin: 0;
 }
 .bltn .post-password-form label {
@@ -2317,9 +2333,32 @@ body.admin-bar .bltn-app {
 	font-size: 13.5px;
 	color: var(--bltn-ink-2);
 }
+/* The caution pair. The colour is on the words, not on a stripe: the words are what
+   carries the meaning, and a 3px coloured rule down an alert is the shape #97 already
+   took off the reskin rows so that tone stays reserved for things that mean something.
+   1px keeps a marker in the gutter at a weight that reads as a rule rather than a bar. */
 .bltn-reskin__body #bbpress-forums div.bbp-template-notice.error,
 .bltn-reskin__body #bbpress-forums div.bbp-template-notice.warning {
-	border-inline-start: 3px solid var(--bltn-unread);
+	border-inline-start: 1px solid var(--bltn-caution);
+}
+.bltn-reskin__body #bbpress-forums div.bbp-template-notice.error li,
+.bltn-reskin__body #bbpress-forums div.bbp-template-notice.warning li {
+	font-weight: 600;
+	color: var(--bltn-caution);
+}
+/* A link inside a caution block. Stated although nothing bbPress renders reaches it —
+   none of its 185 bbp_add_error() messages carries a link — for the reason the login
+   form's severity band below is stated: the tier's `a` rule sets colour explicitly, so
+   it wins over the inherited caution, and an error arriving one day with a link in it
+   would put a teal word inside a red sentence. bbp_template_notices() prints whatever
+   is in $bbp->errors, and another plugin's errors go through it too.
+
+   Underlined at rest, where the tier's links are not: inside this block the caution
+   colour is the block's own voice, so it cannot also be what marks the link. */
+.bltn-reskin__body #bbpress-forums div.bbp-template-notice.error a,
+.bltn-reskin__body #bbpress-forums div.bbp-template-notice.warning a {
+	color: var(--bltn-caution);
+	text-decoration: underline;
 }
 
 /* Topic tags, this tier's copy of them (#33). The takeover reading view calls
@@ -2582,7 +2621,23 @@ body.admin-bar .bltn-app {
 	.bltn-reskin__body
 	.bbp-login-form
 	div.bbp-template-notice.warning {
-	border-inline-start: 3px solid var(--bltn-unread);
+	border-inline-start: 1px solid var(--bltn-caution);
+}
+.bltn-reskin .bltn-reskin__body .bbp-login-form div.bbp-template-notice.error li,
+.bltn-reskin
+	.bltn-reskin__body
+	.bbp-login-form
+	div.bbp-template-notice.warning li {
+	font-weight: 600;
+	color: var(--bltn-caution);
+}
+.bltn-reskin .bltn-reskin__body .bbp-login-form div.bbp-template-notice.error a,
+.bltn-reskin
+	.bltn-reskin__body
+	.bbp-login-form
+	div.bbp-template-notice.warning a {
+	color: var(--bltn-caution);
+	text-decoration: underline;
 }
 /* bbPress floats the submit row right, which makes it a shrink-to-fit box — a button
    asking for 100% inside it resolves against its own text and lands at 86px. Unfloated,
