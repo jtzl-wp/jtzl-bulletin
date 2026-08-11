@@ -1441,6 +1441,36 @@ interface ContextInterface {
 	public function get_ajax_url(): string;
 
 	/**
+	 * Handles of every currently enqueued script.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @return string[]
+	 */
+	public function get_enqueued_script_handles(): array;
+
+	/**
+	 * Dequeue a script by handle.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param string $handle Handle.
+	 */
+	public function dequeue_script( string $handle ): void;
+
+	/**
+	 * The registered source URL of an enqueued script, or '' if unknown.
+	 *
+	 * Used by takeover suppression to identify scripts from the active theme.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param string $handle Handle.
+	 * @return string
+	 */
+	public function get_script_src( string $handle ): string;
+
+	/**
 	 * Handles of every currently enqueued stylesheet.
 	 *
 	 * @since 0.1.0

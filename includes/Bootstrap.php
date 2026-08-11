@@ -15,6 +15,7 @@ use JTZL\Bulletin\Ajax\LoadSubscribedForumsController;
 use JTZL\Bulletin\Ajax\LoadSearchController;
 use JTZL\Bulletin\Ajax\LoadTopicsController;
 use JTZL\Bulletin\Asset\AssetManager;
+use JTZL\Bulletin\Asset\TakeoverScriptSuppressor;
 use JTZL\Bulletin\Chrome\AdminBar;
 use JTZL\Bulletin\Chrome\DocumentTitle;
 use JTZL\Bulletin\Chrome\PasswordForm;
@@ -155,7 +156,7 @@ class Bootstrap {
 	}
 
 	/**
-	 * Assets: enqueue ours, then suppress foreign styles late.
+	 * Assets: enqueue ours, then suppress foreign styles and dead scripts late.
 	 *
 	 * @since 0.3.0
 	 */
@@ -163,9 +164,15 @@ class Bootstrap {
 		$wp     = $this->wp();
 		$assets = $this->container->get( AssetManager::class );
 		assert( $assets instanceof AssetManager );
+		$scripts = $this->container->get( TakeoverScriptSuppressor::class );
+		assert( $scripts instanceof TakeoverScriptSuppressor );
 
 		$wp->add_action( 'wp_enqueue_scripts', array( $assets, 'enqueue' ) );
 		$wp->add_action( 'wp_enqueue_scripts', array( $assets, 'suppress_foreign_styles' ), 100 );
+		$wp->add_action( 'wp_enqueue_scripts', array( $scripts, 'suppress' ), 100 );
+		$wp->add_action( 'wp_print_scripts', array( $scripts, 'suppress' ), PHP_INT_MAX );
+		$wp->add_action( 'wp_footer', array( $scripts, 'suppress' ), 19 );
+		$wp->add_filter( 'generate_print_a11y_script', array( $scripts, 'filter_generatepress_a11y' ) );
 	}
 
 	/**

@@ -2078,6 +2078,46 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * Handles of every currently enqueued script.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @return string[]
+	 */
+	public function get_enqueued_script_handles(): array {
+		$scripts = wp_scripts();
+		return array_values( array_map( 'strval', (array) $scripts->queue ) );
+	}
+
+	/**
+	 * Dequeue a script by handle.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param string $handle Handle.
+	 */
+	public function dequeue_script( string $handle ): void {
+		wp_dequeue_script( $handle );
+	}
+
+	/**
+	 * The registered source URL of an enqueued script, or '' if unknown.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param string $handle Handle.
+	 * @return string
+	 */
+	public function get_script_src( string $handle ): string {
+		$scripts = wp_scripts();
+		if ( ! isset( $scripts->registered[ $handle ] ) ) {
+			return '';
+		}
+		$src = $scripts->registered[ $handle ]->src;
+		return is_string( $src ) ? $src : '';
+	}
+
+	/**
 	 * Handles of every currently enqueued stylesheet.
 	 *
 	 * @since 0.1.0
