@@ -946,6 +946,56 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * Topic statuses this reader is entitled to see.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @return array<int,string>
+	 */
+	public function get_readable_topic_statuses(): array {
+		$statuses = bbp_get_public_topic_statuses();
+
+		if ( current_user_can( 'read_private_topics' ) ) {
+			$statuses[] = bbp_get_private_status_id();
+		}
+
+		if ( current_user_can( 'read_hidden_topics' ) ) {
+			$statuses[] = bbp_get_hidden_status_id();
+		}
+
+		return array_values( array_unique( array_map( 'strval', $statuses ) ) );
+	}
+
+	/**
+	 * Forum IDs this reader may not see, as bbPress computes them.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @return array<int,int>
+	 */
+	public function get_excluded_forum_ids(): array {
+		return array_map( 'intval', bbp_get_excluded_forum_ids() );
+	}
+
+	/**
+	 * A topic's last-activity time as a raw MySQL datetime.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param int $topic_id Topic ID.
+	 * @return string MySQL datetime, or '' when the topic has neither.
+	 */
+	public function get_topic_last_active_datetime( int $topic_id ): string {
+		$stored = (string) get_post_meta( $topic_id, '_bbp_last_active_time', true );
+
+		if ( '' !== $stored ) {
+			return $stored;
+		}
+
+		return (string) get_post_field( 'post_date', $topic_id, 'raw' );
+	}
+
+	/**
 	 * A topic's reply count.
 	 *
 	 * @since 0.1.0

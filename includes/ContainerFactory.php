@@ -75,6 +75,17 @@ class ContainerFactory {
 		return array(
 			ContextInterface::class   => autowire( WordPressContext::class ),
 
+			// The one global the container cannot autowire: \wpdb is constructed by
+			// WordPress before any of this runs, and there is exactly one of it.
+			// Database\Schema and Unread\ReadState take it as a constructor argument
+			// like any other dependency, so they stay testable against a handle a test
+			// supplies rather than reaching for the global themselves.
+			\wpdb::class              => static function (): \wpdb {
+				global $wpdb;
+
+				return $wpdb;
+			},
+
 			BuiltAssets::class        => autowire()
 				->constructorParameter( 'plugin_dir', $plugin_dir )
 				->constructorParameter( 'plugin_url', $plugin_url ),

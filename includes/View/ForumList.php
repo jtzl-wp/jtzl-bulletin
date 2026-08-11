@@ -8,6 +8,7 @@
 
 namespace JTZL\Bulletin\View;
 
+use JTZL\Bulletin\Unread\ReadState;
 use JTZL\Bulletin\WordPress\ContextInterface;
 
 /**
@@ -55,16 +56,26 @@ class ForumList {
 	private ForumRow $row;
 
 	/**
+	 * Read state, for the unread accent.
+	 *
+	 * @var ReadState
+	 * @since 0.5.0
+	 */
+	private ReadState $reads;
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 0.3.0
 	 *
-	 * @param ContextInterface $wp  WordPress/bbPress seam.
-	 * @param ForumRow         $row Forum row renderer.
+	 * @param ContextInterface $wp    WordPress/bbPress seam.
+	 * @param ForumRow         $row   Forum row renderer.
+	 * @param ReadState        $reads Read state, for the unread accent.
 	 */
-	public function __construct( ContextInterface $wp, ForumRow $row ) {
-		$this->wp  = $wp;
-		$this->row = $row;
+	public function __construct( ContextInterface $wp, ForumRow $row, ReadState $reads ) {
+		$this->wp    = $wp;
+		$this->row   = $row;
+		$this->reads = $reads;
 	}
 
 	/**
@@ -77,20 +88,37 @@ class ForumList {
 	 * a drained loop, which makes the guarantee a property of how a caller happens to
 	 * iterate. Owning it here costs one call and stops every caller having to know.
 	 *
+	 * The loop gathers every row before any of them is rendered, which is the shape
+	 * unread forced (#102): the accent is resolved for the whole page in one query
+	 * rather than one per row, and that is only possible once the full set of IDs is
+	 * known. Rendering inside the loop would have meant a lookup per row — fifteen
+	 * queries a page where the SoW promises the plugin "adds no theme weight".
+	 *
 	 * @since 0.3.0
 	 *
 	 * @param array<string,mixed> $args Forum query args (see Query\ForumQuery).
 	 * @return string Markup, or '' when the query matched nothing.
 	 */
 	public function capture( array $args ): string {
-		ob_start();
+		$rows = array();
 
 		if ( $this->wp->has_forums( $args ) ) {
 			while ( $this->wp->the_forums_loop() ) {
 				$this->wp->the_forum();
-				$this->row->render( $this->fields( $this->wp->get_forum_id() ) );
+				$rows[] = $this->fields( $this->wp->get_forum_id() );
 			}
 			$this->wp->reset_postdata();
+		}
+
+		$unread = $this->reads->unread_forums(
+			array_column( $rows, 'id' ),
+			$this->wp->is_user_logged_in() ? $this->wp->get_current_user_id() : 0
+		);
+
+		ob_start();
+		foreach ( $rows as $row ) {
+			$row['unread'] = $unread[ $row['id'] ] ?? false;
+			$this->row->render( $row );
 		}
 
 		return (string) ob_get_clean();
@@ -125,6 +153,7 @@ class ForumList {
 		$last_id     = $this->wp->get_forum_last_active_id( $forum_id );
 
 		return array(
+			'id'          => $forum_id,
 			'permalink'   => $this->wp->get_forum_permalink( $forum_id ),
 			'title'       => $this->wp->get_forum_title( $forum_id ),
 			'description' => '' !== $description ? wp_trim_words( $description, self::DESCRIPTION_WORDS, '…' ) : '',

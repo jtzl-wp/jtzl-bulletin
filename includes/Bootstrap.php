@@ -22,11 +22,15 @@ use JTZL\Bulletin\Chrome\ProtectedTitle;
 use JTZL\Bulletin\Chrome\ReplyToLink;
 use JTZL\Bulletin\Chrome\RowActionLabels;
 use JTZL\Bulletin\Chrome\SubForumCountLabels;
+use JTZL\Bulletin\Chrome\UnreadClasses;
+use JTZL\Bulletin\Database\Migrator;
 use JTZL\Bulletin\Query\SearchVisibility;
 use JTZL\Bulletin\Query\StableOrder;
 use JTZL\Bulletin\Query\StickyHoisting;
 use JTZL\Bulletin\Query\SubscribedForumQuery;
 use JTZL\Bulletin\Takeover\TemplateController;
+use JTZL\Bulletin\Unread\ReadPruner;
+use JTZL\Bulletin\Unread\ReadWriter;
 use JTZL\Bulletin\View\ProfileIdentity;
 use JTZL\Bulletin\View\ProtectedRowContent;
 use JTZL\Bulletin\View\SubscribedForumsMore;
@@ -85,6 +89,54 @@ class Bootstrap {
 		$this->register_reskin();
 		$this->register_search_visibility();
 		$this->register_chrome();
+		$this->register_unread();
+	}
+
+	/**
+	 * Unread: keep the schema current, record what a member reads, mark what they
+	 * have not, and forget rows about things that no longer exist (issue #102).
+	 *
+	 * The schema check runs on every request rather than on activation alone, because
+	 * a plugin can reach a new version without its activation hook ever firing — see
+	 * Database\Migrator. It costs one option read when nothing has changed.
+	 *
+	 * @since 0.5.0
+	 */
+	private function register_unread(): void {
+		$wp       = $this->wp();
+		$migrator = $this->container->get( Migrator::class );
+		assert( $migrator instanceof Migrator );
+		$writer = $this->container->get( ReadWriter::class );
+		assert( $writer instanceof ReadWriter );
+		$pruner = $this->container->get( ReadPruner::class );
+		assert( $pruner instanceof ReadPruner );
+		$classes = $this->container->get( UnreadClasses::class );
+		assert( $classes instanceof UnreadClasses );
+
+		$migrator->maybe_upgrade();
+
+		// Late on template_redirect, so anything that redirects away from this screen
+		// — the single-reply redirect at priority 9, a login gate, a canonical fix —
+		// has already run and we do not record a thread the reader never arrived at.
+		$wp->add_action( 'template_redirect', array( $writer, 'record' ), 100 );
+
+		// Priming runs on the loop, marking on the row. Both halves are scoped to the
+		// reskin tier inside UnreadClasses; the takeover screens carry the accent in
+		// our own row markup instead.
+		$wp->add_filter( 'bbp_has_topics', array( $classes, 'prime_topics' ), 10, 2 );
+		$wp->add_filter( 'bbp_has_forums', array( $classes, 'prime_forums' ), 10, 2 );
+		$wp->add_filter( 'bbp_get_topic_class', array( $classes, 'filter_topic_class' ), 10, 2 );
+		$wp->add_filter( 'bbp_get_forum_class', array( $classes, 'filter_forum_class' ), 10, 2 );
+
+		// The dot is drawn in CSS off the class above; these print the words behind
+		// it, so unread is never carried by colour alone on this tier either.
+		$wp->add_action( 'bbp_theme_before_topic_title', array( $classes, 'announce_topic' ) );
+		$wp->add_action( 'bbp_theme_before_forum_title', array( $classes, 'announce_forum' ) );
+
+		// Two args: the type is read off the deleted post rather than looked up, which
+		// would depend on a post cache that has not been invalidated yet.
+		$wp->add_action( 'deleted_post', array( $pruner, 'forget_deleted_topic' ), 10, 2 );
+		$wp->add_action( 'deleted_user', array( $pruner, 'forget_deleted_user' ) );
 	}
 
 	/**

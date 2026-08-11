@@ -1874,6 +1874,36 @@ body.admin-bar .bltn-app {
 	line-height: 1.3;
 	color: var(--bltn-ink);
 }
+/* Unread on this tier (#102). The class is put on the row by Chrome\UnreadClasses and
+   the mark is drawn here, which is the whole reason the reskin screens could carry the
+   accent at all: six of them are bbPress's own loops, and this is one CSS rule instead
+   of six rebuilt templates.
+
+   Same 7px amber as the takeover's `.bltn-row__dot`, on its own line above the title —
+   and at the LEADING edge, where the takeover puts a thread row's at the trailing one.
+   Both departures were measured at 390px rather than chosen:
+
+   - Trailing fails because bbPress floats a row action right (favourites carries an `×`
+     on every card). A dot pushed to that corner wraps around the float and opens ~40px
+     of dead band above every title, with the two marks stacked on each other.
+   - Inline before the title fails on the row whose title happens to fit one line: the
+     dot then shares that line and indents the title 15px, so a list's titles start at
+     two different x depending on their length. A column of rows that do not align is
+     worse than a dot in an unexpected corner.
+
+   Its own line at the leading edge has neither problem, and keeps the property the
+   placement is for: every dot in the list on one x. The words behind it are printed
+   into the row by the same class, so the dot is decoration and never the only cue. */
+.bltn-reskin .bltn-reskin__body #bbpress-forums ul.bltn-is-unread li.bbp-topic-title::before,
+.bltn-reskin .bltn-reskin__body #bbpress-forums ul.bltn-is-unread li.bbp-forum-info::before {
+	content: "";
+	display: block;
+	inline-size: 7px;
+	block-size: 7px;
+	margin-block-end: 6px;
+	border-radius: 50%;
+	background: var(--bltn-unread);
+}
 /* A long thread's inline page jumps sit beside its title, so they inherit the serif
    title face and bbPress's #ddd box. They're chrome: quiet sans chips on our line. */
 .bltn-reskin .bltn-reskin__body #bbpress-forums span.bbp-topic-pagination a {

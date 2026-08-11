@@ -68,6 +68,26 @@ function jtzl_bltn_boot() {
 add_action( 'plugins_loaded', 'jtzl_bltn_boot', 20 );
 
 /**
+ * Install the schema on activation.
+ *
+ * Not the only path that installs it — Bootstrap checks the stored schema version on
+ * every request, because a plugin can arrive at a new version without this hook ever
+ * firing (an unzip over the directory, a file-copy deploy). This is the ordinary
+ * route; that one is the guarantee.
+ *
+ * Resolved straight from the container rather than through Bootstrap: activation runs
+ * before `plugins_loaded` on the activating request, so no hooks are registered yet
+ * and none should be.
+ *
+ * @since 0.5.0
+ */
+function jtzl_bltn_activate() {
+	$migrator = \JTZL\Bulletin\Plugin::get_container()->get( \JTZL\Bulletin\Database\Migrator::class );
+	$migrator->upgrade();
+}
+register_activation_hook( __FILE__, 'jtzl_bltn_activate' );
+
+/**
  * Admin notice shown when bbPress is not active.
  *
  * @since 0.1.0

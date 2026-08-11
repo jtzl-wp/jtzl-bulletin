@@ -20,8 +20,9 @@ class ThreadRow {
 	 * Echo one thread row.
 	 *
 	 * Fields: permalink (topic URL), title, author (plain name), active (human
-	 * "last active" time), replies (count), and closed (whether the thread takes
-	 * no more replies).
+	 * "last active" time), replies (count), closed (whether the thread takes
+	 * no more replies), and unread (whether it has posts this member has not read —
+	 * always false when logged out).
 	 *
 	 * @since 0.1.0
 	 *
@@ -29,9 +30,38 @@ class ThreadRow {
 	 */
 	public function render( array $row ): void {
 		printf( '<a class="bltn-row" href="%s">', esc_url( (string) ( $row['permalink'] ?? '' ) ) );
+		$this->render_dot( (bool) ( $row['unread'] ?? false ) );
 		printf( '<h2 class="bltn-row__title">%s</h2>', esc_html( (string) ( $row['title'] ?? '' ) ) );
 		$this->render_meta( $row );
 		echo '</a>';
+	}
+
+	/**
+	 * Echo the unread dot, or nothing.
+	 *
+	 * On its own line above the title, at the row's trailing edge — which is where the
+	 * approved prototype puts it, and not the same choice View\ForumRow makes. A forum
+	 * row leads with a heading and can hold the dot at the end of that line; a thread
+	 * row's title wraps to two or three lines, so a dot riding the end of the first one
+	 * would sit at a different height on every row. Given its own line it shares the
+	 * trailing edge with the forum rows' dots, so a column of them is scannable without
+	 * reading any of it. The empty flex box is what puts it there: `.bltn-row__dot`
+	 * carries `margin-inline-start: auto`, so with no title beside it the dot is pushed
+	 * the full width of the row.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param bool $unread Whether the thread has posts this member has not read.
+	 */
+	private function render_dot( bool $unread ): void {
+		if ( ! $unread ) {
+			return;
+		}
+
+		printf(
+			'<div class="bltn-row__top"><span class="bltn-row__dot"><span class="bltn-sr-only">%s</span></span></div>',
+			esc_html__( 'Unread — new posts', 'jtzl-bulletin' )
+		);
 	}
 
 	/**

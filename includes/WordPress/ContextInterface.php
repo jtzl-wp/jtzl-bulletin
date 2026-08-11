@@ -725,6 +725,60 @@ interface ContextInterface {
 	public function get_topic_last_active_time( int $topic_id ): string;
 
 	/**
+	 * Topic statuses this reader is entitled to see.
+	 *
+	 * There is no single bbPress helper for this — it assembles the list inline in
+	 * `bbp_has_search_results()` (`includes/search/template.php:50-62`), and this
+	 * mirrors that assembly exactly: the public topic statuses, plus `private` with
+	 * `read_private_topics`, plus `hidden` with `read_hidden_topics`.
+	 *
+	 * Mirroring rather than capturing is the difference from Query\SearchVisibility,
+	 * which declines to recompute because bbPress had already computed the list for
+	 * that query and thrown it away. Nothing computes it for a query we build
+	 * ourselves, so the choice is to ask in bbPress's own terms or to hardcode two
+	 * statuses and be wrong for a moderator.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @return array<int,string>
+	 */
+	public function get_readable_topic_statuses(): array;
+
+	/**
+	 * Forum IDs this reader may not see, as bbPress computes them.
+	 *
+	 * `bbp_get_excluded_forum_ids()` is capability-aware — it returns private forums
+	 * only when the reader lacks `read_private_forums`, hidden ones only when they
+	 * lack `read_hidden_forums`, and nothing at all to a keymaster — so the answer is
+	 * per request, not per site, and must not be cached across users.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @return array<int,int>
+	 */
+	public function get_excluded_forum_ids(): array;
+
+	/**
+	 * A topic's last-activity time as a raw MySQL datetime.
+	 *
+	 * Distinct from get_topic_last_active_time(), which humanizes it for a byline.
+	 * Unread compares this against a stored read time, so it needs the stored value
+	 * rather than "3 days ago" — and stores the same string it compares, so the two
+	 * sides of that comparison can never disagree about format or timezone.
+	 *
+	 * Falls back to the topic's own post date when the meta is missing or empty, which
+	 * is what bbPress itself falls back to: a topic nobody has replied to was last
+	 * active when it was written. Unread\ReadState's SQL applies the same COALESCE, so
+	 * the read path and the write path agree about a topic bbPress has not stamped.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param int $topic_id Topic ID.
+	 * @return string MySQL datetime, or '' when the topic has neither.
+	 */
+	public function get_topic_last_active_datetime( int $topic_id ): string;
+
+	/**
 	 * A topic's reply count.
 	 *
 	 * @since 0.1.0
