@@ -243,11 +243,15 @@ interface ContextInterface {
 	 * The one gate on the reading view's moderation mode, and deliberately coarser
 	 * than bbPress's own per-link tests. bbPress lets each admin link answer for
 	 * itself, which means a participant inside the edit window gets an "Edit" link on
-	 * their own post — a *posting* affordance, and this release has no composer to
-	 * edit in (that is P4). Gating the whole mode on `moderate` keeps the reading view
-	 * free of controls for everyone who is not moderating, which is what issue #36
-	 * asks for; the per-link tests still run inside, so a Moderator sees a narrower
-	 * set than a Keymaster without us enumerating either.
+	 * their own post. Gating the whole mode on `moderate` keeps the reading view free
+	 * of controls for everyone who is not moderating, which is what issue #36 asks
+	 * for; the per-link tests still run inside, so a Moderator sees a narrower set
+	 * than a Keymaster without us enumerating either.
+	 *
+	 * ⚠ Since 0.5.0 that participant's Edit is *rendered*, by `View\AuthorEdit`, in
+	 * the byline rather than in this mode — and only for a reader this method answers
+	 * `false` for. The gate is unchanged; what changed is that its suppression is no
+	 * longer the last word on the subject (§3 decision 10).
 	 *
 	 * @since 0.3.0
 	 *
@@ -280,6 +284,67 @@ interface ContextInterface {
 	 * @return string Markup, or '' when the user may do nothing.
 	 */
 	public function get_reply_moderation_links( int $reply_id ): string;
+
+	/**
+	 * The author's own "Edit" link for a topic, in bbPress's own markup.
+	 *
+	 * Asked of bbPress rather than assembled here, because the question is harder
+	 * than it looks and bbPress already answers it: `bbp_get_topic_edit_link()` runs
+	 * the `edit_topic` capability, the `_bbp_edit_lock` window against the post's GMT
+	 * date, and `bbp_get_topic_edit_url()`, and returns nothing at all when any of
+	 * them declines. Re-deriving the window here would mean re-implementing
+	 * `bbp_past_edit_lock()`, whose "0 minutes means forever" branch is exactly the
+	 * case a hand-rolled subtraction gets wrong.
+	 *
+	 * ⚠ **It is not a pure "may this author edit" test.** bbPress bypasses the whole
+	 * block — the lock included — for anyone holding `edit_others_topics`, so a
+	 * moderator gets a link that never expires. `View\AuthorEdit` is what makes the
+	 * answer meaningful, by declining to ask on behalf of a moderator at all.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param int $topic_id Topic ID.
+	 * @return string Markup, or '' when this reader may not edit it.
+	 */
+	public function get_topic_edit_link( int $topic_id ): string;
+
+	/**
+	 * The author's own "Edit" link for a reply, in bbPress's own markup.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param int $reply_id Reply ID.
+	 * @return string Markup, or '' when this reader may not edit it.
+	 */
+	public function get_reply_edit_link( int $reply_id ): string;
+
+	/**
+	 * The topic statuses bbPress considers public — `publish` and `closed`.
+	 *
+	 * Asked rather than hardcoded, for the reason
+	 * {@see self::get_readable_topic_statuses()} gives at greater length: the list is
+	 * filterable, and `closed` being in it is the load-bearing part. A closed thread
+	 * is a fully public one in bbPress's model, so a rule written as "status is
+	 * `publish`" would withhold the author's Edit from a thread a moderator happened
+	 * to close inside the window.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @return array<int,string>
+	 */
+	public function get_public_topic_statuses(): array;
+
+	/**
+	 * The reply statuses bbPress considers public — `publish` alone.
+	 *
+	 * The complement is what matters: `pending`, `spam` and `trash` are all out, which
+	 * is how one test covers the "Awaiting review" exclusion without naming it.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @return array<int,string>
+	 */
+	public function get_public_reply_statuses(): array;
 
 	/**
 	 * Login URL, optionally with a redirect target.

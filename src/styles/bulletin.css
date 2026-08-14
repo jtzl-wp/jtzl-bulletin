@@ -676,6 +676,52 @@ body.admin-bar .bltn-app {
 	margin-inline-start: auto;
 }
 
+/* The author's own Edit, while the edit window is open (View\AuthorEdit). NOT in the
+   moderation tray: putting it there would hand a participant a "Moderate" toggle for
+   an ordinary act. It is transient by nature — five minutes by default — so it needs
+   no mode to hide behind, which is the whole reason it can sit in the open here.
+
+   Two elements, because the anchor is bbPress's: the span is ours and takes the flex
+   row's trailing slot, the anchor inside it is the control. Styling the wrapper rather
+   than `.bbp-topic-edit-link` means a site that filters that markup into something
+   else still gets our control instead of an unstyled blue link mid-byline.
+
+   No fill at rest. It is an action, not a label — the chip beside it is the one that
+   carries a wash, and two washed boxes in one byline would read as two chips. */
+.bltn-byline__edit {
+	margin-inline-start: auto;
+	line-height: 1;
+}
+.bltn-byline__edit a {
+	display: inline-block;
+	position: relative;
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--bltn-accent-ink);
+	text-decoration: none;
+	padding: 2px 6px;
+	border-radius: 6px;
+}
+.bltn-byline__edit a:hover {
+	background: var(--bltn-wash);
+}
+/* WCAG 2.2 2.5.8 again, and solved the way .bltn-permalink solves it: a 12px label in
+   2px of padding renders a 16px box — measured in the browser, not derived — and the
+   target has to be 24. Grown with an inset overlay rather than more padding so the
+   resting geometry stays exactly what was approved; only the thumb notices. Vertical
+   only (16 + 8 = 24): the box is already 35px across, and extending it sideways is the
+   one direction that could reach the permalink four elements to its left. */
+.bltn-byline__edit a::after {
+	content: "";
+	position: absolute;
+	inset: -4px 0;
+}
+/* The chip claims the trailing slot on its own, but not when the edit control has
+   already taken it — then the chip simply follows at the row's own gap. */
+.bltn-byline__edit + .bltn-chip {
+	margin-inline-start: 0;
+}
+
 /* Per-reply permalink — the timestamp itself, so the affordance costs no pixels.
    It inherits the size and colour of the .bltn-byline__time it lives in and adds
    nothing: no underline, no glyph, no second element. "The time is the permalink"

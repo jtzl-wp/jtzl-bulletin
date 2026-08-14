@@ -319,6 +319,58 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * The author's own "Edit" link for a topic, in bbPress's own markup.
+	 *
+	 * ⚠ **The ID must be one that resolves.** bbPress reads `$topic->ID` after a guard
+	 * it skips for `edit_others_topics` holders, so a keymaster passed a nonexistent ID
+	 * gets a fatal rather than an empty string. Callers pass the topic being rendered,
+	 * which by then has already been loaded.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param int $topic_id Topic ID.
+	 * @return string Markup, or '' when this reader may not edit it.
+	 */
+	public function get_topic_edit_link( int $topic_id ): string {
+		// bbPress returns null, not '', from all three of its declining branches.
+		return (string) bbp_get_topic_edit_link( array( 'id' => $topic_id ) );
+	}
+
+	/**
+	 * The author's own "Edit" link for a reply, in bbPress's own markup.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param int $reply_id Reply ID.
+	 * @return string Markup, or '' when this reader may not edit it.
+	 */
+	public function get_reply_edit_link( int $reply_id ): string {
+		return (string) bbp_get_reply_edit_link( array( 'id' => $reply_id ) );
+	}
+
+	/**
+	 * The topic statuses bbPress considers public.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @return array<int,string>
+	 */
+	public function get_public_topic_statuses(): array {
+		return array_values( bbp_get_public_topic_statuses() );
+	}
+
+	/**
+	 * The reply statuses bbPress considers public.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @return array<int,string>
+	 */
+	public function get_public_reply_statuses(): array {
+		return array_values( bbp_get_public_reply_statuses() );
+	}
+
+	/**
 	 * Render one of bbPress's admin-link sets, optionally minus its `reply` member,
 	 * and report emptiness honestly.
 	 *

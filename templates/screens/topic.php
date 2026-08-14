@@ -31,6 +31,7 @@ $bltn_navbar     = $bltn_container->get( \JTZL\Bulletin\View\ThreadNavBar::class
 $bltn_loadmore   = $bltn_container->get( \JTZL\Bulletin\View\LoadMore::class );
 $bltn_mod        = $bltn_container->get( \JTZL\Bulletin\View\ModerationActions::class );
 $bltn_compose    = $bltn_container->get( \JTZL\Bulletin\View\ComposeSlot::class );
+$bltn_author_edit = $bltn_container->get( \JTZL\Bulletin\View\AuthorEdit::class );
 
 $bltn_topic_id  = bbp_get_topic_id();
 $bltn_forum_id  = bbp_get_topic_forum_id( $bltn_topic_id );
@@ -208,6 +209,12 @@ $bltn_moderates = $bltn_mod->available( $bltn_topic_id );
 					<div class="bltn-byline">
 						<span class="bltn-byline__name"><?php echo esc_html( bbp_get_topic_author_display_name( $bltn_topic_id ) ); ?></span>
 						<span class="bltn-byline__time"><?php echo esc_html( bbp_get_topic_post_date( $bltn_topic_id, true ) ); ?></span>
+						<?php
+						// Before the chip, not after it: the chip is a label and the edit
+						// control is an action, so the action takes the trailing slot the
+						// flex row opens and the chip follows it at a plain gap.
+						$bltn_author_edit->render_for_topic( $bltn_topic_id );
+						?>
 						<span class="bltn-chip"><?php esc_html_e( 'Original post', 'jtzl-bulletin' ); ?></span>
 					</div>
 					<div class="bltn-post__body"><?php bbp_topic_content( $bltn_topic_id ); ?></div>

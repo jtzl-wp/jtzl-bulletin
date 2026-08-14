@@ -36,8 +36,17 @@ use JTZL\Bulletin\WordPress\ContextInterface;
  * - **The gate is `moderate` on the whole mode, not bbPress's per-link tests.** Those
  *   run too, inside — which is how a Moderator ends up with a narrower set than a
  *   Keymaster without us enumerating either — but bbPress alone would also give a
- *   *participant* an "Edit" link on their own post inside the edit window. That is a
- *   posting affordance, and this release has no composer to edit in.
+ *   *participant* an "Edit" link on their own post inside the edit window, and the
+ *   mode has to stay free of controls for a reader who is not moderating (issue #36).
+ *
+ *   ⚠ **The gate survives 0.5.0; its justification does not.** Until P4 that clause
+ *   read "that is a posting affordance, and this release has no composer to edit in",
+ *   which is no longer true — an author's in-window Edit is now legitimate, and it is
+ *   what the SoW sold. It did not move into this tray, because that would either hand
+ *   a participant a "Moderate" toggle for an ordinary act or give them a tray with no
+ *   toggle. `View\AuthorEdit` renders it in the byline instead, and declines to render
+ *   for anyone this class would answer `true` for — so the two are exclusive by
+ *   construction and this mode is unchanged (§3 decision 10).
  *
  * @since 0.3.0
  */

@@ -61,16 +61,25 @@ class ReplyView {
 	private ModerationActions $moderation;
 
 	/**
+	 * The author's own Edit control.
+	 *
+	 * @var AuthorEdit
+	 */
+	private AuthorEdit $author_edit;
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param ContextInterface  $wp         WordPress/bbPress seam.
-	 * @param ModerationActions $moderation Moderation actions renderer.
+	 * @param ContextInterface  $wp          WordPress/bbPress seam.
+	 * @param ModerationActions $moderation  Moderation actions renderer.
+	 * @param AuthorEdit        $author_edit The author's own Edit control.
 	 */
-	public function __construct( ContextInterface $wp, ModerationActions $moderation ) {
-		$this->wp         = $wp;
-		$this->moderation = $moderation;
+	public function __construct( ContextInterface $wp, ModerationActions $moderation, AuthorEdit $author_edit ) {
+		$this->wp          = $wp;
+		$this->moderation  = $moderation;
+		$this->author_edit = $author_edit;
 	}
 
 	/**
@@ -114,6 +123,10 @@ class ReplyView {
 			esc_html__( 'Permalink to reply', 'jtzl-bulletin' ),
 			esc_html( $this->wp->get_reply_post_date( $reply_id, true ) )
 		);
+		// Last in the byline, where the flex row's trailing slot is, and rendered here
+		// rather than in the template so replies the load-more endpoint appends carry it
+		// too — the same reason the moderation row below is built here.
+		$this->author_edit->render_for_reply( $topic_id, $reply_id );
 		echo '</div>';
 		echo '<div class="bltn-post__body">';
 		$this->wp->the_reply_content( $reply_id ); // Echoes filtered post HTML (code/tables/images held in-column).
