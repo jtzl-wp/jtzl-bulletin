@@ -327,6 +327,42 @@ interface ContextInterface {
 	public function can_access_create_reply_form(): bool;
 
 	/**
+	 * Whether bbPress would render a topic form for the current user, here.
+	 *
+	 * The topic twin of the reply test, and asked for the same reason: it already folds
+	 * together keymaster status, an open forum, the `publish_topics` capability and the
+	 * anonymous-posting option (`users/template.php:2291`). Re-implementing any of it
+	 * would be a second opinion about who may post.
+	 *
+	 * ⚠ **It does NOT answer for categories, and callers must ask separately.** Its
+	 * forum test is `bbp_is_forum_open()`, which is only `! bbp_is_forum_closed()`
+	 * (`forums/template.php:1516`) and says nothing about type — so on a category it
+	 * returns true, bbPress renders a topic form, and `bbp_new_topic_handler()` then
+	 * refuses the post outright: *"This forum is a category. No topics can be created
+	 * in this forum."* (`topics/functions.php:222`). See `is_forum_category()`.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @return bool
+	 */
+	public function can_access_create_topic_form(): bool;
+
+	/**
+	 * Whether a forum is a container for other forums rather than for topics.
+	 *
+	 * Asked because `can_access_create_topic_form()` does not, and a category is the one
+	 * place on this screen where bbPress would render a form it will not accept a post
+	 * from — a control leading straight to a refusal, which is the shape
+	 * `Chrome\ReplyToLink` exists to prevent.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param int $forum_id Forum ID.
+	 * @return bool
+	 */
+	public function is_forum_category( int $forum_id ): bool;
+
+	/**
 	 * The reply this request asked to answer, or 0.
 	 *
 	 * ⚠ **Not `bbp_get_form_reply_to()`, and the difference is the whole reason this

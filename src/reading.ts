@@ -595,13 +595,19 @@ function improveAnonymousFields(form: HTMLElement): void {
  */
 function initComposeSlot(): void {
 	const slot = document.querySelector<HTMLElement>('[data-bltn-compose]');
-	const trigger = slot?.querySelector<HTMLButtonElement>(
-		'[data-bltn-compose-open]',
-	);
+	// ⚠ Looked up on the DOCUMENT, not inside the slot. On the reading view the
+	// trigger sits in the slot; on the forum screen it is in the fixed bar below
+	// <main>, and there is only ever one composer on a screen. Scoping to the slot
+	// worked for the first screen and would have silently done nothing on the second.
+	const trigger = document.querySelector<HTMLElement>('[data-bltn-compose-open]');
 	const form = slot?.querySelector<HTMLElement>('.bltn-compose__form');
 	if (!slot || !trigger || !form) {
 		return;
 	}
+	// The bar is the collapsed representation of the composer, so it goes away while
+	// the composer is open. Null on the reading view, where the trigger is inline and
+	// the CSS folds it with the rest of the slot.
+	const bar = trigger.closest<HTMLElement>('.bltn-composebar');
 
 	const field = form.querySelector<HTMLTextAreaElement>('textarea');
 
@@ -617,15 +623,30 @@ function initComposeSlot(): void {
 	const open = (): void => {
 		slot.classList.remove('is-collapsed');
 		trigger.setAttribute('aria-expanded', 'true');
+		if (bar) {
+			bar.hidden = true;
+		}
 		field?.focus({ preventScroll: true });
 	};
 
 	const collapse = (): void => {
 		slot.classList.add('is-collapsed');
 		trigger.setAttribute('aria-expanded', 'false');
+		if (bar) {
+			bar.hidden = false;
+		}
 	};
 
-	trigger.addEventListener('click', open);
+	trigger.addEventListener('click', (event) => {
+		// The forum screen's trigger is an anchor to #new-post, which is how it works
+		// without this script. With the script the composer opens in place, so the
+		// jump is redundant — and it would scroll the page under a field about to take
+		// focus. Cancelled only where there is a default to cancel.
+		if (trigger.tagName === 'A') {
+			event.preventDefault();
+		}
+		open();
+	});
 
 	if (slot.dataset.bltnCompose === 'open') {
 		// A deep link. Nothing to collapse, but the caret still belongs in the field:
@@ -651,7 +672,11 @@ function initComposeSlot(): void {
 		collapse();
 		trigger.focus();
 	});
-	form.querySelector('.bbp-submit-wrapper')?.appendChild(cancel);
+	// Both of bbPress's forms use .bbp-submit-wrapper today (form-reply.php:163,
+	// form-topic.php:202), so this resolves on the first try on either screen. The
+	// fallback is for a template stack that renames it: a misplaced Cancel is
+	// recoverable, a missing one strands a reader inside an open composer.
+	(form.querySelector('.bbp-submit-wrapper') ?? form).appendChild(cancel);
 
 	collapse();
 }

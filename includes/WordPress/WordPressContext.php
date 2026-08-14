@@ -463,6 +463,29 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * Whether bbPress would render a topic form for the current user, here.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @return bool
+	 */
+	public function can_access_create_topic_form(): bool {
+		return (bool) bbp_current_user_can_access_create_topic_form();
+	}
+
+	/**
+	 * Whether a forum is a container for other forums rather than for topics.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param int $forum_id Forum ID.
+	 * @return bool
+	 */
+	public function is_forum_category( int $forum_id ): bool {
+		return (bool) bbp_is_forum_category( $forum_id );
+	}
+
+	/**
 	 * The reply this request asked to answer, or 0.
 	 *
 	 * Read-only and nonce-free by design: this decides whether a composer opens

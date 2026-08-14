@@ -1189,7 +1189,7 @@ body.admin-bar .bltn-app {
    content becomes a post: what is typed here appears three lines up, in that face,
    the moment it is submitted. Every other field collects a label, a tag or a
    credential. */
-.bltn-compose__form :is(input[type="text"], input[type="email"], input[type="url"], textarea) {
+.bltn-compose__form :is(input[type="text"], input[type="email"], input[type="url"], select, textarea) {
 	appearance: none;
 	display: block;
 	inline-size: 100%;
@@ -1213,9 +1213,28 @@ body.admin-bar .bltn-app {
 	line-height: 1.5;
 	resize: vertical;
 }
+/* A select has to keep saying it is a picker. `appearance: none` above is what makes
+   the 40px hold across engines, and it takes the native arrow with it, so the chevron
+   is drawn back on — the row chevron's shape, in --bltn-ink-3.
+
+   ⚠ Only the topic form has selects (Topic Type, Topic Status); the reply form has
+   none, which is why this arrives with the forum screen rather than with the reply
+   composer. Without it they were the one run of native controls left on the tier.
+
+   ⚠ The colour is a literal, not var(--bltn-ink-3): a data URI cannot read a custom
+   property, and CLAUDE.md trap #1 is iOS Safari silently dropping var() inside SVG
+   anyway. If the token moves, this moves with it. Physical `right`, mirrored with the
+   reskin tier's copy when an RTL layer exists. */
+.bltn-compose__form select {
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%2369716a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 13px center;
+	background-size: 12px 8px;
+	padding-inline-end: 36px;
+}
 /* One ring on focus, not two — the field's own border would sit inside the global
    accent outline. Same move as the reskin tier and the password prompt. */
-.bltn-compose__form :is(input, textarea):focus-visible {
+.bltn-compose__form :is(input, select, textarea):focus-visible {
 	border-color: transparent;
 }
 /* Labels above their fields: bbPress puts "Tags:" on its own line already, so this
@@ -1333,6 +1352,61 @@ body.admin-bar .bltn-app {
    other leaves for wp-login.php and comes back. */
 a.bltn-compose__open {
 	display: flex;
+}
+
+/* ---- the compose bar (forum screen) -----------------------------------------
+
+   "Start a thread", fixed at the foot of the forum screen. The prototype puts it
+   here and JT approved it.
+
+   ⚠ **A different shape from the reading view's inline composer, and deliberately
+   so.** That screen's bottom is spoken for by thread Prev/Next — JT's own proposal —
+   and this one's is free. The actions differ too, which is what makes the
+   inconsistency bearable: starting a thread is a screen-level action, available
+   wherever you are in a long list; replying belongs where the conversation ended.
+
+   Geometry is the Prev/Next bar's, because they are the same furniture on two
+   screens: the same top hairline, the same inset, the same safe-area inset so the
+   control clears the home indicator rather than sitting under it. */
+.bltn-composebar {
+	display: flex;
+	padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+	border-block-start: 1px solid var(--bltn-line-soft);
+	background: var(--bltn-surface);
+}
+/* An anchor, not a button — see View\StartThread. With no script the form is
+   already open at the foot of the list and this jumps to it, which is an ordinary
+   in-page link doing an ordinary thing; the script upgrades a control that already
+   worked rather than supplying one that did not. */
+.bltn-composebar__btn {
+	display: flex;
+	flex: 1 1 auto;
+	align-items: center;
+	justify-content: center;
+	min-block-size: 40px;
+	padding: 12px;
+	border: 0;
+	border-radius: 11px;
+	background: var(--bltn-accent);
+	color: #fff;
+	font-family: var(--bltn-sans);
+	font-size: 13.5px;
+	font-weight: 600;
+	line-height: 1.2;
+	text-align: center;
+	text-decoration: none;
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+.bltn-composebar__btn:hover {
+	background: var(--bltn-accent-ink);
+	color: #fff;
+}
+/* Away while the composer is open: the bar IS the collapsed representation, so
+   leaving it up would put "Start a thread" under a thread being started. Stated
+   explicitly because `hidden` alone loses to the `display: flex` above. */
+.bltn-composebar[hidden] {
+	display: none;
 }
 
 /* ---- bottom bar (thread Prev/Next, scoped to the current forum) ---- */

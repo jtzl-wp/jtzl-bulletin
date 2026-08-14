@@ -46,6 +46,7 @@ $bltn_forums    = $bltn_container->get( \JTZL\Bulletin\View\ForumList::class );
 $bltn_subquery  = $bltn_container->get( \JTZL\Bulletin\Query\ForumQuery::class );
 $bltn_query     = $bltn_container->get( \JTZL\Bulletin\Query\TopicQuery::class );
 $bltn_ctx       = $bltn_container->get( \JTZL\Bulletin\WordPress\ContextInterface::class );
+$bltn_start     = $bltn_container->get( \JTZL\Bulletin\View\StartThread::class );
 
 $bltn_forum_id  = bbp_get_forum_id();
 $bltn_protected = $bltn_ctx->is_password_required( $bltn_forum_id );
@@ -128,6 +129,15 @@ if ( ! $bltn_protected ) {
 	$bltn_more = $bltn_page < $bltn_ctx->get_max_topic_pages();
 	wp_reset_postdata();
 }
+
+/*
+ * Whether a thread can be started here, resolved once and used twice: the empty
+ * state's copy and the fixed bar have to agree, or an empty forum invites a reader
+ * to post and then withholds the control (see View\StartThread for the two
+ * questions behind it — bbPress's own test does not answer for categories).
+ */
+$bltn_may_start = $bltn_ctx->can_access_create_topic_form()
+	&& ! $bltn_ctx->is_forum_category( $bltn_forum_id );
 
 /*
  * A sub-forum's back control returns to its parent, not the index — otherwise
@@ -336,17 +346,55 @@ $bltn_back_label = $bltn_parent_id
 					<p class="bltn-empty__title"><?php esc_html_e( 'No threads yet', 'jtzl-bulletin' ); ?></p>
 					<?php
 					/*
-					 * Not "Be the first to start one." — this release has no composer
-					 * on any screen, so that invited an action the reader cannot take,
-					 * on the one screen whose job is to explain an absence.
+					 * ⚠ The copy branches on whether the reader can actually start one,
+					 * and 0.5.0 is where it started to. Until P4 this read "Nothing has
+					 * been posted in this forum." for everybody, because the alternative
+					 * — "Be the first to start one." — invited an action no reader could
+					 * take, on the one screen whose job is to explain an absence.
+					 *
+					 * They can now, some of them. So the invitation returns to exactly
+					 * the people the bar below is already offering it to, and everyone
+					 * else keeps the statement of fact. Same test, so the two can never
+					 * disagree: an empty forum cannot invite a reader to post and then
+					 * withhold the control.
 					 */
 					?>
-					<p class="bltn-empty__body"><?php esc_html_e( 'Nothing has been posted in this forum.', 'jtzl-bulletin' ); ?></p>
+					<?php if ( $bltn_may_start ) : ?>
+						<p class="bltn-empty__body"><?php esc_html_e( 'Be the first to start one.', 'jtzl-bulletin' ); ?></p>
+					<?php else : ?>
+						<p class="bltn-empty__body"><?php esc_html_e( 'Nothing has been posted in this forum.', 'jtzl-bulletin' ); ?></p>
+					<?php endif; ?>
 				</div>
 
 			<?php endif; ?>
 
+			<?php
+			/*
+			 * The form itself, at the foot of the list — or the one line that replaces
+			 * it on a closed forum (see View\StartThread). Inside <main> because it is
+			 * content the reader scrolls to; the control that opens it is fixed below.
+			 */
+			$bltn_start->render_form( $bltn_forum_id );
+			?>
+
 		<?php endif; ?>
 	</main>
+
+	<?php
+	/*
+	 * "Start a thread", in the fixed bar the prototype puts here and JT approved.
+	 *
+	 * ⚠ A different shape from the reading view's inline composer, deliberately. That
+	 * screen's bottom is spoken for by thread Prev/Next — JT's own proposal — and this
+	 * one's is free. The actions differ too, which is what makes the inconsistency
+	 * bearable: starting a thread is a screen-level action, available wherever you are
+	 * in a long list; replying belongs where the conversation ended.
+	 *
+	 * Outside <main>, after it, so the bar is the last thing in the document as it is
+	 * the last thing on the screen — the same sequence argument the reading view's
+	 * Prev/Next bar is placed by.
+	 */
+	$bltn_start->render_bar( $bltn_forum_id );
+	?>
 
 </section>

@@ -62,23 +62,6 @@ use JTZL\Bulletin\WordPress\ContextInterface;
 class ComposeSlot {
 
 	/**
-	 * A template name chosen so that bbPress will not find it.
-	 *
-	 * ⚠ **An empty array would be the obvious way to suppress a template part, and it
-	 * raises a PHP warning.** `bbp_locate_template()` reads `$template_name` after its
-	 * own `foreach` to pass into the `bbp_locate_template` action
-	 * (`core/template-functions.php:99`), so with nothing to iterate the variable was
-	 * never assigned. Naming a file that cannot exist lets the loop run once, find
-	 * nothing, and leave `$located` false — the same outcome, without reaching into
-	 * upstream's scope.
-	 *
-	 * @since 0.5.0
-	 *
-	 * @var string
-	 */
-	private const NOWHERE = 'jtzl-bulletin-suppressed.php';
-
-	/**
 	 * WordPress/bbPress seam.
 	 *
 	 * @var ContextInterface
@@ -86,14 +69,23 @@ class ComposeSlot {
 	private ContextInterface $wp;
 
 	/**
+	 * Renders bbPress's own form templates, corrected for this tier.
+	 *
+	 * @var BbPressForm
+	 */
+	private BbPressForm $form;
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 0.5.0
 	 *
-	 * @param ContextInterface $wp WordPress/bbPress seam.
+	 * @param ContextInterface $wp   WordPress/bbPress seam.
+	 * @param BbPressForm      $form Renders bbPress's own form templates.
 	 */
-	public function __construct( ContextInterface $wp ) {
-		$this->wp = $wp;
+	public function __construct( ContextInterface $wp, BbPressForm $form ) {
+		$this->wp   = $wp;
+		$this->form = $form;
 	}
 
 	/**
@@ -138,10 +130,11 @@ class ComposeSlot {
 	/**
 	 * The reply form itself — bbPress's — wrapped so the script can collapse it.
 	 *
-	 * The form itself is bbPress's, rendered through its template part — this plugin
-	 * registers no template stack and never has, so the fields, the nonces, the
-	 * anonymous block and the whole write path stay upstream's. What is ours is the
-	 * wrapper, the trigger, and the stylesheet.
+	 * The form itself is bbPress's, rendered through View\BbPressForm — which applies
+	 * the two corrections this tier needs (the legend's unescaped title, the
+	 * allowed-tags list) and is shared with the forum screen's composer so neither has
+	 * to remember them. What is ours here is the wrapper, the trigger, and the
+	 * stylesheet.
 	 *
 	 * `data-bltn-compose` carries the resting state rather than the script deriving
 	 * it: a deep link (`?bbp_reply_to={id}#new-post`) names a post the reader has
@@ -176,74 +169,10 @@ class ComposeSlot {
 		);
 
 		echo '<div class="bltn-compose__form">';
-		$this->form();
+		$this->form->render( 'reply' );
 		echo '</div>';
 
 		echo '</div>';
-	}
-
-	/**
-	 * Render bbPress's reply form with its legend reduced to text.
-	 *
-	 * ⚠ **This closes a hole we would otherwise open on our own tier.** bbPress builds
-	 * the legend as `printf( esc_html__( 'Reply To: %s' ), bbp_get_topic_title() )`
-	 * (`form-reply.php:30`) — the *format string* is escaped and the substitution is
-	 * not, so a title carrying markup lands in the document as markup. That is
-	 * bbPress's behaviour on every theme and not a bug we introduced, but until P4 no
-	 * takeover screen rendered that template: the reading view escaped the title in all
-	 * three places it appeared. Rendering the form here is what puts it in reach, so
-	 * closing it is this phase's job.
-	 *
-	 * `wp_strip_all_tags()` rather than `esc_html()`, and the difference matters: a
-	 * title legitimately containing `&amp;` would come back as `&amp;amp;` from
-	 * escaping something bbPress then escapes again. Stripping removes markup and
-	 * leaves entities alone — and it is the right transform on its own terms, because
-	 * this string is an accessible name, and a name is text.
-	 *
-	 * Added and removed around the single call rather than left on, in a `finally` for
-	 * the same reason `WordPressContext::moderation_links()` uses one: bbPress runs
-	 * plugin hooks while rendering, and one of those throwing would otherwise leave the
-	 * filter attached for the rest of the request — stripping markup out of a title
-	 * somewhere that wanted it.
-	 *
-	 * @since 0.5.0
-	 */
-	private function form(): void {
-		$text_only = static fn( $title ) => is_string( $title ) ? wp_strip_all_tags( $title ) : $title;
-
-		/*
-		 * And no allowed-tags list. It is a notice box enumerating every permitted HTML
-		 * tag with its attributes, nested between the textarea and the submit — a wall
-		 * of markup on a phone.
-		 *
-		 * ⚠ Dropped because decision 1 supplies the replacement, not merely to save
-		 * room: with the quicktags strip kept, the buttons ARE the discoverable version
-		 * of this information, and the list is the desktop-era fallback for people
-		 * hand-writing HTML. Removing something that has a better replacement in place
-		 * is the strongest form of the subtraction rule, not the weakest. It stays on
-		 * the reskin tier, where bbPress's own layout makes it unremarkable and the
-		 * edit forms are reached by people more likely to be writing markup on purpose.
-		 *
-		 * Note this is usually moot and deliberately not relied on being so: the
-		 * template renders nothing at all unless a site switches `bbp_use_wp_editor`
-		 * off (`form-allowed-tags.php:13`), which is exactly the configuration where a
-		 * plain textarea has no strip and the list would be the loudest thing on the
-		 * screen.
-		 */
-		$no_allowed_tags = static fn( $templates, $slug, $name ) =>
-			( 'form' === $slug && 'allowed-tags' === $name )
-				? array( self::NOWHERE )
-				: $templates;
-
-		add_filter( 'bbp_get_topic_title', $text_only );
-		add_filter( 'bbp_get_template_part', $no_allowed_tags, 10, 3 );
-
-		try {
-			bbp_get_template_part( 'form', 'reply' );
-		} finally {
-			remove_filter( 'bbp_get_topic_title', $text_only );
-			remove_filter( 'bbp_get_template_part', $no_allowed_tags, 10 );
-		}
 	}
 
 	/**
