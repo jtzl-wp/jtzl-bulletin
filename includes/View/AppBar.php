@@ -237,7 +237,21 @@ class AppBar {
 				return $profile;
 			}
 		}
-		return $this->wp->get_login_url( $this->wp->get_forums_url() );
+
+		/*
+		 * Back to where they were, not to the forums index. Until 0.5.0 this sent a
+		 * logged-out reader to `get_forums_url()`, which was harmless while it was the
+		 * only sign-in route on the screen. P4 put a second one at the foot of every
+		 * thread — "Sign in to reply", carrying this URL — and two controls one above
+		 * the other going to different places is the kind of thing a reader notices
+		 * exactly once, when the first one loses their place.
+		 *
+		 * The index is still the fallback: a request that cannot name itself has to
+		 * land somewhere, and the forums are where the app begins.
+		 */
+		$here = $this->wp->get_current_url();
+
+		return $this->wp->get_login_url( '' !== $here ? $here : $this->wp->get_forums_url() );
 	}
 
 	/**

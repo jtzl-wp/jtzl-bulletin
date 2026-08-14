@@ -292,6 +292,75 @@ interface ContextInterface {
 	public function get_login_url( string $redirect = '' ): string;
 
 	/**
+	 * The URL of the request being served, query string included.
+	 *
+	 * The composer's sign-in control needs it so `wp_login_url()` can return a reader
+	 * to the thread they were on rather than to the forums index. The query string is
+	 * part of it and not an implementation detail: `?bbp_reply_to={id}` names the post
+	 * a reader meant to answer, and dropping it across the login round-trip silently
+	 * turns a reply-to-a-post into a reply-to-the-thread.
+	 *
+	 * bbPress reaches the same value through `bbp_redirect_to_field()`, which defaults
+	 * to `REQUEST_URI` (`common/template.php:1345`); this is that behaviour on our own
+	 * tier, where we author the control rather than render bbPress's form.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @return string Absolute URL, or '' when the request cannot supply one.
+	 */
+	public function get_current_url(): string;
+
+	/**
+	 * Whether bbPress would render a reply form for the current user, here.
+	 *
+	 * One question, asked of bbPress rather than re-derived: it already folds together
+	 * keymaster status, an open topic, an open forum, a published topic, the
+	 * `publish_replies` capability and the anonymous-posting option
+	 * (`users/template.php:2320`, `:2194`). Re-implementing any of that would be a
+	 * second opinion about who may post, which is the one thing a companion plugin
+	 * must never hold.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @return bool
+	 */
+	public function can_access_create_reply_form(): bool;
+
+	/**
+	 * The reply this request asked to answer, or 0.
+	 *
+	 * ⚠ **Not `bbp_get_form_reply_to()`, and the difference is the whole reason this
+	 * exists.** That helper falls back to `bbp_get_reply_to()` — the *current reply in
+	 * the loop's* stored parent (`replies/template.php:2498`) — so asked from anywhere
+	 * a reply loop has run it answers a question about bbPress's loop state rather than
+	 * about the request. What the compose slot needs to know is narrower and stable:
+	 * did the reader arrive by following "Reply To" on a specific post.
+	 *
+	 * Validated through `bbp_validate_reply_to()`, so a request naming a topic, a
+	 * deleted post or a non-reply gets 0 — the same answer bbPress's own form will
+	 * reach, rather than a second opinion about it.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @return int Reply ID, or 0 when the request named none.
+	 */
+	public function get_requested_reply_to(): int;
+
+	/**
+	 * Whether bbPress is holding an error to show on this request.
+	 *
+	 * The signal `bbp_template_notices()` itself branches on, asked separately because
+	 * the compose slot has to make a decision **before** that notice renders: a form
+	 * carrying a rejection cannot rest collapsed, or the rejection is invisible and
+	 * submitting appears to do nothing at all.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @return bool
+	 */
+	public function has_errors(): bool;
+
+	/**
 	 * A piece of site information (e.g. "name", "charset").
 	 *
 	 * @since 0.1.0

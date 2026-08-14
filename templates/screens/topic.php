@@ -30,6 +30,7 @@ $bltn_navigator  = $bltn_container->get( \JTZL\Bulletin\Navigation\ThreadNavigat
 $bltn_navbar     = $bltn_container->get( \JTZL\Bulletin\View\ThreadNavBar::class );
 $bltn_loadmore   = $bltn_container->get( \JTZL\Bulletin\View\LoadMore::class );
 $bltn_mod        = $bltn_container->get( \JTZL\Bulletin\View\ModerationActions::class );
+$bltn_compose    = $bltn_container->get( \JTZL\Bulletin\View\ComposeSlot::class );
 
 $bltn_topic_id  = bbp_get_topic_id();
 $bltn_forum_id  = bbp_get_topic_forum_id( $bltn_topic_id );
@@ -241,6 +242,22 @@ $bltn_moderates = $bltn_mod->available( $bltn_topic_id );
 						)
 					);
 				}
+				?>
+
+				<?php
+				/*
+				 * The end of the thread, and what a reader may do with it — the composer,
+				 * a closed line, a sign-in control, or nothing (see View\ComposeSlot).
+				 *
+				 * Below the load-more deliberately. Both controls occupy this slot and
+				 * they mean different things: load-more continues the thread you are
+				 * reading, the composer ends it. Reading order is what separates them, so
+				 * the one that adds to what is above comes first. They separate visually
+				 * by fill rather than geometry — load-more keeps the secondary wash, the
+				 * composer takes the filled teal — because two identical full-width
+				 * buttons stacked read as one control repeated.
+				 */
+				$bltn_compose->render( $bltn_topic_id, $bltn_forum_id );
 				?>
 
 			</article>

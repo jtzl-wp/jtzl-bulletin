@@ -967,6 +967,374 @@ body.admin-bar .bltn-app {
 	color: #a4442f;
 }
 
+/* ---- the compose slot (foot of a thread) ------------------------------------
+
+   One slot, five states, at the end of the reading flow. It is inline rather than
+   in the fixed bottom bar because that bar is thread Prev/Next and it was JT's own
+   proposal — the same resolution "load more replies" took, for the same reason.
+
+   ⚠ **Geometry is `.bltn-loadmore__btn`'s, exactly, and that is deliberate.** This
+   tier already has an answer to "an action inline in the reading flow", and this is
+   the same problem; a second full-width button at a different height would be a new
+   component saying the same thing. They separate by FILL: load-more keeps the
+   secondary wash, the composer takes the filled teal, because on a long thread both
+   occupy this slot and two identical buttons stacked read as one control repeated.
+   Filled is also the prototype's approved `.composebar` and #90's rule that the
+   thing a screen exists to do takes the filled treatment. */
+.bltn-compose {
+	/* ⚠ The block-end inset is a safety distance, not rhythm. The fixed Prev/Next bar
+	   begins immediately below the scroll region, so when a reader is scrolled to the
+	   foot of a thread this is the entire gap between the composer's last control and
+	   "Next thread" — and mis-tapping Next mid-reply loses what was typed. 40px is one
+	   control height, which is the floor decision 4 set. It is a floor and not an
+	   answer: the real check is a thumb on a real device, which Chrome cannot make.
+
+	   The block-start inset separates the composer from the last reply, which
+	   otherwise butts straight against it — the replies are divided by hairlines and
+	   this slot is not one of them. */
+	padding: 20px 20px 40px;
+}
+/* The trigger, and the sign-in control that stands in for it — one rule, because
+   they are the same control with different destinations. `a` needs the flex
+   centring and the text-decoration reset that `button` does not. */
+.bltn-compose__open {
+	appearance: none;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	inline-size: 100%;
+	min-block-size: 40px;
+	padding: 12px;
+	border: 0;
+	border-radius: 11px;
+	background: var(--bltn-accent);
+	color: #fff;
+	font: inherit;
+	font-size: 13.5px;
+	font-weight: 600;
+	line-height: 1.2;
+	text-align: center;
+	text-decoration: none;
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+.bltn-compose__open:hover {
+	background: var(--bltn-accent-ink);
+	color: #fff;
+}
+/* Closed. One quiet line, no box and no tint — and emphatically not
+   --bltn-caution. DESIGN.md is explicit that a closed thread is not a negative
+   ("often the one most worth reading: resolved, archived, canonical. Nothing is
+   dimmed"), so the severity channel is the wrong channel for it. Centred because it
+   is a statement about the screen rather than a field label, which is the same
+   voice the empty states use. */
+.bltn-compose__note {
+	margin: 0;
+	font-family: var(--bltn-sans);
+	font-size: 13.5px;
+	line-height: 1.4;
+	color: var(--bltn-ink-3);
+	text-align: center;
+}
+
+/* ---- the composer itself ----------------------------------------------------
+
+   bbPress's own `form-reply.php`, inside our chrome. Nothing here re-authors its
+   markup: the fields, the nonces, the anonymous block and the whole write path stay
+   upstream's, and this plugin registers no template stack.
+
+   ⚠ **This tier suppresses every foreign stylesheet, and two still arrive.**
+   `wp_editor()` prints `editor.css` and `buttons.css` as `<link>` elements INSIDE
+   the editor markup rather than enqueuing them, so `Asset\AssetManager`'s dequeue
+   never sees them — measured on wp-env, 2026-08-14. So the strip is styled OVER
+   core here exactly as it is on reskin, not replaced. If that ever changes, these
+   rules still hold: they set every property they rely on rather than unsetting
+   core's. */
+.bltn-compose__form {
+	padding-block-start: 4px;
+}
+/* bbPress draws the form as a bordered fieldset with its own padding and a legend
+   naming the thread. The border and padding go — the slot's own gutter is the
+   inset, and a box around a form at the end of a thread is a second edge inside an
+   edge. */
+.bltn-compose__form fieldset.bbp-form {
+	border: 0;
+	margin: 0;
+	padding: 0;
+}
+/* The legend reads "Reply To: {title}" — the title the reader has been looking at
+   since the top of the screen. Announced, not shown: it is the form's accessible
+   name, which is worth keeping, and repeating the thread title above the field is
+   the clutter this product exists to remove. Same treatment as View\ScreenHeading's
+   h1, and the same reasoning. */
+.bltn-compose__form fieldset.bbp-form legend {
+	position: absolute;
+	inline-size: 1px;
+	block-size: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+	border: 0;
+}
+/* A notice inside the form: "your account may post unrestricted HTML", or "this
+   forum is closed but your capabilities still allow it". Facts about the writer's
+   own situation, so they take the quiet voice rather than bbPress's yellow band —
+   and rather than the caution colour, which belongs to things that can go wrong.
+   The severity variants are excluded so anything bbPress marks .error or .warning
+   keeps its own treatment. */
+.bltn-compose__form div.bbp-template-notice:not(.info, .important, .error, .warning),
+.bltn-compose__form div.bbp-template-notice.info {
+	margin: 0 0 14px;
+	padding: 12px 14px;
+	border: 0;
+	border-radius: 10px;
+	background: var(--bltn-bg);
+}
+.bltn-compose__form div.bbp-template-notice ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+.bltn-compose__form div.bbp-template-notice li {
+	margin: 0;
+	padding: 0;
+	font-family: var(--bltn-sans);
+	font-size: 13.5px;
+	line-height: 1.4;
+	color: var(--bltn-ink-2);
+}
+/* ⚠ **A failed reply is silent on this tier without this rule, and that is what
+   makes it load-bearing rather than decorative.** bbPress reports validation
+   failures through `bbp_template_notices()`, which prints inside the form
+   (`form-reply.php`) — and it dresses them with `bbp-default`, which the takeover
+   dequeues along with every other foreign stylesheet. So a reader whose reply was
+   rejected would get bbPress's words in bbPress's markup wearing nothing at all: a
+   bare list where a warning should be, indistinguishable from the capability note
+   two lines above it.
+
+   The caution pair reads exactly as it does on the reskin tier — colour on the words,
+   a 1px rule in the gutter, no stripe and no tint — because a reader meeting an error
+   here has already met that vocabulary on a profile or a merge screen. One product,
+   one way of saying something went wrong. */
+.bltn-compose__form div.bbp-template-notice:is(.error, .warning) {
+	margin: 0 0 14px;
+	padding: 12px 14px;
+	border: 0;
+	border-inline-start: 1px solid var(--bltn-caution);
+	border-radius: 10px;
+	background: var(--bltn-bg);
+}
+.bltn-compose__form div.bbp-template-notice:is(.error, .warning) li {
+	font-weight: 600;
+	color: var(--bltn-caution);
+}
+.bltn-compose__form div.bbp-template-notice:is(.error, .warning) a {
+	color: var(--bltn-caution);
+	text-decoration: underline;
+}
+/* The formatting strip. Ten buttons — Chrome\ComposerSettings drops `img`, the only
+   one that asks a reader on a phone for a URL they do not have. Core's slab and
+   bordered container go; each button takes the secondary control step, which is what
+   these are: helpers beside a field, not the thing the screen exists to do.
+
+   ⚠ `min-inline-size` is the touch floor (#76's 24px), not the look. `b` and `i` are
+   one character wide and would otherwise land at 25px of mostly padding. */
+.bltn-compose__form .wp-editor-container {
+	border: 0;
+	background: none;
+}
+.bltn-compose__form .quicktags-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	padding: 0 0 8px;
+	border: 0;
+	border-radius: 0;
+	background: none;
+}
+.bltn-compose__form .quicktags-toolbar input[type="button"] {
+	appearance: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-inline-size: 36px;
+	min-block-size: 36px;
+	block-size: auto;
+	margin: 0;
+	padding: 0 10px;
+	border: 0;
+	border-radius: 10px;
+	background: var(--bltn-wash);
+	color: var(--bltn-accent-ink);
+	font-family: var(--bltn-sans);
+	font-size: 13px;
+	font-weight: 600;
+	line-height: 1.2;
+	text-shadow: none;
+	box-shadow: none;
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+.bltn-compose__form .quicktags-toolbar input[type="button"]:hover {
+	background: color-mix(in srgb, var(--bltn-accent) 12%, var(--bltn-wash));
+}
+/* Fields. The same arithmetic as the reskin tier's and the password prompt's — 15px
+   on 10px of padding and a 1px border lands on the control scale's 40px — so the two
+   tiers hold one field vocabulary rather than one each.
+
+   ⚠ The textarea reads in the SERIF, alone among the fields on either tier, and that
+   is the one deliberate divergence. It is the only field on this product whose
+   content becomes a post: what is typed here appears three lines up, in that face,
+   the moment it is submitted. Every other field collects a label, a tag or a
+   credential. */
+.bltn-compose__form :is(input[type="text"], input[type="email"], input[type="url"], textarea) {
+	appearance: none;
+	display: block;
+	inline-size: 100%;
+	max-inline-size: 100%;
+	block-size: auto;
+	min-block-size: 0;
+	font-family: var(--bltn-sans);
+	font-size: 15px;
+	line-height: 1.4;
+	color: var(--bltn-ink);
+	background-color: var(--bltn-surface);
+	border: 1px solid var(--bltn-line);
+	border-radius: 10px;
+	padding: 10px 13px;
+	margin: 0;
+	box-shadow: none;
+}
+.bltn-compose__form textarea.bbp-the-content {
+	font-family: var(--bltn-serif);
+	font-size: 16px;
+	line-height: 1.5;
+	resize: vertical;
+}
+/* One ring on focus, not two — the field's own border would sit inside the global
+   accent outline. Same move as the reskin tier and the password prompt. */
+.bltn-compose__form :is(input, textarea):focus-visible {
+	border-color: transparent;
+}
+/* Labels above their fields: bbPress puts "Tags:" on its own line already, so this
+   is about voice rather than layout. */
+.bltn-compose__form label[for] {
+	display: block;
+	padding: 14px 0 5px;
+	font-family: var(--bltn-sans);
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--bltn-ink-2);
+}
+/* The subscribe checkbox keeps its label beside it — one line, one target. 24px is
+   the touch floor itself; a run of one does not need more. */
+.bltn-compose__form input[type="checkbox"] {
+	appearance: auto;
+	inline-size: 24px;
+	block-size: 24px;
+	min-block-size: 0;
+	margin: 0 8px 0 0;
+	padding: 0;
+	vertical-align: middle;
+	accent-color: var(--bltn-accent);
+	cursor: pointer;
+}
+.bltn-compose__form input[type="checkbox"] + label,
+.bltn-compose__form .bbp-form-subscribe label {
+	display: inline;
+	padding: 0;
+	font-size: 13.5px;
+	font-weight: 400;
+	color: var(--bltn-ink);
+	line-height: 24px;
+	vertical-align: middle;
+}
+.bltn-compose__form div.bbp-submit-wrapper {
+	margin: 0;
+	padding-block-start: 18px;
+	float: none;
+}
+/* Submit: the thing the screen exists to do, so the filled teal — the same fill the
+   trigger it replaced was wearing, which is what makes opening the composer read as
+   one continuous action rather than a hand-off between two controls. */
+.bltn-compose__form button[type="submit"] {
+	appearance: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	inline-size: 100%;
+	min-block-size: 40px;
+	float: none;
+	padding: 0 20px;
+	border: 0;
+	border-radius: 11px;
+	background: var(--bltn-accent);
+	color: #fff;
+	font-family: var(--bltn-sans);
+	font-size: 13.5px;
+	font-weight: 600;
+	line-height: 1.2;
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+.bltn-compose__form button[type="submit"]:hover {
+	background: var(--bltn-accent-ink);
+}
+
+/* ---- the collapse -----------------------------------------------------------
+
+   ⚠ **The default state is OPEN, and the script closes it.** Every declaration here
+   is applied by a class `reading.ts` adds, so a document that never runs our script
+   shows the whole form and no trigger — failure yields more, not less. Issue #62's
+   scar was a control hidden by a signal the script did not control; this is the
+   inverse of that arrangement, on purpose.
+
+   `hidden` is not used for either half: the trigger has to be absent from the
+   accessibility tree when the form is open, and the form when it is collapsed, and
+   `display: none` is what does that in both directions without a second attribute
+   for the script to keep in step. */
+.bltn-compose__open {
+	display: none;
+}
+.bltn-compose.is-collapsed .bltn-compose__open {
+	display: flex;
+}
+.bltn-compose.is-collapsed .bltn-compose__form {
+	display: none;
+}
+/* Cancel, added by the script beside the submit it shares a row with. Secondary
+   fill: closing the composer is not the thing the screen exists to do. */
+.bltn-compose__cancel {
+	appearance: none;
+	display: block;
+	inline-size: 100%;
+	min-block-size: 40px;
+	margin-block-start: 8px;
+	padding: 0 20px;
+	border: 0;
+	border-radius: 11px;
+	background: var(--bltn-wash);
+	color: var(--bltn-accent-ink);
+	font-family: var(--bltn-sans);
+	font-size: 13.5px;
+	font-weight: 600;
+	line-height: 1.2;
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+.bltn-compose__cancel:hover {
+	background: color-mix(in srgb, var(--bltn-accent) 12%, var(--bltn-wash));
+}
+/* The sign-in control is not collapsible — it IS the resting state — so it opts back
+   in on its own. An anchor rather than a button is what tells the two apart, and it
+   is also what makes them different controls: one opens something on this page, the
+   other leaves for wp-login.php and comes back. */
+a.bltn-compose__open {
+	display: flex;
+}
+
 /* ---- bottom bar (thread Prev/Next, scoped to the current forum) ---- */
 .bltn-navbar {
 	display: grid;

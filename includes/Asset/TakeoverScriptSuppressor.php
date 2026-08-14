@@ -15,10 +15,11 @@ use JTZL\Bulletin\WordPress\ContextInterface;
 /**
  * Remove scripts whose markup is absent from Bulletin's takeover document.
  *
- * The policy is deliberately conservative: remove active-theme scripts and the
- * known unused bbPress editor/reply behavior, while preserving unknown plugin
- * scripts because wp_head() and wp_footer() remain compatibility boundaries.
- * Signed-in forum/topic readers keep engagements for the Subscribe control.
+ * The policy is deliberately conservative: remove active-theme scripts and bbPress
+ * behavior this tier's markup cannot use, while preserving unknown plugin scripts
+ * because wp_head() and wp_footer() remain compatibility boundaries. Signed-in
+ * forum/topic readers keep engagements for the Subscribe control — and, since the
+ * composer landed, the editor script that rides on the same jQuery.
  *
  * @since 0.5.0
  */
@@ -56,7 +57,9 @@ class TakeoverScriptSuppressor {
 	 *
 	 * The jQuery handle is not suppressed directly: WordPress drops it when the
 	 * removed scripts were its last consumers and keeps it when a surviving
-	 * integration still needs it.
+	 * integration still needs it. That is what makes the editor rule below work —
+	 * it never has to ask whether jQuery is present, only whether something else
+	 * already needed it.
 	 *
 	 * @since 0.5.0
 	 */
@@ -65,9 +68,33 @@ class TakeoverScriptSuppressor {
 			return;
 		}
 
-		$dead = array( 'bbpress-editor', 'bbpress-reply' );
+		/*
+		 * `bbpress-reply` is dead on every takeover screen and stays that way. It is
+		 * `addReply.moveForm`, whose whole purpose is to lift the reply form out of the
+		 * foot of the thread and up under the post being answered — and the composer's
+		 * place at the foot is a design JT approved. Chrome\ReplyToLink takes the
+		 * matching inline handler off the link so the href is the mechanism.
+		 *
+		 * ⚠ `bbpress-editor` is NOT dead once a composer renders, and it rides on
+		 * engagements. It is 52 lines that rebind the Code button to emit backticks
+		 * instead of `<code>` and wire tab order out of the title and tags fields — both
+		 * of them composer behaviour — and it depends on jQuery. Measured on wp-env
+		 * (bbPress 2.6.14, GeneratePress, 2026-08-14): a logged-out reader on a topic
+		 * screen loads no jQuery at all, while a signed-in one already has it, because
+		 * `needs_engagements()` kept engagements for the Subscribe control. So the
+		 * condition that pays for jQuery is exactly the condition under which this
+		 * script is free, and there is no second test to write.
+		 *
+		 * What that costs in the configurations where engagements does not survive —
+		 * subscriptions switched off, or anonymous posting by a logged-out visitor — is
+		 * that the Code button inserts `<code>` rather than backticks and Tab does not
+		 * jump out of the title field. Both are valid; neither is worth an 85KB library.
+		 * A site that disagrees has `bltn_script_allowlist`.
+		 */
+		$dead = array( 'bbpress-reply' );
 		if ( ! $this->needs_engagements() ) {
 			$dead[] = 'bbpress-engagements';
+			$dead[] = 'bbpress-editor';
 		}
 
 		$allow    = $this->allowlist();

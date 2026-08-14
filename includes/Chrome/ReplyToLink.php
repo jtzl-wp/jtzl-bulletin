@@ -1,6 +1,6 @@
 <?php
 /**
- * The per-reply "Reply" link, in a release with no composer.
+ * The per-reply "Reply To" link, on the takeover tier.
  *
  * @package JTZL\Bulletin
  * @since 0.3.0
@@ -12,30 +12,54 @@ use JTZL\Bulletin\Screen\ScreenClassifier;
 use JTZL\Bulletin\Screen\ScreenTier;
 
 /**
- * Withholds the per-reply "Reply" link, because in this release it cannot work.
+ * Takes bbPress's inline `onclick` off the link and leaves the `href` to do the work.
  *
- * `bbp_get_reply_to_link()` points at `{topic}/?bbp_reply_to={id}#new-post`, which is
- * a single-topic URL — and since issue #37 removed the last decline, **every**
- * single-topic URL is a takeover screen, which renders no reply form until the
- * posting phase (P4). Followed on the fixture, the destination reports zero forms and
- * zero textareas: the reader taps Reply, arrives at the thread, and nothing has
- * happened. Measured, not assumed.
+ * ## What this class used to do, and why it stopped
  *
- * It reached a reader on the profile's Replies Created tab, once per row.
+ * Until 0.5.0 it **withheld the link entirely**. The reasoning was sound at the time:
+ * the destination is `{topic}/?bbp_reply_to={id}#new-post`, a single-topic URL, and
+ * since issue #37 every single-topic URL is a takeover screen — which rendered no
+ * reply form until the posting phase. Followed on the fixture, the destination
+ * reported zero forms and zero textareas. A door to a room that was not built.
  *
- * This is a **withholding of a broken control, not of a field.** The reskin tier's
- * standing rule is to preserve every field bbPress renders — that rule is about
- * information (counts, freshness, authors), and a link whose destination cannot
- * honour it carries none. Nothing else about the row changes.
+ * P4 built the room. The link works, so withholding it would now be the defect.
  *
- * ⚠ **Delete this class when P4 lands a composer.** It is a statement about a
- * capability this release lacks, not a design decision about the control — and
- * DESIGN.md's #36 note already records the neighbouring case (the `reply` admin link
- * dropped from the moderation tray for the same reason). Both come back together.
+ * ## What it does instead, and why that is not nothing
+ *
+ * `bbp_get_reply_to_link()` emits `onclick="return addReply.moveForm( … )"` whenever
+ * `bbp_thread_replies()` is on (`replies/template.php:1609`). `addReply` lives in
+ * bbPress's `reply.js`, which `Asset\TakeoverScriptSuppressor` dequeues on every
+ * takeover screen — deliberately, and it stays dequeued: `moveForm` exists to lift
+ * the reply form out of the foot of the thread and up under the post being answered,
+ * and the composer's resting place at the foot is a design JT approved.
+ *
+ * ⚠ **Left alone, the link would still reach the right page — by way of a thrown
+ * ReferenceError.** `addReply` is undefined, the handler throws, the return value is
+ * therefore not `false`, and the browser follows the `href`. Right destination, wrong
+ * mechanism, and a console error on every tap. Stripping the attribute makes the
+ * `href` the whole mechanism, which is what it already was in practice and what the
+ * no-JS path has always done.
+ *
+ * `ScreenTier::None` and the reskin tier are both left exactly as they are: reskin
+ * keeps bbPress's scripts, so `addReply` is defined there and `moveForm` is a working
+ * control on a screen we only restyle.
  *
  * @since 0.3.0
  */
 class ReplyToLink {
+
+	/**
+	 * The generated handler, exactly as `bbp_get_reply_to_link()` builds it.
+	 *
+	 * Anchored on the function name rather than on `onclick` generally: this class is
+	 * removing one known handler whose script we suppressed, not sanitising markup.
+	 * An `onclick` another plugin adds through the same filter is not ours to drop.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @var string
+	 */
+	private const HANDLER = '/\s*onclick="return addReply\.moveForm\([^"]*\);?"/';
 
 	/**
 	 * Screen-tier classifier.
@@ -56,21 +80,19 @@ class ReplyToLink {
 	}
 
 	/**
-	 * Return nothing for the link, on screens Bulletin owns.
-	 *
-	 * Off our screens (`ScreenTier::None`) the link is left exactly as it is: another
-	 * theme's bbPress pages are not ours to edit, and there the destination may well
-	 * render a form.
+	 * Strip the handler on takeover screens; leave every other tier untouched.
 	 *
 	 * @since 0.3.0
+	 * @since 0.5.0 Strips the inline handler instead of withholding the link.
 	 *
 	 * @param mixed $link The link markup bbPress assembled.
 	 * @return mixed
 	 */
 	public function filter_reply_to_link( $link ) {
-		if ( ScreenTier::None === $this->screen->tier() ) {
+		if ( ScreenTier::Takeover !== $this->screen->tier() || ! is_string( $link ) ) {
 			return $link;
 		}
-		return '';
+
+		return (string) preg_replace( self::HANDLER, '', $link );
 	}
 }

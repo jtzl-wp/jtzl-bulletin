@@ -520,9 +520,146 @@ function initReading(): void {
 	resolveDeepLink();
 }
 
+/**
+ * Give the anonymous author fields the keyboards and autofill they should have had.
+ *
+ * bbPress hardcodes all three as `type="text"` in `form-anonymous.php`, and puts
+ * `autocomplete="off"` on the name — so a visitor posting without an account gets a
+ * QWERTY keyboard for an email address and no autofill for their own name, which is
+ * the single biggest friction point in mobile form entry.
+ *
+ * ⚠ **Done here rather than by overriding the template, and that is the constraint
+ * rather than the convenience.** This plugin registers no `bbp_register_template_stack()`
+ * and never has; owning a copy of that file would mean owning every future change
+ * bbPress makes to the anonymous write path — nonces, hidden fields, capability
+ * checks — to gain three attributes. Applied by script, the worst case is exactly
+ * bbPress's own behaviour, which already works.
+ *
+ * ⚠ **The website field keeps `type="text"`.** `type="url"` would make the browser
+ * reject a bare `example.com`, which bbPress itself accepts and stores — so promoting
+ * it would be us rejecting input upstream considers valid. The keyboard hint and the
+ * autofill token are safe because neither validates anything.
+ */
+function improveAnonymousFields(form: HTMLElement): void {
+	const set = (
+		id: string,
+		attrs: Record<string, string>,
+	): void => {
+		const input = form.querySelector<HTMLInputElement>(`#${id}`);
+		if (!input) {
+			return;
+		}
+		for (const [name, value] of Object.entries(attrs)) {
+			input.setAttribute(name, value);
+		}
+	};
+
+	set('bbp_anonymous_author', {
+		autocomplete: 'name',
+		autocapitalize: 'words',
+	});
+	set('bbp_anonymous_email', {
+		type: 'email',
+		inputmode: 'email',
+		autocomplete: 'email',
+		autocapitalize: 'none',
+		spellcheck: 'false',
+	});
+	set('bbp_anonymous_website', {
+		inputmode: 'url',
+		autocomplete: 'url',
+		autocapitalize: 'none',
+		spellcheck: 'false',
+	});
+}
+
+/**
+ * The compose slot's resting state (P4).
+ *
+ * ⚠ **The server renders the form OPEN and this collapses it.** Every other
+ * arrangement fails in the wrong direction: a server-collapsed form needs script to
+ * become reachable, so a bundle that 404s or throws leaves a reader with a button
+ * that opens nothing. Collapsing here means the worst case is bbPress's own
+ * behaviour — the whole form, inline, working. Same contract as the moderation
+ * toggle above, and the same scar behind it (#62).
+ *
+ * `data-bltn-compose` carries the state the SERVER decided. A deep link
+ * (`?bbp_reply_to={id}#new-post`) names a post the reader has already chosen to
+ * answer, so the composer stays open and takes focus; asking them to press "Write a
+ * reply" after they pressed "Reply To" is asking the same question twice. The server
+ * knows that from `bbp_get_form_reply_to()`, so this never parses the query string.
+ *
+ * Deliberately outside initReading(), like the moderation toggle: the slot needs
+ * neither the AJAX endpoint nor the localised strings, so it must not inherit that
+ * function's early return on a missing config.
+ */
+function initComposeSlot(): void {
+	const slot = document.querySelector<HTMLElement>('[data-bltn-compose]');
+	const trigger = slot?.querySelector<HTMLButtonElement>(
+		'[data-bltn-compose-open]',
+	);
+	const form = slot?.querySelector<HTMLElement>('.bltn-compose__form');
+	if (!slot || !trigger || !form) {
+		return;
+	}
+
+	const field = form.querySelector<HTMLTextAreaElement>('textarea');
+
+	improveAnonymousFields(form);
+
+	/**
+	 * Open the composer and put the caret in it.
+	 *
+	 * `preventScroll` because the browser is already moving: on a deep link the
+	 * `#new-post` fragment is doing the scrolling, and on a tap the slot is under the
+	 * finger. Focus that also scrolls would fight both.
+	 */
+	const open = (): void => {
+		slot.classList.remove('is-collapsed');
+		trigger.setAttribute('aria-expanded', 'true');
+		field?.focus({ preventScroll: true });
+	};
+
+	const collapse = (): void => {
+		slot.classList.add('is-collapsed');
+		trigger.setAttribute('aria-expanded', 'false');
+	};
+
+	trigger.addEventListener('click', open);
+
+	if (slot.dataset.bltnCompose === 'open') {
+		// A deep link. Nothing to collapse, but the caret still belongs in the field:
+		// the reader arrived here having already said which post they are answering.
+		field?.focus({ preventScroll: true });
+		return;
+	}
+
+	/*
+	 * The way back out, added here rather than rendered by the server because there
+	 * is nothing to cancel back TO without this script — an uncollapsed form has no
+	 * resting state to return to, so a server-rendered Cancel would be a control that
+	 * does nothing on the one path that matters.
+	 *
+	 * Secondary fill: closing the composer is not the thing the screen exists to do,
+	 * and it sits beside a submit that is.
+	 */
+	const cancel = document.createElement('button');
+	cancel.type = 'button';
+	cancel.className = 'bltn-compose__cancel';
+	cancel.textContent = trigger.dataset.bltnCancel ?? 'Cancel';
+	cancel.addEventListener('click', () => {
+		collapse();
+		trigger.focus();
+	});
+	form.querySelector('.bbp-submit-wrapper')?.appendChild(cancel);
+
+	collapse();
+}
+
 // Moderation first, and outside the config gate: it enhances markup that already works
 // without it, so it must not be lost to a problem in the load-more wiring.
 initModerationToggle();
+initComposeSlot();
 
 // This bundle is only ever enqueued in a browser, and initReading() itself
 // no-ops without a BLTN config, so it is the single gate on whether there is

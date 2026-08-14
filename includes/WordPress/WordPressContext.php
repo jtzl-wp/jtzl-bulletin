@@ -273,6 +273,7 @@ class WordPressContext implements ContextInterface {
 	 */
 	public function get_topic_moderation_links( int $topic_id ): string {
 		return $this->moderation_links(
+			true,
 			'bbp_topic_admin_links',
 			static fn(): string => (string) bbp_get_topic_admin_links(
 				array(
@@ -306,6 +307,7 @@ class WordPressContext implements ContextInterface {
 	 */
 	public function get_reply_moderation_links( int $reply_id ): string {
 		return $this->moderation_links(
+			! bbp_thread_replies(),
 			'bbp_reply_admin_links',
 			static fn(): string => (string) bbp_get_reply_admin_links(
 				array(
@@ -317,22 +319,34 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
-	 * Render one of bbPress's admin-link sets, minus the link that opens a composer,
+	 * Render one of bbPress's admin-link sets, optionally minus its `reply` member,
 	 * and report emptiness honestly.
 	 *
 	 * Two things happen here, both of them about staying out of bbPress's way.
 	 *
-	 * The set is bbPress's own — we ask for it and drop exactly one member rather than
+	 * The set is bbPress's own — we ask for it and drop at most one member rather than
 	 * enumerate the rest, so a link a future bbPress adds arrives without us updating
-	 * a list (and without fifteen more functions in `stubs/bbpress-stubs.php`). What
-	 * comes out is `reply`: "Reply" on a topic, "Reply To" on a reply, both pointing at
-	 * bbPress's composer, which the takeover reading view does not render — P4 owns
-	 * posting. A door to a room that is not built.
+	 * a list (and without fifteen more functions in `stubs/bbpress-stubs.php`).
+	 *
+	 * ⚠ **The two sets get different answers, and 0.5.0 is where they parted.** Until
+	 * P4 both dropped `reply`, because the takeover rendered no composer for either to
+	 * arrive at. It renders one now, and only one of them came back:
+	 *
+	 * - **Topic — still dropped, permanently, and no longer for the old reason.**
+	 *   `bbp_get_topic_reply_link()` resolves to `remove_query_arg( … ) . '#new-post'`
+	 *   (`topics/template.php:2867`) — this same page, the identical destination as the
+	 *   composer at the foot of the thread. Two controls to one place is the fault that
+	 *   took "Start a thread" off the forums index; it does not become a feature by
+	 *   living in a moderation tray.
+	 * - **Reply — restored, and only where threading is on.** `bbp_get_reply_to_link()`
+	 *   names *which post* you are answering, which the foot composer cannot say. With
+	 *   `bbp_thread_replies()` off, bbPress omits the `onclick` and the destination
+	 *   collapses to the foot slot's — so there it is the topic case again, and it goes.
 	 *
 	 * The filter is added and removed around the single call rather than left on. On
 	 * the reskin tier bbPress renders its own admin links AND its own reply form, so
-	 * "Reply To" works there and removing it would be us breaking a working control on
-	 * a screen we only restyle.
+	 * both links work there and removing either would be us breaking a working control
+	 * on a screen we only restyle.
 	 *
 	 * `sep` is emptied because bbPress joins with " | " and this design has no pipes:
 	 * the links become chips laid out with a flex gap. One `sep` governs both levels —
@@ -346,12 +360,14 @@ class WordPressContext implements ContextInterface {
 	 * it, so the wrapper alone must read as nothing.
 	 *
 	 * @since 0.3.0
+	 * @since 0.5.0 The `reply` member is dropped per set rather than always.
 	 *
-	 * @param string            $filter bbPress filter naming the link set.
-	 * @param callable():string $render Produces the markup with the filter in place.
+	 * @param bool              $drop_reply Whether to drop the set's `reply` member.
+	 * @param string            $filter     bbPress filter naming the link set.
+	 * @param callable():string $render     Produces the markup with the filter in place.
 	 * @return string Markup, or '' when the set holds no links.
 	 */
-	private function moderation_links( string $filter, callable $render ): string {
+	private function moderation_links( bool $drop_reply, string $filter, callable $render ): string {
 		$without_composer = static function ( $links ) {
 			if ( is_array( $links ) ) {
 				unset( $links['reply'] );
@@ -360,7 +376,9 @@ class WordPressContext implements ContextInterface {
 			return $links;
 		};
 
-		add_filter( $filter, $without_composer );
+		if ( $drop_reply ) {
+			add_filter( $filter, $without_composer );
+		}
 
 		try {
 			$markup = $render();
@@ -370,6 +388,8 @@ class WordPressContext implements ContextInterface {
 			// these links, and one of those throwing would otherwise leave the filter
 			// attached for the rest of the request — stripping "Reply To" from the
 			// reskin tier, which renders both those links and a working reply form.
+			// Unconditional, and safe when nothing was added: remove_filter() on a
+			// callback that is not attached returns false and does nothing.
 			remove_filter( $filter, $without_composer );
 		}
 
@@ -386,6 +406,90 @@ class WordPressContext implements ContextInterface {
 	 */
 	public function get_login_url( string $redirect = '' ): string {
 		return (string) wp_login_url( $redirect );
+	}
+
+	/**
+	 * The URL of the request being served, query string included.
+	 *
+	 * ⚠ Built from `REQUEST_URI` rather than from `get_permalink()`, because the query
+	 * string is the point: `?bbp_reply_to={id}` has to survive the login round-trip.
+	 * Only the scheme, host and port are taken from `home_url()`; `esc_url_raw()` runs
+	 * over the result, because `REQUEST_URI` is client input and this value is handed
+	 * to `wp_login_url()` as a redirect target.
+	 *
+	 * ⚠ **`home_url( $path )` cannot be used for this, and the reason only shows on a
+	 * subdirectory install.** It *appends* — and `REQUEST_URI` is already root-relative,
+	 * so on a site at `example.com/blog` the two overlap and `home_url( REQUEST_URI )`
+	 * yields `/blog/blog/…`. A reader would sign in and land on a 404, which is exactly
+	 * the regression this getter exists to prevent. bbPress sidesteps it by keeping
+	 * `bbp_redirect_to_field()`'s value relative; we need an absolute one for
+	 * `wp_login_url()`, so the two halves are assembled rather than concatenated.
+	 * Raised by Gitar on #111, reproduced before fixing.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @return string
+	 */
+	public function get_current_url(): string {
+		$uri = isset( $_SERVER['REQUEST_URI'] )
+			? wp_unslash( $_SERVER['REQUEST_URI'] ) // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- esc_url_raw() below is the sanitiser.
+			: '';
+		if ( ! is_string( $uri ) || '' === $uri ) {
+			return '';
+		}
+
+		$home = wp_parse_url( (string) home_url() );
+		if ( ! is_array( $home ) || ! isset( $home['scheme'], $home['host'] ) ) {
+			return '';
+		}
+
+		$base = $home['scheme'] . '://' . $home['host'];
+		if ( isset( $home['port'] ) ) {
+			$base .= ':' . $home['port'];
+		}
+
+		return (string) esc_url_raw( $base . '/' . ltrim( $uri, '/' ) );
+	}
+
+	/**
+	 * Whether bbPress would render a reply form for the current user, here.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @return bool
+	 */
+	public function can_access_create_reply_form(): bool {
+		return (bool) bbp_current_user_can_access_create_reply_form();
+	}
+
+	/**
+	 * The reply this request asked to answer, or 0.
+	 *
+	 * Read-only and nonce-free by design: this decides whether a composer opens
+	 * expanded, which is presentation. bbPress checks the nonce on the link when the
+	 * reply is actually posted (`bbp_new_reply_handler()`), and `bbp_validate_reply_to()`
+	 * already rejects anything that is not a real reply.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @return int
+	 */
+	public function get_requested_reply_to(): int {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- presentation only; see the docblock.
+		$raw = $_REQUEST['bbp_reply_to'] ?? 0;
+
+		return (int) bbp_validate_reply_to( absint( $raw ) );
+	}
+
+	/**
+	 * Whether bbPress is holding an error to show on this request.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @return bool
+	 */
+	public function has_errors(): bool {
+		return (bool) bbp_has_errors();
 	}
 
 	/**

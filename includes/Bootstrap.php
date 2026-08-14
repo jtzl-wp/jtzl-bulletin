@@ -17,6 +17,7 @@ use JTZL\Bulletin\Ajax\LoadTopicsController;
 use JTZL\Bulletin\Asset\AssetManager;
 use JTZL\Bulletin\Asset\TakeoverScriptSuppressor;
 use JTZL\Bulletin\Chrome\AdminBar;
+use JTZL\Bulletin\Chrome\ComposerSettings;
 use JTZL\Bulletin\Chrome\DocumentTitle;
 use JTZL\Bulletin\Chrome\PasswordForm;
 use JTZL\Bulletin\Chrome\ProtectedTitle;
@@ -332,9 +333,9 @@ class Bootstrap {
 		$this->wp()->add_filter( 'bbp_before_get_user_favorites_link_parse_args', array( $row_labels, 'filter_favorite_args' ) );
 		$this->wp()->add_filter( 'bbp_before_paginate_links_parse_args', array( $row_labels, 'filter_pagination_args' ) );
 
-		// And withhold the per-reply "Reply" link, whose destination is a takeover
-		// single-topic screen and therefore has no composer to arrive at until P4
-		// (see Chrome\ReplyToLink — delete it with that phase).
+		// And take bbPress's inline handler off the per-reply "Reply To" link on the
+		// takeover tier, where the script that would answer it is suppressed and the
+		// href is the whole mechanism (see Chrome\ReplyToLink).
 		$reply_to = $this->container->get( ReplyToLink::class );
 		assert( $reply_to instanceof ReplyToLink );
 
@@ -357,6 +358,15 @@ class Bootstrap {
 		assert( $doc_title instanceof DocumentTitle );
 
 		$this->wp()->add_filter( 'document_title_parts', array( $doc_title, 'filter_document_title_parts' ), 100 );
+
+		// And trim the editor bbPress hands the composer: one button off the formatting
+		// strip, and a textarea that does not spend two-thirds of a phone screen being
+		// empty (see Chrome\ComposerSettings).
+		$composer = $this->container->get( ComposerSettings::class );
+		assert( $composer instanceof ComposerSettings );
+
+		$this->wp()->add_filter( 'bbp_get_quicktags_settings', array( $composer, 'filter_quicktags' ) );
+		$this->wp()->add_filter( 'bbp_after_get_the_content_parse_args', array( $composer, 'filter_content_args' ) );
 	}
 
 	/**
