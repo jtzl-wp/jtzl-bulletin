@@ -42,11 +42,20 @@ use JTZL\Bulletin\Screen\ScreenTier;
  * names the forum instead of narrating its configuration.
  *
  * Scoped to `ScreenTier::None` passing through, on the same principle as
- * Chrome\AdminBar: off our screens — every non-bbPress page, and the edit forms the
- * posting phase excludes, which is exactly where an editor *wants* the admin
- * vocabulary — WordPress's default is left alone.
+ * Chrome\AdminBar: off our screens — every non-bbPress page, and forum create/edit —
+ * WordPress's default is left alone.
+ *
+ * ⚠ **0.5.0 brought topic and reply edit onto the reskin tier, so the prefix is
+ * stripped there now too.** Checked before allowing it rather than after: neither
+ * `form-topic.php` nor `form-reply.php` carries a password field — both offer a
+ * status dropdown and nothing else about visibility — so `post_password` is not
+ * editable from these screens and the prefix was never an editing affordance on
+ * them. It appeared only in the chrome around the form (the tab, the app bar, the
+ * breadcrumb), which is the same place, and for the same reason, it was removed from
+ * everywhere else.
  *
  * @since 0.3.0
+ * @since 0.5.0 The topic and reply edit forms reskin, so the prefix goes there too.
  */
 class ProtectedTitle {
 

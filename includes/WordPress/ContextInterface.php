@@ -127,66 +127,19 @@ interface ContextInterface {
 	public function is_thread_replies_active(): bool;
 
 	/**
-	 * Whether this is the edit-topic form.
-	 *
-	 * One of the posting/edit forms the reskin tier excludes (owned by the posting
-	 * phase, P4), so a request for it is left to the active theme.
-	 *
-	 * @since 0.3.0
-	 *
-	 * @return bool
-	 */
-	public function is_topic_edit(): bool;
-
-	/**
-	 * Whether this is the edit-reply form.
-	 *
-	 * @since 0.3.0
-	 *
-	 * @return bool
-	 */
-	public function is_reply_edit(): bool;
-
-	/**
 	 * Whether this is the create/edit-forum form (keymaster administration).
+	 *
+	 * The one bbPress front-end screen Bulletin still leaves to the active theme, and
+	 * so the only edit conditional the seam needs. Topic edit, reply edit and the
+	 * three moderation forms built on them (merge, split, move) all reskin now, which
+	 * they do by falling through Screen\ScreenClassifier rather than by being asked
+	 * about — so asking about them is surface with no caller.
 	 *
 	 * @since 0.3.0
 	 *
 	 * @return bool
 	 */
 	public function is_forum_edit(): bool;
-
-	/**
-	 * Whether the request is bbPress's merge-topic form.
-	 *
-	 * The three moderation forms are each built on top of an edit request — merge and
-	 * split are `bbp_is_topic_edit()` plus an `action` parameter, move is
-	 * `bbp_is_reply_edit()` plus one — so they need asking about separately from the
-	 * edit screens the posting phase owns (issue #36).
-	 *
-	 * @since 0.3.0
-	 *
-	 * @return bool
-	 */
-	public function is_topic_merge(): bool;
-
-	/**
-	 * Whether the request is bbPress's split-topic form.
-	 *
-	 * @since 0.3.0
-	 *
-	 * @return bool
-	 */
-	public function is_topic_split(): bool;
-
-	/**
-	 * Whether the request is bbPress's move-reply form.
-	 *
-	 * @since 0.3.0
-	 *
-	 * @return bool
-	 */
-	public function is_reply_move(): bool;
 
 	/**
 	 * Whether this is a member profile's Subscriptions tab.

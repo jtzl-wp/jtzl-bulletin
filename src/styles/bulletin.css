@@ -2492,8 +2492,9 @@ body.admin-bar .bltn-app {
 
    ⚠ The account forms are NOT excluded from this tier, though #90 assumed they were.
    `is_bbpress()` ends on `bbp_has_shortcode()`, so a page carrying [bbp-login] IS a
-   bbPress screen; ScreenClassifier excludes only the topic/reply/forum edit forms, so
-   the reskin catch-all wraps it. Verified in-shell: the login form rendered flush to
+   bbPress screen; ScreenClassifier excludes only forum create/edit (it excluded the
+   topic and reply edit forms too until P4 rendered them), so the reskin catch-all
+   wraps it. Verified in-shell: the login form rendered flush to
    both screen edges with no gutter at all, because it is the one form bbPress puts
    OUTSIDE #bbpress-forums — and every rule on this tier, the gutter included, is
    anchored on that ID.
@@ -2579,6 +2580,22 @@ body.admin-bar .bltn-app {
 	text-transform: uppercase;
 	color: var(--bltn-ink-3);
 }
+/* ⚠ A label inside a legend is a control's name, not a group's. The edit forms put
+   the revision-log checkbox and its own `<label for="bbp_log_reply_edit">` INSIDE the
+   `<legend>` (common/template.php:1745, :1782), so the section-label voice above
+   painted "Keep a log of this edit:" as a heading — 10.5px uppercase in ink-3, beside
+   "Notify the author of follow-up replies via email" at 13.5px sentence case, two
+   checkboxes on one form speaking in two registers. The legend keeps its voice; a
+   label inside it gets the tier's ordinary one back. Only reachable since P4 brought
+   the edit forms onto this tier: no other reskin screen nests a control in a legend. */
+.bltn-reskin .bltn-reskin__body #bbpress-forums fieldset.bbp-form legend label {
+	font-size: 13.5px;
+	font-weight: 400;
+	letter-spacing: normal;
+	text-transform: none;
+	color: var(--bltn-ink);
+}
+
 /* The account forms' labels, reflowed above their fields — bbPress gives them a
    140px inline-block column, which is the same desktop shape #88 took off the profile
    edit, on the one form that renders outside #bbpress-forums. The checkbox row is
@@ -2819,6 +2836,31 @@ body.admin-bar .bltn-app {
 	   is not a `padding-inline-end` declaration. */
 	--bltn-field-inline-end: 36px;
 }
+/* The forum picker, back to the width of the two selects beneath it. bbPress caps it
+   at `#bbpress-forums fieldset select#bbp_forum_id { max-width: 200px }` — a desktop
+   measure for a column of forum names — and on a 390px screen that left "Forum:" at
+   200px directly above "Topic Type:" and "Topic Status:" at 350px: three pickers on
+   one form at two widths.
+
+   ⚠ **This one is matched on its id, and that is not a style choice.** Every other
+   field rule on this tier reaches its controls through `fieldset.bbp-form`, and that
+   is deliberately narrow (see the three-branch note above). It is not enough here:
+   bbPress spends TWO ids on this single element, so a selector carrying one id and
+   four classes loses to it outright — measured at 200px with the field rule matching
+   and apparently outweighing it. Specificity counts ids first, and no number of
+   classes reaches past a second id.
+
+   So this is a rule about one element by name, which the tier otherwise avoids. It is
+   the only control bbPress singles out this way; if a second appears, they belong in
+   one selector list here rather than in a widened tail above. */
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	fieldset.bbp-form
+	select#bbp_forum_id {
+	max-inline-size: 100%;
+}
+
 /* Username is `disabled` on this form — bbPress will not change a login. Dressed
    like every editable field it read as one; muted, it reads as the fact it is. */
 .bltn-reskin
@@ -2829,6 +2871,134 @@ body.admin-bar .bltn-app {
 	background-color: var(--bltn-bg);
 	color: var(--bltn-ink-2);
 	cursor: not-allowed;
+}
+
+/* An in-form notice is not an empty state, and until P4 nothing could tell them
+   apart. The empty-state voice above claims EVERY classless `div.bbp-template-notice`
+   on the tier, on the stated premise that the plain variant "is only ever 'no
+   topics/replies/forums were found here'". That premise expired the moment the edit
+   forms arrived here: form-topic.php and form-reply.php each emit two classless
+   notices of their own — "This forum is marked as closed to new topics, however your
+   posting capabilities still allow you to create a topic", and "Your account has the
+   ability to post unrestricted HTML content" (topics/form-topic.php:58, :68). Both
+   inherited the centred 15px serif meant for an empty screen, which on a form made an
+   administrator's footnote the loudest thing above the fields.
+
+   They take the `.info` voice instead of a third one. That is the same *kind* of
+   statement — a fact about this screen's context, addressed to the person on it — as
+   "This topic has 2 replies, 3 voices", which already reads that way six lines up the
+   same screen. bbPress simply did not give these two a class to say so.
+
+   Scoped to `fieldset.bbp-form` rather than to the message, so a notice a plugin adds
+   to a form lands on the same footing rather than on the empty state's.
+
+   ⚠ **The four severity variants are excluded by `:not()`, and the reason is a
+   regression this rule caused before the exclusion was added.** Written to match every
+   in-form notice, it outweighed `div.bbp-template-notice.error li`'s caution colour —
+   one id and four classes against one id and two — and drained the red out of "This
+   process cannot be undone" on the split screen, the one sentence on this tier whose
+   whole job is to be the colour it is (#101). Excluding the variants rather than
+   restating their colour keeps the severity rules the only place severity is decided;
+   restating it would have made this rule a second source of truth for it.
+
+   ⚠ **This also changes two screens that shipped in P2**, and it changes them for the
+   better rather than incidentally: merge and split each print half their explanation
+   as an `.info` notice and the other half as a classless one, so the same explanation
+   arrived in two voices — a grey sans panel above a centred serif paragraph. Only a
+   moderator ever saw it, which is why it shipped. Both halves now read alike. */
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	fieldset.bbp-form
+	div.bbp-template-notice:not(.info, .important, .error, .warning) {
+	padding: 12px 14px;
+	border-radius: 10px;
+	background: var(--bltn-bg);
+	color: var(--bltn-ink-2);
+	text-align: start;
+}
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	fieldset.bbp-form
+	div.bbp-template-notice:not(.info, .important, .error, .warning)
+	li {
+	font-family: var(--bltn-sans);
+	font-size: 13.5px;
+	color: var(--bltn-ink-2);
+}
+
+/* The formatting strip. bbPress asks WordPress for quicktags — `bbp_use_wp_editor()`
+   defaults to 1 and `bbp_get_the_content()` passes `tinymce => false`, so what lands
+   is a textarea with core's eleven-button HTML bar above it, dressed by core's own
+   editor.css and `buttons` CSS. Neither is a theme stylesheet, so reskin suppression
+   leaves both alone (by design: this tier keeps the CSS that makes bbPress legible),
+   and until P4 no screen on this tier rendered the markup they dress.
+
+   What arrived: a grey slab in its own bordered box above a rounded field, its
+   controls 11px Arial with a transparent fill — the one place on the tier where a run
+   of controls says nothing about being controls.
+
+   The slab goes. The bar is part of the field group, not a toolbar over a document,
+   so it sits directly on the page and the field below stays the only box. Each button
+   takes the tier's secondary voice — the profile's Generate Password step, 36px and
+   the wash — because that is exactly what these are: helpers beside a field, not the
+   thing the screen exists to do.
+
+   ⚠ `min-inline-size` is the touch floor (#76's 24px) and not the look: `B` and `I`
+   are one character wide and would otherwise land at 25px of mostly padding. 36px is
+   the secondary control's own step, so the run reads as one scale rather than as
+   eleven different widths.
+
+   Core's own strikethrough on DEL and underline on LINK are kept. They are the button
+   previewing its own effect, which is information a label cannot carry, and this
+   project's rule is to keep what bbPress and WordPress already say well. */
+.bltn-reskin .bltn-reskin__body #bbpress-forums .wp-editor-container {
+	border: 0;
+	background: none;
+}
+.bltn-reskin .bltn-reskin__body #bbpress-forums .quicktags-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	padding: 0 0 8px;
+	border: 0;
+	border-radius: 0;
+	background: none;
+}
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	.quicktags-toolbar
+	input[type="button"] {
+	appearance: none;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-inline-size: 36px;
+	min-block-size: 36px;
+	block-size: auto;
+	margin: 0;
+	padding: 0 10px;
+	border: 0;
+	border-radius: 10px;
+	background: var(--bltn-wash);
+	color: var(--bltn-accent-ink);
+	font-family: var(--bltn-sans);
+	font-size: 13px;
+	font-weight: 600;
+	line-height: 1.2;
+	text-shadow: none;
+	box-shadow: none;
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+.bltn-reskin
+	.bltn-reskin__body
+	#bbpress-forums
+	.quicktags-toolbar
+	input[type="button"]:hover {
+	background: color-mix(in srgb, var(--bltn-accent) 12%, var(--bltn-wash));
 }
 
 /* Buttons, split by the semantics the markup already carries: `type="submit"` is the

@@ -162,28 +162,6 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
-	 * Whether this is the edit-topic form.
-	 *
-	 * @since 0.3.0
-	 *
-	 * @return bool
-	 */
-	public function is_topic_edit(): bool {
-		return (bool) bbp_is_topic_edit();
-	}
-
-	/**
-	 * Whether this is the edit-reply form.
-	 *
-	 * @since 0.3.0
-	 *
-	 * @return bool
-	 */
-	public function is_reply_edit(): bool {
-		return (bool) bbp_is_reply_edit();
-	}
-
-	/**
 	 * Whether this is the create/edit-forum form (keymaster administration).
 	 *
 	 * @since 0.3.0
@@ -192,39 +170,6 @@ class WordPressContext implements ContextInterface {
 	 */
 	public function is_forum_edit(): bool {
 		return (bool) bbp_is_forum_edit();
-	}
-
-	/**
-	 * Whether the request is bbPress's merge-topic form.
-	 *
-	 * @since 0.3.0
-	 *
-	 * @return bool
-	 */
-	public function is_topic_merge(): bool {
-		return (bool) bbp_is_topic_merge();
-	}
-
-	/**
-	 * Whether the request is bbPress's split-topic form.
-	 *
-	 * @since 0.3.0
-	 *
-	 * @return bool
-	 */
-	public function is_topic_split(): bool {
-		return (bool) bbp_is_topic_split();
-	}
-
-	/**
-	 * Whether the request is bbPress's move-reply form.
-	 *
-	 * @since 0.3.0
-	 *
-	 * @return bool
-	 */
-	public function is_reply_move(): bool {
-		return (bool) bbp_is_reply_move();
 	}
 
 	/**

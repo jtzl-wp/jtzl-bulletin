@@ -28,10 +28,21 @@ use JTZL\Bulletin\WordPress\ContextInterface;
  *   value passes through untouched, so their own "Show Toolbar when viewing site"
  *   preference still decides — we suppress a default, we don't override a choice.
  * - It leaves screens we don't own alone (ScreenTier::None): every non-bbPress page,
- *   and the edit forms excluded for the posting phase, which is precisely where a
- *   keymaster is administrating rather than reading.
+ *   and forum create/edit, which is precisely where a keymaster is administrating
+ *   rather than reading.
+ *
+ * ⚠ **0.5.0 changed which screens that second clause covers, and the change was
+ * decided rather than inherited.** Topic and reply edit used to be excluded too, so
+ * they kept the bar; P4 reskins them, so a moderator without `manage_options` now
+ * loses it there. That is the right outcome on this class's own stated reasoning —
+ * "forum moderation belongs in the shell, in Bulletin's own affordances (issue #36),
+ * not in WordPress's chrome" — which already governed merge, split and move, screens
+ * of exactly the same kind that have reskinned since #36. An administrator is
+ * unaffected either way: `manage_options` passes the incoming value straight through.
  *
  * @since 0.3.0
+ * @since 0.5.0 Only forum create/edit is left to the theme, so only it keeps the
+ *              default bar for a non-administrator.
  */
 class AdminBar {
 
