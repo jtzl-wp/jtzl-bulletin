@@ -347,6 +347,58 @@ interface ContextInterface {
 	public function get_public_reply_statuses(): array;
 
 	/**
+	 * The status bbPress gives a post held for moderation.
+	 *
+	 * Asked for rather than written as `'pending'` for the same reason the public
+	 * status lists are: it is bbPress's vocabulary, filterable at source, and this
+	 * plugin's job is to speak it rather than to restate it.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @return string
+	 */
+	public function get_pending_status_id(): string;
+
+	/**
+	 * The user ID a post is attributed to, or 0.
+	 *
+	 * Zero is a real answer, not an error: an anonymous post carries `post_author = 0`
+	 * and its identity in post meta, which is why every caller here treats zero as
+	 * "nobody" rather than as a user to match.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param int $post_id Post to ask about.
+	 * @return int
+	 */
+	public function get_post_author( int $post_id ): int;
+
+	/**
+	 * The post statuses WordPress admits to a status-less query only because it
+	 * believes the request is an admin screen.
+	 *
+	 * Asked of WordPress rather than written out, because the list is what the
+	 * defect is defined against: `Query\ProtectedStatusGuard` subtracts exactly what
+	 * `WP_Query`'s `is_admin` branch added, and a hard-coded copy would drift from it
+	 * the moment a plugin registers another protected status.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @return string[]
+	 */
+	public function get_admin_only_statuses(): array;
+
+	/**
+	 * A WHERE fragment withholding every row in a list of statuses.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param string[] $statuses Statuses to withhold.
+	 * @return string A fragment beginning with AND, or '' if there is nothing to say.
+	 */
+	public function status_exclusion_where_clause( array $statuses ): string;
+
+	/**
 	 * Login URL, optionally with a redirect target.
 	 *
 	 * @since 0.1.0
@@ -446,6 +498,33 @@ interface ContextInterface {
 	 * @return int Reply ID, or 0 when the request named none.
 	 */
 	public function get_requested_reply_to(): int;
+
+	/**
+	 * Whether this request carries a query argument at all.
+	 *
+	 * **Presence only, deliberately.** The one caller is the held-reply
+	 * acknowledgement, which must never distinguish `pending` from `spam` in
+	 * anything a reader can read (§3 decision 6) — so the value is not returned
+	 * here, and there is nothing for a later caller to start branching on.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param string $key Argument name.
+	 * @return bool
+	 */
+	public function has_query_flag( string $key ): bool;
+
+	/**
+	 * A URL with one argument added.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param string $key   Argument name.
+	 * @param string $value Argument value.
+	 * @param string $url   URL to add it to.
+	 * @return string
+	 */
+	public function add_query_arg( string $key, string $value, string $url ): string;
 
 	/**
 	 * Whether bbPress is holding an error to show on this request.
@@ -802,11 +881,17 @@ interface ContextInterface {
 	 *
 	 * @since 0.3.0
 	 *
-	 * @param int $topic_id Topic to read.
+	 * @param int                 $topic_id   Topic to read.
+	 * @param array<string,mixed> $extra_args Arguments merged into the query before
+	 *                                        bbPress parses it. The reading view
+	 *                                        passes Query\PendingVisibility's marker
+	 *                                        here, because the seam may not reach the
+	 *                                        Query layer to arm itself and the two
+	 *                                        reply queries have to agree.
 	 * @return array<int,int> Reply ID => parent reply ID (0 for a reply to the
 	 *                        thread), in (date, ID) order.
 	 */
-	public function get_reply_parents( int $topic_id ): array;
+	public function get_reply_parents( int $topic_id, array $extra_args = array() ): array;
 
 	/**
 	 * ID of the topic currently in the loop.
@@ -1488,6 +1573,86 @@ interface ContextInterface {
 	 * @return string A fragment beginning with AND, or '' if there is nothing to say.
 	 */
 	public function reply_parent_where_clause( string $reply_post_type, string $topic_post_type, array $topic_statuses ): string;
+
+	/**
+	 * A WHERE clause rewritten to *also* admit one reader's own replies held for
+	 * moderation — and nothing else, ever.
+	 *
+	 * ## Why this widens instead of narrowing
+	 *
+	 * `pending` is a WordPress *protected* status. The obvious move — naming it in
+	 * the query's `post_status` — was measured on bbPress 2.6.14 and is a
+	 * disclosure. WP_Query author-restricts only its *private* bucket, and only
+	 * under `perm => readable` (`class-wp-query.php:2688`); a protected status goes
+	 * to the unrestricted bucket, so `post_status => array( 'publish', 'pending' )`
+	 * emits
+	 *
+	 * ```sql
+	 * AND post_type = 'reply' AND ( post_status = 'publish' OR post_status = 'pending' )
+	 * ```
+	 *
+	 * — every held reply on the site, to a logged-out visitor. Setting `post_status`
+	 * at all is also a regression on its own: with it unset, WP builds
+	 * `publish OR closed OR ( post_author = me AND private ) OR ( post_author = me AND
+	 * hidden )`, and naming a list replaces all of that.
+	 *
+	 * So the existing clause is never touched. One fully-qualified predicate is
+	 * OR-ed beside it, naming the post type, the status, the author and the topic —
+	 * every one of them bound. There is no argument to this method that can widen it
+	 * past one reader's own held replies in one thread, which is the property that
+	 * makes it reviewable: **its failure mode is a missing row, never a leak.** A
+	 * widen-then-subtract pair (`Query\SearchVisibility`'s shape) fails the other
+	 * way, and on this surface that is the difference between a defect and a
+	 * disclosure.
+	 *
+	 * ## Two guards, both refusing rather than guessing
+	 *
+	 * - **`$author_id` must be positive.** That is the logged-out rule and the
+	 *   anonymous carve-out in one line: an anonymous reply carries `post_author = 0`
+	 *   and its identity in post meta, so a zero would match every anonymous held
+	 *   reply in the thread rather than nobody's.
+	 * - **`$where` must already begin with `AND`.** The rewrite wraps it as
+	 *   `AND ( 1=1 <where> OR ( mine ) )`, and `1=1` alone is `TRUE` — so a `$where`
+	 *   that constrains nothing would turn the whole query into a full-table read.
+	 *   It cannot happen for the two queries that arm this (both set a post type),
+	 *   and it is refused anyway.
+	 *
+	 * The wrap is what keeps a *later* `posts_where` filter honest. Appending
+	 * ` OR ( mine )` bare would leave `A AND B OR C`, and a plugin that then appends
+	 * ` AND X` would narrow only `C` — letting `A AND B` escape a restriction its
+	 * author meant for the whole query. Wrapped, anything appended after us applies
+	 * to both sides.
+	 *
+	 * The reader's ID is bound *into the SQL* rather than applied to the rows
+	 * afterwards. That is deliberate beyond taste: the query differs per reader, so
+	 * a persistent object cache keys it per reader too. Deciding visibility in PHP
+	 * after a shared query would leave one reader's held reply in a cache entry
+	 * another reader can be served.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param string $where           The clause built so far.
+	 * @param string $reply_post_type Post type the predicate admits.
+	 * @param string $pending_status  Status the predicate admits.
+	 * @param int    $author_id       The one author whose held replies are admitted.
+	 * @param int    $topic_id        The one thread they are admitted in.
+	 * @param int[]  $ids             Further narrows the predicate to these reply
+	 *                                IDs. The threaded reading view MUST pass its
+	 *                                page slice: its page query is scoped by
+	 *                                `post__in`, which the predicate would otherwise
+	 *                                escape — putting the held reply on every page.
+	 *                                Empty means "no ID constraint", which is right
+	 *                                only where `post_parent` is the whole scope.
+	 * @return string The rewritten clause, or $where untouched if either guard fired.
+	 */
+	public function own_pending_where_clause(
+		string $where,
+		string $reply_post_type,
+		string $pending_status,
+		int $author_id,
+		int $topic_id,
+		array $ids
+	): string;
 
 	/**
 	 * Read a query variable off a query object.

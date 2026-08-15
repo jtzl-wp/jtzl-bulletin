@@ -371,6 +371,72 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * The status bbPress gives a post held for moderation.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @return string
+	 */
+	public function get_pending_status_id(): string {
+		return (string) bbp_get_pending_status_id();
+	}
+
+	/**
+	 * The user ID a post is attributed to, or 0.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param int $post_id Post to ask about.
+	 * @return int
+	 */
+	public function get_post_author( int $post_id ): int {
+		return (int) get_post_field( 'post_author', $post_id );
+	}
+
+	/**
+	 * The post statuses WordPress admits only because it believes this is an admin
+	 * screen — the exact list `WP_Query`'s `is_admin` branch adds
+	 * (`class-wp-query.php:2735`).
+	 *
+	 * @since 0.5.0
+	 *
+	 * @return string[]
+	 */
+	public function get_admin_only_statuses(): array {
+		return array_values(
+			get_post_stati(
+				array(
+					'protected'              => true,
+					'show_in_admin_all_list' => true,
+				)
+			)
+		);
+	}
+
+	/**
+	 * A WHERE fragment withholding every row in a list of statuses.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param string[] $statuses Statuses to withhold.
+	 * @return string
+	 */
+	public function status_exclusion_where_clause( array $statuses ): string {
+		global $wpdb;
+
+		if ( array() === $statuses ) {
+			return '';
+		}
+
+		$placeholders = implode( ', ', array_fill( 0, count( $statuses ), '%s' ) );
+
+		return (string) $wpdb->prepare(
+			" AND {$wpdb->posts}.post_status NOT IN ( {$placeholders} )", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			array_values( $statuses )
+		);
+	}
+
+	/**
 	 * Render one of bbPress's admin-link sets, optionally minus its `reply` member,
 	 * and report emptiness honestly.
 	 *
@@ -554,6 +620,37 @@ class WordPressContext implements ContextInterface {
 		$raw = $_REQUEST['bbp_reply_to'] ?? 0;
 
 		return (int) bbp_validate_reply_to( absint( $raw ) );
+	}
+
+	/**
+	 * Whether this request carries a query argument at all.
+	 *
+	 * Nonce-free, and safe to be: the answer decides whether one fixed, translated
+	 * sentence is printed. The value is never read, so there is nothing to escape
+	 * and nothing an attacker could put in a link that the page would repeat back.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param string $key Argument name.
+	 * @return bool
+	 */
+	public function has_query_flag( string $key ): bool {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- presence of a flag, value never read; see the docblock.
+		return isset( $_GET[ $key ] );
+	}
+
+	/**
+	 * A URL with one argument added.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param string $key   Argument name.
+	 * @param string $value Argument value.
+	 * @param string $url   URL to add it to.
+	 * @return string
+	 */
+	public function add_query_arg( string $key, string $value, string $url ): string {
+		return (string) add_query_arg( $key, rawurlencode( $value ), $url );
 	}
 
 	/**
@@ -950,10 +1047,12 @@ class WordPressContext implements ContextInterface {
 	 *
 	 * @since 0.3.0
 	 *
-	 * @param int $topic_id Topic to read.
+	 * @param int                 $topic_id   Topic to read.
+	 * @param array<string,mixed> $extra_args Arguments merged in before bbPress
+	 *                                        parses them; see the interface.
 	 * @return array<int,int> Reply ID => parent reply ID, in (date, ID) order.
 	 */
-	public function get_reply_parents( int $topic_id ): array {
+	public function get_reply_parents( int $topic_id, array $extra_args = array() ): array {
 		$args = array(
 			'post_parent'            => $topic_id,
 			'post_type'              => bbp_get_reply_post_type(),
@@ -978,6 +1077,16 @@ class WordPressContext implements ContextInterface {
 		} else {
 			$args['perm'] = 'readable';
 		}
+
+		// Merged BEFORE bbp_parse_args, not after, so the caller's arguments are
+		// exposed to `bbp_after_has_replies_parse_args` exactly as they are on the
+		// page query — which reaches the same filter through bbp_has_replies(). The
+		// pending marker is the one that rides here, and the two reply queries
+		// agreeing about it is not cosmetic: the order (and the page count derived
+		// from it) is computed here while the page itself is fetched there, so a
+		// marker honoured in one place and stripped in the other is CLAUDE.md trap #4
+		// with a held reply as the tied row.
+		$args = array_merge( $args, $extra_args );
 
 		// Run the same filters bbp_has_replies() runs, so a site that narrows the
 		// reply query narrows the reading order with it. bbPress hooks these itself
@@ -2117,6 +2226,87 @@ class WordPressContext implements ContextInterface {
 		return (string) $wpdb->prepare(
 			" AND ( {$wpdb->posts}.post_type != %s OR NOT EXISTS ( SELECT 1 FROM {$wpdb->posts} AS bltn_parent WHERE bltn_parent.ID = {$wpdb->posts}.post_parent AND bltn_parent.post_type = %s AND ( bltn_parent.post_status NOT IN ( {$placeholders} ) OR ( bltn_parent.post_password <> '' AND bltn_parent.post_password IS NOT NULL ) ) ) )", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			array_merge( array( $reply_post_type, $topic_post_type ), array_values( $topic_statuses ) )
+		);
+	}
+
+	/**
+	 * A WHERE clause rewritten to also admit one reader's own held replies.
+	 *
+	 * Widens rather than narrows, so its failure mode is a missing row and never a
+	 * disclosure; see ContextInterface for the measurement that ruled out naming
+	 * `pending` in `post_status`, and for both guards.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param string $where           The clause built so far.
+	 * @param string $reply_post_type Post type the predicate admits.
+	 * @param string $pending_status  Status the predicate admits.
+	 * @param int    $author_id       The one author whose held replies are admitted.
+	 * @param int    $topic_id        The one thread they are admitted in.
+	 * @param int[]  $ids             Optional further narrowing to these reply IDs.
+	 * @return string
+	 */
+	public function own_pending_where_clause(
+		string $where,
+		string $reply_post_type,
+		string $pending_status,
+		int $author_id,
+		int $topic_id,
+		array $ids
+	): string {
+		global $wpdb;
+
+		if ( '' === $reply_post_type || '' === $pending_status || $author_id < 1 || $topic_id < 1 ) {
+			return $where;
+		}
+
+		// The clause has to already be a conjunction for `1=1 <where>` to mean what
+		// it reads as. Refusing is the safe half of the trade: a held reply goes
+		// unshown, rather than `1=1 OR ( … )` returning the posts table.
+		if ( 1 !== preg_match( '/^\s*AND\s/i', $where ) ) {
+			return $where;
+		}
+
+		$mine = (string) $wpdb->prepare(
+			"{$wpdb->posts}.post_type = %s AND {$wpdb->posts}.post_status = %s AND {$wpdb->posts}.post_author = %d AND {$wpdb->posts}.post_parent = %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$reply_post_type,
+			$pending_status,
+			$author_id,
+			$topic_id
+		);
+
+		$mine .= $this->id_predicate( $ids );
+
+		return " AND ( 1=1 {$where} OR ( {$mine} ) )";
+	}
+
+	/**
+	 * ` AND ID IN ( … )`, or '' for an unconstrained list.
+	 *
+	 * Split out because the empty case is the dangerous one and deserves to be
+	 * visible: the threaded page query is scoped by `post__in` alone, so a caller
+	 * that omits its slice gets a predicate that escapes the page and repeats the
+	 * held reply on every one of them. `array( 0 )` — which Query\ReplyQuery already
+	 * uses for a page past the end — is a list, not an absence, and correctly
+	 * matches nothing.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param int[] $ids Reply IDs to narrow to.
+	 * @return string
+	 */
+	private function id_predicate( array $ids ): string {
+		global $wpdb;
+
+		if ( array() === $ids ) {
+			return '';
+		}
+
+		$clean = array_map( 'absint', $ids );
+
+		return (string) $wpdb->prepare(
+			" AND {$wpdb->posts}.ID IN ( " . implode( ', ', array_fill( 0, count( $clean ), '%d' ) ) . ' )', // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$clean
 		);
 	}
 

@@ -681,10 +681,33 @@ function initComposeSlot(): void {
 	collapse();
 }
 
+/**
+ * Take the held-reply acknowledgement out of the address bar once it has been read.
+ *
+ * The flag is how the server knows to print "Your reply is awaiting review" on the
+ * screen bbPress redirects to (View\HeldNotice). Left in place it would re-announce
+ * on every reload and travel with a shared link, so it is stripped the moment the
+ * page it belongs to has rendered.
+ *
+ * `replaceState`, not `pushState`: this is not a place in the reader's history, and
+ * a Back that returned to the same screen wearing the same banner would be worse
+ * than not cleaning up at all. The message itself is untouched — removing the
+ * sentence the reader is mid-way through reading is the one thing this must not do.
+ */
+function stripHeldFlag(): void {
+	const url = new URL(window.location.href);
+	if (!url.searchParams.has('bltn_held')) {
+		return;
+	}
+	url.searchParams.delete('bltn_held');
+	window.history.replaceState(window.history.state, '', url.toString());
+}
+
 // Moderation first, and outside the config gate: it enhances markup that already works
 // without it, so it must not be lost to a problem in the load-more wiring.
 initModerationToggle();
 initComposeSlot();
+stripHeldFlag();
 
 // This bundle is only ever enqueued in a browser, and initReading() itself
 // no-ops without a BLTN config, so it is the single gate on whether there is

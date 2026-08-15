@@ -76,16 +76,25 @@ class ComposeSlot {
 	private BbPressForm $form;
 
 	/**
+	 * The acknowledgement a held reply gets on the redirect.
+	 *
+	 * @var HeldNotice
+	 */
+	private HeldNotice $held;
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 0.5.0
 	 *
 	 * @param ContextInterface $wp   WordPress/bbPress seam.
 	 * @param BbPressForm      $form Renders bbPress's own form templates.
+	 * @param HeldNotice       $held Acknowledgement for a reply held for moderation.
 	 */
-	public function __construct( ContextInterface $wp, BbPressForm $form ) {
+	public function __construct( ContextInterface $wp, BbPressForm $form, HeldNotice $held ) {
 		$this->wp   = $wp;
 		$this->form = $form;
+		$this->held = $held;
 	}
 
 	/**
@@ -107,6 +116,11 @@ class ComposeSlot {
 	 * @param int $forum_id Forum it belongs to.
 	 */
 	public function render( int $topic_id, int $forum_id ): void {
+		// Before the branch, not inside it. The acknowledgement is about the reply
+		// just written, and it is owed whatever the slot now shows — a moderator
+		// closing the thread between the submit and the redirect must not swallow it.
+		$this->held->render();
+
 		if ( $this->wp->can_access_create_reply_form() ) {
 			$this->composer();
 			return;

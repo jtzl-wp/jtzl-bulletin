@@ -99,7 +99,13 @@ class ReplyView {
 	public function render( int $topic_id ): void {
 		$reply_id = $this->wp->get_reply_id();
 
-		printf( '<article class="bltn-post" id="post-%s">', esc_attr( (string) $reply_id ) );
+		$held = $this->wp->get_post_status( $reply_id ) === $this->wp->get_pending_status_id();
+
+		printf(
+			'<article class="%1$s" id="post-%2$s">',
+			esc_attr( $held ? 'bltn-post bltn-post--pending' : 'bltn-post' ),
+			esc_attr( (string) $reply_id )
+		);
 		$this->render_reply_context( $reply_id, $topic_id );
 		echo '<div class="bltn-byline">';
 		printf(
@@ -123,6 +129,22 @@ class ReplyView {
 			esc_html__( 'Permalink to reply', 'jtzl-bulletin' ),
 			esc_html( $this->wp->get_reply_post_date( $reply_id, true ) )
 		);
+		// A reply held for moderation is in this document for exactly one reader — its
+		// author (Query\PendingVisibility) — so the chip is not a permission label but
+		// an answer to "why is my reply not like the others". It sits against the
+		// timestamp rather than in the byline's trailing slot, because it is about the
+		// post rather than an action on it; the approved design shows it there.
+		//
+		// Rendered before the Edit control on purpose: View\AuthorEdit declines on a
+		// held post, so the two never appear together, and the order here is what makes
+		// that legible to read rather than a coincidence of two conditions.
+		if ( $held ) {
+			printf(
+				'<span class="bltn-chip bltn-chip--pending">%s</span>',
+				esc_html__( 'Awaiting review', 'jtzl-bulletin' )
+			);
+		}
+
 		// Last in the byline, where the flex row's trailing slot is, and rendered here
 		// rather than in the template so replies the load-more endpoint appends carry it
 		// too — the same reason the moderation row below is built here.

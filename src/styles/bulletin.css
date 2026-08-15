@@ -676,6 +676,30 @@ body.admin-bar .bltn-app {
 	margin-inline-start: auto;
 }
 
+/* A reply held for moderation, rendered for its author and for nobody else
+   (Query\PendingVisibility). Caution IS the right channel: this is a real
+   interruption to what the author expected to happen, which is the one thing
+   --bltn-caution exists to say. Amber would be wrong — #101 gave amber back to
+   unread, and "new to you" and "not yet public" are different facts.
+
+   Hugs the timestamp instead of taking the byline's trailing slot. The slot is
+   where an action goes (the author's Edit); this is a state of the post, and
+   pushing it to the far edge would read as a control. It also never shares the
+   row with that Edit — View\AuthorEdit declines on a held post — so the two are
+   not competing for the slot in the first place.
+
+   The dimming is the whole of the "not yet public" signal on the body: no tint,
+   no rule, no box. A held reply is still the author's own words and still worth
+   reading back; it just is not the same as the ones around it. */
+.bltn-post--pending {
+	opacity: 0.78;
+}
+.bltn-chip--pending {
+	color: var(--bltn-caution);
+	background: color-mix(in srgb, var(--bltn-caution) 8%, transparent);
+	margin-inline-start: 0;
+}
+
 /* The author's own Edit, while the edit window is open (View\AuthorEdit). NOT in the
    moderation tray: putting it there would hand a participant a "Moderate" toggle for
    an ordinary act. It is transient by nature — five minutes by default — so it needs
@@ -868,6 +892,62 @@ body.admin-bar .bltn-app {
 	border: 0;
 	border-top: 1px solid var(--bltn-line);
 	margin: 1.2em 0;
+}
+
+/* The edit record, when an author kept a log of one (bbPress appends it to the
+   reply's own content through `bbp_get_reply_content`, so it lands inside the
+   serif reading column and inherits everything meant for prose).
+
+   Undressed it renders as a bulleted 17px serif paragraph with a 14px avatar
+   stranded on its own line — the loudest thing under a short reply, saying the
+   least. It is a fact ABOUT the post, not part of it, so it takes the byline's
+   voice instead of the body's: quiet sans at the timestamp's size and ink.
+
+   ⚠ **Kept, not hidden**, and that was the choice. P4 gave authors an edit window,
+   and a post that can change silently is a worse forum than one that says it
+   changed — this is the only place a reader learns it did. Subtraction applies to
+   chrome, not to disclosure.
+
+   The avatar goes. At 14px beside 12px text it is a smudge, the byline overhead
+   already says whose post this is, and dropping it puts the sentence on one line
+   instead of three. Its `alt` carries the same name the link does, so nothing is
+   lost to a screen reader either.
+
+   Two selectors because bbPress emits one class for replies and another for
+   topics, and the opening post is a topic. */
+.bltn-post__body .bbp-reply-revision-log,
+.bltn-post__body .bbp-topic-revision-log {
+	margin: 1.1em 0 0;
+	padding: 0;
+	list-style: none;
+	font-family: var(--bltn-sans);
+	font-size: 12px;
+	line-height: 1.5;
+	color: var(--bltn-ink-3);
+}
+.bltn-post__body .bbp-reply-revision-log li,
+.bltn-post__body .bbp-topic-revision-log li {
+	margin: 0;
+}
+.bltn-post__body .bbp-reply-revision-log li + li,
+.bltn-post__body .bbp-topic-revision-log li + li {
+	margin-block-start: 0.35em;
+}
+/* A name in a sentence, not a call to action: no underline, no accent, and it
+   inherits the line's own ink so the eye reads the sentence rather than the link. */
+.bltn-post__body .bbp-reply-revision-log a,
+.bltn-post__body .bbp-topic-revision-log a {
+	color: inherit;
+	font-weight: 600;
+	text-decoration: none;
+}
+.bltn-post__body .bbp-reply-revision-log a:hover,
+.bltn-post__body .bbp-topic-revision-log a:hover {
+	color: var(--bltn-accent-ink);
+}
+.bltn-post__body .bbp-reply-revision-log img,
+.bltn-post__body .bbp-topic-revision-log img {
+	display: none;
 }
 
 /* ---- moderation: a mode, not furniture (issue #36) ----
@@ -1081,6 +1161,20 @@ body.admin-bar .bltn-app {
 	line-height: 1.4;
 	color: var(--bltn-ink-3);
 	text-align: center;
+}
+
+/* Held for review — and here the caution channel IS right, which is exactly the
+   distinction the note above is at pains to draw. A closed thread is a property of
+   the thread; a held reply is an interruption to what this reader just tried to do.
+   Same one line and same centring, one step of colour.
+
+   Left below the composer's own margin rather than given a box: the row it is about
+   already carries the matching chip a screen-length up, and two framed things saying
+   "awaiting review" would be the clutter this product exists to remove. */
+.bltn-compose__note--held {
+	margin-block-end: 14px;
+	font-weight: 600;
+	color: var(--bltn-caution);
 }
 
 /* ---- the composer itself ----------------------------------------------------

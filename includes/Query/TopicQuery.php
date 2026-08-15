@@ -56,14 +56,23 @@ class TopicQuery {
 	private ContextInterface $wp;
 
 	/**
+	 * Keeps WordPress's admin status list out of the topics loop.
+	 *
+	 * @var ProtectedStatusGuard
+	 */
+	private ProtectedStatusGuard $guard;
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param ContextInterface $wp WordPress/bbPress seam.
+	 * @param ContextInterface     $wp    WordPress/bbPress seam.
+	 * @param ProtectedStatusGuard $guard Admin-only statuses, kept out.
 	 */
-	public function __construct( ContextInterface $wp ) {
-		$this->wp = $wp;
+	public function __construct( ContextInterface $wp, ProtectedStatusGuard $guard ) {
+		$this->wp    = $wp;
+		$this->guard = $guard;
 	}
 
 	/**
@@ -164,7 +173,11 @@ class TopicQuery {
 	 * @return array<string,mixed>
 	 */
 	private function base(): array {
-		return array(
+		// Armed here rather than in each of the three builders: they all funnel
+		// through this, and bbp_has_topics() leaves post_status to WordPress — which
+		// hands `draft`, `future` and `pending` topics to anyone inside an AJAX
+		// request. See Query\ProtectedStatusGuard.
+		return $this->guard->marker() + array(
 			'post_type'     => $this->wp->get_topic_post_type(),
 			'show_stickies' => false,
 			'meta_key'      => '_bbp_last_active_time', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- bbPress's own topic ordering key.

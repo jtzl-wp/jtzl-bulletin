@@ -9,11 +9,7 @@
 namespace JTZL\Bulletin;
 
 use DI\Container;
-use JTZL\Bulletin\Ajax\LoadForumsController;
-use JTZL\Bulletin\Ajax\LoadRepliesController;
-use JTZL\Bulletin\Ajax\LoadSubscribedForumsController;
-use JTZL\Bulletin\Ajax\LoadSearchController;
-use JTZL\Bulletin\Ajax\LoadTopicsController;
+use JTZL\Bulletin\Ajax\Endpoints;
 use JTZL\Bulletin\Asset\AssetManager;
 use JTZL\Bulletin\Asset\TakeoverScriptSuppressor;
 use JTZL\Bulletin\Chrome\AdminBar;
@@ -22,10 +18,13 @@ use JTZL\Bulletin\Chrome\DocumentTitle;
 use JTZL\Bulletin\Chrome\PasswordForm;
 use JTZL\Bulletin\Chrome\ProtectedTitle;
 use JTZL\Bulletin\Chrome\ReplyToLink;
+use JTZL\Bulletin\Chrome\RevisionLogStop;
 use JTZL\Bulletin\Chrome\RowActionLabels;
 use JTZL\Bulletin\Chrome\SubForumCountLabels;
 use JTZL\Bulletin\Chrome\UnreadClasses;
 use JTZL\Bulletin\Database\Migrator;
+use JTZL\Bulletin\Query\PendingVisibility;
+use JTZL\Bulletin\Query\ProtectedStatusGuard;
 use JTZL\Bulletin\Query\SearchVisibility;
 use JTZL\Bulletin\Query\StableOrder;
 use JTZL\Bulletin\Query\StickyHoisting;
@@ -33,6 +32,7 @@ use JTZL\Bulletin\Query\SubscribedForumQuery;
 use JTZL\Bulletin\Takeover\TemplateController;
 use JTZL\Bulletin\Unread\ReadPruner;
 use JTZL\Bulletin\Unread\ReadWriter;
+use JTZL\Bulletin\View\HeldNotice;
 use JTZL\Bulletin\View\ProfileIdentity;
 use JTZL\Bulletin\View\ProtectedRowContent;
 use JTZL\Bulletin\View\SubscribedForumsMore;
@@ -90,8 +90,30 @@ class Bootstrap {
 		$this->register_ajax();
 		$this->register_reskin();
 		$this->register_search_visibility();
+		$this->register_pending_visibility();
 		$this->register_chrome();
 		$this->register_unread();
+	}
+
+	/**
+	 * Resolve one service from the container.
+	 *
+	 * Replaces a get-then-assert pair repeated thirty times. The assertion is not
+	 * decoration — php-di is typed by convention, so PHPStan has to be told what came
+	 * back — and one template says it for every caller.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @template T of object
+	 * @param string $service Fully-qualified class name.
+	 * @phpstan-param class-string<T> $service
+	 * @return T
+	 */
+	private function service( string $service ): object {
+		$resolved = $this->container->get( $service );
+		assert( $resolved instanceof $service );
+
+		return $resolved;
 	}
 
 	/**
@@ -106,14 +128,10 @@ class Bootstrap {
 	 */
 	private function register_unread(): void {
 		$wp       = $this->wp();
-		$migrator = $this->container->get( Migrator::class );
-		assert( $migrator instanceof Migrator );
-		$writer = $this->container->get( ReadWriter::class );
-		assert( $writer instanceof ReadWriter );
-		$pruner = $this->container->get( ReadPruner::class );
-		assert( $pruner instanceof ReadPruner );
-		$classes = $this->container->get( UnreadClasses::class );
-		assert( $classes instanceof UnreadClasses );
+		$migrator = $this->service( Migrator::class );
+		$writer   = $this->service( ReadWriter::class );
+		$pruner   = $this->service( ReadPruner::class );
+		$classes  = $this->service( UnreadClasses::class );
 
 		$migrator->maybe_upgrade();
 
@@ -148,8 +166,7 @@ class Bootstrap {
 	 */
 	private function register_takeover(): void {
 		$wp       = $this->wp();
-		$takeover = $this->container->get( TemplateController::class );
-		assert( $takeover instanceof TemplateController );
+		$takeover = $this->service( TemplateController::class );
 
 		$wp->add_action( 'template_redirect', array( $takeover, 'redirect_single_reply' ), 9 );
 		$wp->add_action( 'template_redirect', array( $takeover, 'prime_takeover' ) );
@@ -162,11 +179,9 @@ class Bootstrap {
 	 * @since 0.3.0
 	 */
 	private function register_assets(): void {
-		$wp     = $this->wp();
-		$assets = $this->container->get( AssetManager::class );
-		assert( $assets instanceof AssetManager );
-		$scripts = $this->container->get( TakeoverScriptSuppressor::class );
-		assert( $scripts instanceof TakeoverScriptSuppressor );
+		$wp      = $this->wp();
+		$assets  = $this->service( AssetManager::class );
+		$scripts = $this->service( TakeoverScriptSuppressor::class );
 
 		$wp->add_action( 'wp_enqueue_scripts', array( $assets, 'enqueue' ) );
 		$wp->add_action( 'wp_enqueue_scripts', array( $assets, 'suppress_foreign_styles' ), 100 );
@@ -187,23 +202,7 @@ class Bootstrap {
 	 * @since 0.3.0
 	 */
 	private function register_ajax(): void {
-		$wp      = $this->wp();
-		$replies = $this->container->get( LoadRepliesController::class );
-		assert( $replies instanceof LoadRepliesController );
-		$topics = $this->container->get( LoadTopicsController::class );
-		assert( $topics instanceof LoadTopicsController );
-		$forums = $this->container->get( LoadForumsController::class );
-		assert( $forums instanceof LoadForumsController );
-		$subscribed = $this->container->get( LoadSubscribedForumsController::class );
-		assert( $subscribed instanceof LoadSubscribedForumsController );
-		$search = $this->container->get( LoadSearchController::class );
-		assert( $search instanceof LoadSearchController );
-
-		$wp->add_action( 'bbp_ajax_bulletin_load_replies', array( $replies, 'handle' ) );
-		$wp->add_action( 'bbp_ajax_bulletin_load_topics', array( $topics, 'handle' ) );
-		$wp->add_action( 'bbp_ajax_bulletin_load_forums', array( $forums, 'handle' ) );
-		$wp->add_action( 'bbp_ajax_bulletin_load_subscribed_forums', array( $subscribed, 'handle' ) );
-		$wp->add_action( 'bbp_ajax_bulletin_load_search', array( $search, 'handle' ) );
+		$this->service( Endpoints::class )->register();
 	}
 
 	/**
@@ -212,21 +211,14 @@ class Bootstrap {
 	 * @since 0.3.0
 	 */
 	private function register_reskin(): void {
-		$wp       = $this->wp();
-		$identity = $this->container->get( ProfileIdentity::class );
-		assert( $identity instanceof ProfileIdentity );
-		$order = $this->container->get( StableOrder::class );
-		assert( $order instanceof StableOrder );
-		$stickies = $this->container->get( StickyHoisting::class );
-		assert( $stickies instanceof StickyHoisting );
-		$counts = $this->container->get( SubForumCountLabels::class );
-		assert( $counts instanceof SubForumCountLabels );
-		$subscriptions = $this->container->get( SubscribedForumQuery::class );
-		assert( $subscriptions instanceof SubscribedForumQuery );
-		$subscribed_more = $this->container->get( SubscribedForumsMore::class );
-		assert( $subscribed_more instanceof SubscribedForumsMore );
-		$protected = $this->container->get( ProtectedRowContent::class );
-		assert( $protected instanceof ProtectedRowContent );
+		$wp              = $this->wp();
+		$identity        = $this->service( ProfileIdentity::class );
+		$order           = $this->service( StableOrder::class );
+		$stickies        = $this->service( StickyHoisting::class );
+		$counts          = $this->service( SubForumCountLabels::class );
+		$subscriptions   = $this->service( SubscribedForumQuery::class );
+		$subscribed_more = $this->service( SubscribedForumsMore::class );
+		$protected       = $this->service( ProtectedRowContent::class );
 
 		// Give the member-profile header a coherent identity block (name + @handle +
 		// role beside the avatar). The hook fires only inside bbPress's user-details
@@ -288,8 +280,7 @@ class Bootstrap {
 	 */
 	private function register_search_visibility(): void {
 		$wp     = $this->wp();
-		$search = $this->container->get( SearchVisibility::class );
-		assert( $search instanceof SearchVisibility );
+		$search = $this->service( SearchVisibility::class );
 
 		// Last on the arguments filter, so what is copied is what the query will
 		// actually use: a site that widens or narrows post_status through the same
@@ -301,6 +292,30 @@ class Bootstrap {
 	}
 
 	/**
+	 * Moderation held a reply: withhold it from everyone, show it back to its author,
+	 * and acknowledge the two cases where no row comes back (§3 decision 6).
+	 *
+	 * Nothing here arms either query rule — Query\ReplyQuery and Query\TopicQuery do,
+	 * at every one of their sites, which is what keeps those sites agreeing about a
+	 * held row rather than paging around one (CLAUDE.md trap #4).
+	 *
+	 * @since 0.5.0
+	 */
+	private function register_pending_visibility(): void {
+		$wp      = $this->wp();
+		$pending = $this->service( PendingVisibility::class );
+		$guard   = $this->service( ProtectedStatusGuard::class );
+		$held    = $this->service( HeldNotice::class );
+		// ⚠ Guard early, widening last, and the order is load-bearing: the guard
+		// subtracts, the widening then wraps the whole clause and OR-s one row back
+		// in. Swapped, the subtraction lands outside the wrap and removes it again —
+		// see Query\ProtectedStatusGuard.
+		$wp->add_filter( 'posts_where', array( $guard, 'restrict' ), 10, 2 );
+		$wp->add_filter( 'posts_where', array( $pending, 'widen' ), PHP_INT_MAX, 2 );
+		$wp->add_filter( 'bbp_new_reply_redirect_to', array( $held, 'filter_redirect' ), 10, 3 );
+	}
+
+	/**
 	 * Chrome: keep WordPress's admin bar off our screens for readers who cannot
 	 * administrate. Late, so ours is the last word on the shell we render — an
 	 * administrator's own preference still passes through (see Chrome\AdminBar).
@@ -308,26 +323,31 @@ class Bootstrap {
 	 * @since 0.3.0
 	 */
 	private function register_chrome(): void {
-		$admin_bar = $this->container->get( AdminBar::class );
-		assert( $admin_bar instanceof AdminBar );
+		$admin_bar = $this->service( AdminBar::class );
 
 		$this->wp()->add_filter( 'show_admin_bar', array( $admin_bar, 'filter_show_admin_bar' ), 100 );
 
 		// And keep WordPress's "Protected:" prefix out of a forum's name on those
 		// same screens. Late for the same reason: ours is the last word on the shell
 		// we render, and off it (ScreenTier::None) the default passes through.
-		$protected_title = $this->container->get( ProtectedTitle::class );
-		assert( $protected_title instanceof ProtectedTitle );
+		$protected_title = $this->service( ProtectedTitle::class );
 
 		$this->wp()->add_filter( 'protected_title_format', array( $protected_title, 'filter_protected_title_format' ), 100 );
+
+		// And take the second full stop off an edit record whose author's display
+		// name already ends in one — "by Mara K..". Every tier, because it is a
+		// correction rather than a restyle (Chrome\RevisionLogStop).
+		$stop = $this->service( RevisionLogStop::class );
+
+		$this->wp()->add_filter( 'bbp_get_reply_revision_log', array( $stop, 'filter_revision_log' ), 20 );
+		$this->wp()->add_filter( 'bbp_get_topic_revision_log', array( $stop, 'filter_revision_log' ), 20 );
 
 		// And give bbPress's glyph-only `+` / `×` row toggles a name. bbPress hardcodes
 		// the glyphs in its own loop templates, so the only control on a Subscriptions
 		// or Favourites row announced itself as "times" — while being the destructive
 		// one. Filtered before the parse, so the name travels through bbPress's own
 		// AJAX re-render too (see Chrome\RowActionLabels).
-		$row_labels = $this->container->get( RowActionLabels::class );
-		assert( $row_labels instanceof RowActionLabels );
+		$row_labels = $this->service( RowActionLabels::class );
 
 		$this->wp()->add_filter( 'bbp_before_get_user_subscribe_link_parse_args', array( $row_labels, 'filter_subscribe_args' ) );
 		$this->wp()->add_filter( 'bbp_before_get_user_favorites_link_parse_args', array( $row_labels, 'filter_favorite_args' ) );
@@ -336,8 +356,7 @@ class Bootstrap {
 		// And take bbPress's inline handler off the per-reply "Reply To" link on the
 		// takeover tier, where the script that would answer it is suppressed and the
 		// href is the whole mechanism (see Chrome\ReplyToLink).
-		$reply_to = $this->container->get( ReplyToLink::class );
-		assert( $reply_to instanceof ReplyToLink );
+		$reply_to = $this->service( ReplyToLink::class );
 
 		$this->wp()->add_filter( 'bbp_get_reply_to_link', array( $reply_to, 'filter_reply_to_link' ), 100 );
 
@@ -346,24 +365,21 @@ class Bootstrap {
 		// <body> and the field has to be found again (see Chrome\PasswordForm). At 20,
 		// after View\ProtectedRowContent's withholding at 10 on the same filter: what
 		// that returns for a loop row is the empty string, which has no field to focus.
-		$password_form = $this->container->get( PasswordForm::class );
-		assert( $password_form instanceof PasswordForm );
+		$password_form = $this->service( PasswordForm::class );
 
 		$this->wp()->add_filter( 'the_password_form', array( $password_form, 'filter_password_form' ), 20 );
 
 		// And name the screens WordPress could not: bbPress filters only the legacy
 		// wp_title, which wp_get_document_title() never calls, so four reskin routes
 		// shared one <title> (see Chrome\DocumentTitle).
-		$doc_title = $this->container->get( DocumentTitle::class );
-		assert( $doc_title instanceof DocumentTitle );
+		$doc_title = $this->service( DocumentTitle::class );
 
 		$this->wp()->add_filter( 'document_title_parts', array( $doc_title, 'filter_document_title_parts' ), 100 );
 
 		// And trim the editor bbPress hands the composer: one button off the formatting
 		// strip, and a textarea that does not spend two-thirds of a phone screen being
 		// empty (see Chrome\ComposerSettings).
-		$composer = $this->container->get( ComposerSettings::class );
-		assert( $composer instanceof ComposerSettings );
+		$composer = $this->service( ComposerSettings::class );
 
 		$this->wp()->add_filter( 'bbp_get_quicktags_settings', array( $composer, 'filter_quicktags' ) );
 		$this->wp()->add_filter( 'bbp_after_get_the_content_parse_args', array( $composer, 'filter_content_args' ) );
@@ -377,8 +393,7 @@ class Bootstrap {
 	 * @return ContextInterface
 	 */
 	private function wp(): ContextInterface {
-		$wp = $this->container->get( ContextInterface::class );
-		assert( $wp instanceof ContextInterface );
+		$wp = $this->service( ContextInterface::class );
 
 		return $wp;
 	}
