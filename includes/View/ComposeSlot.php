@@ -100,10 +100,30 @@ class ComposeSlot {
 	/**
 	 * Echo the slot for a topic.
 	 *
-	 * ⚠ **Capability is asked first, before either closed test.** A keymaster may
-	 * reply on a closed topic — `bbp_current_user_can_access_create_reply_form()`
-	 * short-circuits for them (`users/template.php:2326`) — so testing "closed" ahead
-	 * of it would take the composer away from the one person the exception exists for.
+	 * ⚠ **Closed is asked first, and it is asked with `moderate`.** The rule this
+	 * has to match is the *write path's*, not the form-access helper's, because
+	 * bbPress does not use the same one for both. `bbp_new_reply_handler()` refuses a
+	 * closed topic unless `current_user_can( 'moderate', $topic_id )`
+	 * (`replies/functions.php:347`), while
+	 * `bbp_current_user_can_access_create_reply_form()` — having found the topic
+	 * closed — falls through to `elseif ( bbp_get_topic_id() ) → current_user_can(
+	 * 'edit_topic', … )` (`users/template.php`). That fallback exists so the **edit**
+	 * form can render on an edit request; on a reading view it answers a different
+	 * question, and it is true for a thread's own author forever, since the edit lock
+	 * lives in bbPress's link getters rather than in the capability.
+	 *
+	 * So upstream offers the form to a strictly wider set than it will accept from,
+	 * and the gap is exactly *an author on their own closed thread*. Measured on the
+	 * fixture 2026-08-15: they get a composer, type into it, and are answered with
+	 * "Error: Topic is closed." Their text survives, so nothing is lost — but a
+	 * control that cannot do what it offers is the thing DESIGN.md rules out, and it
+	 * is worse than the keymaster exception rather than a variant of it, because the
+	 * keymaster's reply actually posts.
+	 *
+	 * Asking `moderate` restores the agreement: whoever bbPress will accept a reply
+	 * from is whoever is offered somewhere to write it. That widens the documented
+	 * keymaster exception to moderators, which is correct — they can genuinely post
+	 * there — and closes it for everyone else.
 	 *
 	 * ⚠ **And closed is asked before logged-out.** On a closed thread nobody may
 	 * reply, so "Sign in to reply" would be an invitation to do something signing in
@@ -121,18 +141,20 @@ class ComposeSlot {
 		// closing the thread between the submit and the redirect must not swallow it.
 		$this->held->render();
 
+		if ( ! $this->wp->current_user_can_moderate( $topic_id ) ) {
+			if ( $this->wp->is_forum_closed( $forum_id ) ) {
+				$this->note( __( 'This forum is closed to new posts.', 'jtzl-bulletin' ) );
+				return;
+			}
+
+			if ( $this->wp->is_topic_closed( $topic_id ) ) {
+				$this->note( __( 'This thread is closed to new replies.', 'jtzl-bulletin' ) );
+				return;
+			}
+		}
+
 		if ( $this->wp->can_access_create_reply_form() ) {
 			$this->composer();
-			return;
-		}
-
-		if ( $this->wp->is_forum_closed( $forum_id ) ) {
-			$this->note( __( 'This forum is closed to new posts.', 'jtzl-bulletin' ) );
-			return;
-		}
-
-		if ( $this->wp->is_topic_closed( $topic_id ) ) {
-			$this->note( __( 'This thread is closed to new replies.', 'jtzl-bulletin' ) );
 			return;
 		}
 

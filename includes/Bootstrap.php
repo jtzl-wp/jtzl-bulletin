@@ -12,15 +12,8 @@ use DI\Container;
 use JTZL\Bulletin\Ajax\Endpoints;
 use JTZL\Bulletin\Asset\AssetManager;
 use JTZL\Bulletin\Asset\TakeoverScriptSuppressor;
-use JTZL\Bulletin\Chrome\AdminBar;
-use JTZL\Bulletin\Chrome\ComposerSettings;
-use JTZL\Bulletin\Chrome\DocumentTitle;
-use JTZL\Bulletin\Chrome\PasswordForm;
-use JTZL\Bulletin\Chrome\ProtectedTitle;
-use JTZL\Bulletin\Chrome\ReplyToLink;
-use JTZL\Bulletin\Chrome\RevisionLogStop;
-use JTZL\Bulletin\Chrome\RowActionLabels;
-use JTZL\Bulletin\Chrome\SubForumCountLabels;
+use JTZL\Bulletin\Chrome\Furniture;
+use JTZL\Bulletin\Chrome\Namings;
 use JTZL\Bulletin\Chrome\UnreadClasses;
 use JTZL\Bulletin\Database\Migrator;
 use JTZL\Bulletin\Query\PendingVisibility;
@@ -215,7 +208,6 @@ class Bootstrap {
 		$identity        = $this->service( ProfileIdentity::class );
 		$order           = $this->service( StableOrder::class );
 		$stickies        = $this->service( StickyHoisting::class );
-		$counts          = $this->service( SubForumCountLabels::class );
 		$subscriptions   = $this->service( SubscribedForumQuery::class );
 		$subscribed_more = $this->service( SubscribedForumsMore::class );
 		$protected       = $this->service( ProtectedRowContent::class );
@@ -243,12 +235,6 @@ class Bootstrap {
 		// And decline bbPress's sticky hoisting there, which serves a sticky twice and
 		// miscounts the page it hoisted onto. Same hook, separate decision.
 		$wp->add_filter( 'bbp_after_has_topics_parse_args', array( $stickies, 'filter_topic_args' ), 11 );
-
-		// Name the two numbers bbPress prints beside each child forum, which it renders
-		// as a bare `(2, 0)` — a pair no label explains and which cannot be reconciled
-		// with the labelled `Topics`/`Posts` on the same forum's own row (issue #74).
-		// After the parse, so the counts bbPress decided to show are the ones named.
-		$wp->add_filter( 'bbp_after_list_forums_parse_args', array( $counts, 'filter_list_args' ) );
 
 		// Keep WordPress's password form out of the description slot of a loop row,
 		// where bbPress's own row templates would otherwise print it as though it were
@@ -316,73 +302,22 @@ class Bootstrap {
 	}
 
 	/**
-	 * Chrome: keep WordPress's admin bar off our screens for readers who cannot
-	 * administrate. Late, so ours is the last word on the shell we render — an
-	 * administrator's own preference still passes through (see Chrome\AdminBar).
+	 * Chrome: the furniture the shell paints around a screen, and the names bbPress
+	 * leaves off its own controls.
+	 *
+	 * ⚠ **Two classes rather than the run of bindings that used to live here.** The
+	 * group was eight services deep and `Bootstrap` had spent three PRs a handful of
+	 * lines under PHPMD's class-length ceiling — close enough that the next hook would
+	 * have been paid for by deleting an explanation. It is split on a seam the
+	 * comments had already drawn: `Chrome\Namings` supplies a name where bbPress
+	 * supplies none, `Chrome\Furniture` changes or removes something it already
+	 * renders. Both keep the comments the bindings were written with.
 	 *
 	 * @since 0.3.0
 	 */
 	private function register_chrome(): void {
-		$admin_bar = $this->service( AdminBar::class );
-
-		$this->wp()->add_filter( 'show_admin_bar', array( $admin_bar, 'filter_show_admin_bar' ), 100 );
-
-		// And keep WordPress's "Protected:" prefix out of a forum's name on those
-		// same screens. Late for the same reason: ours is the last word on the shell
-		// we render, and off it (ScreenTier::None) the default passes through.
-		$protected_title = $this->service( ProtectedTitle::class );
-
-		$this->wp()->add_filter( 'protected_title_format', array( $protected_title, 'filter_protected_title_format' ), 100 );
-
-		// And take the second full stop off an edit record whose author's display
-		// name already ends in one — "by Mara K..". Every tier, because it is a
-		// correction rather than a restyle (Chrome\RevisionLogStop).
-		$stop = $this->service( RevisionLogStop::class );
-
-		$this->wp()->add_filter( 'bbp_get_reply_revision_log', array( $stop, 'filter_revision_log' ), 20 );
-		$this->wp()->add_filter( 'bbp_get_topic_revision_log', array( $stop, 'filter_revision_log' ), 20 );
-
-		// And give bbPress's glyph-only `+` / `×` row toggles a name. bbPress hardcodes
-		// the glyphs in its own loop templates, so the only control on a Subscriptions
-		// or Favourites row announced itself as "times" — while being the destructive
-		// one. Filtered before the parse, so the name travels through bbPress's own
-		// AJAX re-render too (see Chrome\RowActionLabels).
-		$row_labels = $this->service( RowActionLabels::class );
-
-		$this->wp()->add_filter( 'bbp_before_get_user_subscribe_link_parse_args', array( $row_labels, 'filter_subscribe_args' ) );
-		$this->wp()->add_filter( 'bbp_before_get_user_favorites_link_parse_args', array( $row_labels, 'filter_favorite_args' ) );
-		$this->wp()->add_filter( 'bbp_before_paginate_links_parse_args', array( $row_labels, 'filter_pagination_args' ) );
-
-		// And take bbPress's inline handler off the per-reply "Reply To" link on the
-		// takeover tier, where the script that would answer it is suppressed and the
-		// href is the whole mechanism (see Chrome\ReplyToLink).
-		$reply_to = $this->service( ReplyToLink::class );
-
-		$this->wp()->add_filter( 'bbp_get_reply_to_link', array( $reply_to, 'filter_reply_to_link' ), 100 );
-
-		// And put the caret back in the password field when the reader has just
-		// mistyped it — the wrong-password state is a full page load, so focus is on
-		// <body> and the field has to be found again (see Chrome\PasswordForm). At 20,
-		// after View\ProtectedRowContent's withholding at 10 on the same filter: what
-		// that returns for a loop row is the empty string, which has no field to focus.
-		$password_form = $this->service( PasswordForm::class );
-
-		$this->wp()->add_filter( 'the_password_form', array( $password_form, 'filter_password_form' ), 20 );
-
-		// And name the screens WordPress could not: bbPress filters only the legacy
-		// wp_title, which wp_get_document_title() never calls, so four reskin routes
-		// shared one <title> (see Chrome\DocumentTitle).
-		$doc_title = $this->service( DocumentTitle::class );
-
-		$this->wp()->add_filter( 'document_title_parts', array( $doc_title, 'filter_document_title_parts' ), 100 );
-
-		// And trim the editor bbPress hands the composer: one button off the formatting
-		// strip, and a textarea that does not spend two-thirds of a phone screen being
-		// empty (see Chrome\ComposerSettings).
-		$composer = $this->service( ComposerSettings::class );
-
-		$this->wp()->add_filter( 'bbp_get_quicktags_settings', array( $composer, 'filter_quicktags' ) );
-		$this->wp()->add_filter( 'bbp_after_get_the_content_parse_args', array( $composer, 'filter_content_args' ) );
+		$this->service( Furniture::class )->register();
+		$this->service( Namings::class )->register();
 	}
 
 	/**
