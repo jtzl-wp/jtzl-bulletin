@@ -1,6 +1,6 @@
 {
 	"name": "jtzl-bulletin-assets",
-	"version": "0.4.0",
+	"version": "0.5.0",
 	"description": "Bulletin for bbPress plugin assets - reading-view build system",
 	"private": true,
 	"type": "module",
@@ -50,7 +50,9 @@
 		"yaml": ">=2.8.3",
 		"picomatch": ">=4.0.4",
 		"esbuild": ">=0.25.0",
-		"postcss": ">=8.5.23"
+		"postcss": ">=8.5.23",
+		"nanoid": ">=3.3.18 <4",
+		"js-yaml": ">=4.3.1 <5"
 	},
 	"engines": {
 		"node": ">=20",
