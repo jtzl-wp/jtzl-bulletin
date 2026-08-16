@@ -47,6 +47,47 @@ interface Control {
 }
 
 /**
+ * Move the app's scroll region so `el` sits at its top.
+ *
+ * The app's own scroller is moved directly rather than through scrollIntoView(),
+ * which scrolls every scrollable ancestor. That used to be load-bearing: the shell
+ * clipped with `overflow: hidden`, which stops a *user* scrolling a box and does
+ * nothing about the API, so the viewport went up with the scroller and left the app
+ * bar above the top of the screen. Measured on an arriving permalink and on a
+ * reply-context tap (issue #37).
+ *
+ * #66 closed that in CSS — `.bltn-app` now establishes the containing block and clips
+ * without being a scroll container, so no ancestor of a target is scrollable any more.
+ * This stays anyway: it says which box moves and by how much, rather than asking the
+ * browser to work it out, and it is the same one line either way. scrollIntoView()
+ * remains the fallback for a target outside a `.bltn-scroll` — nothing renders one
+ * today, and if something does, the old behaviour is better than none.
+ *
+ * ⚠ **`block: 'start'` reads as "as far up as the scroller will go", and the clamp is
+ * doing design work.** A composer is the last thing in its scroll region, so the
+ * browser stops at the end of the content rather than at the requested offset: the
+ * form lands against the foot of the screen with the thread still above it, instead of
+ * being dragged to the top with a band of nothing under it.
+ *
+ * Instant rather than smooth is for a scroll the reader did not ask for — arriving on
+ * a screen that is already in the state they wanted. Animating a journey nobody
+ * started reads as the page moving by itself.
+ */
+function scrollAppTo(el: HTMLElement, instant = false): void {
+	const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+	const behavior: ScrollBehavior = reduce || instant ? 'auto' : 'smooth';
+	const scroller = el.closest<HTMLElement>('.bltn-scroll');
+
+	if (scroller) {
+		const delta =
+			el.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+		scroller.scrollTo({ top: scroller.scrollTop + delta, behavior });
+	} else {
+		el.scrollIntoView({ behavior, block: 'start' });
+	}
+}
+
+/**
  * Moderation mode (issue #36).
  *
  * The trays are already in the DOM — server-rendered under the thread header and under
@@ -356,36 +397,8 @@ function initReading(): void {
 
 	// Takes the element rather than an id: callers resolve it first, so a
 	// null-check in here would be unreachable.
-	//
-	// The app's own scroller is moved directly rather than through
-	// scrollIntoView(), which scrolls every scrollable ancestor. That used to be
-	// load-bearing: the shell clipped with `overflow: hidden`, which stops a *user*
-	// scrolling a box and does nothing about the API, so the viewport went up with
-	// the scroller and left the app bar above the top of the screen. Measured on an
-	// arriving permalink and on a reply-context tap (issue #37).
-	//
-	// #66 closed that in CSS — `.bltn-app` now establishes the containing block and
-	// clips without being a scroll container, so no ancestor of a target is
-	// scrollable any more. This stays anyway: it says which box moves and by how
-	// much, rather than asking the browser to work it out, and it is the same one
-	// line either way. scrollIntoView() remains the fallback for a target outside a
-	// .bltn-scroll — nothing renders one today, and if something does, the old
-	// behaviour is better than none.
 	function scrollToTarget(el: HTMLElement): void {
-		const reduce = window.matchMedia(
-			'(prefers-reduced-motion: reduce)'
-		).matches;
-		const behavior: ScrollBehavior = reduce ? 'auto' : 'smooth';
-		const scroller = el.closest<HTMLElement>('.bltn-scroll');
-
-		if (scroller) {
-			const delta =
-				el.getBoundingClientRect().top -
-				scroller.getBoundingClientRect().top;
-			scroller.scrollTo({ top: scroller.scrollTop + delta, behavior });
-		} else {
-			el.scrollIntoView({ behavior, block: 'start' });
-		}
+		scrollAppTo(el);
 		highlight(el);
 	}
 
@@ -614,11 +627,25 @@ function initComposeSlot(): void {
 	improveAnonymousFields(form);
 
 	/**
-	 * Open the composer and put the caret in it.
+	 * Open the composer, bring it into view, and put the caret in it.
 	 *
-	 * `preventScroll` because the browser is already moving: on a deep link the
-	 * `#new-post` fragment is doing the scrolling, and on a tap the slot is under the
-	 * finger. Focus that also scrolls would fight both.
+	 * ⚠ **The scroll is the whole point of this function, not a flourish.** Without
+	 * it, tapping "Start a thread" measured `visiblePx: 0` — a 660px form opening
+	 * 1,956px below the top of the scroll region, on a forum screen whose control is
+	 * *fixed to the bottom of the viewport* and therefore nowhere near it. The bar
+	 * vanished, nothing arrived, and the button read as broken. The reading view was
+	 * milder and wrong the same way: at the foot of a long thread, 102px of a 533px
+	 * form — the legend, and neither the field nor Submit. Both measured on the
+	 * fixture at 390×844 before the fix.
+	 *
+	 * `preventScroll` on the focus, because the scroll above it is already the
+	 * considered one: a browser scrolling to a focused field aims to make the *caret*
+	 * visible and stops as soon as it is, which on a 660px form is its last line. The
+	 * two together would have the screen arrive twice, in different places.
+	 *
+	 * Order matters and is measured, not assumed: the class comes off and the bar goes
+	 * away first, because both change the height of the scroll region, and geometry
+	 * read before them describes a screen that no longer exists.
 	 */
 	const open = (): void => {
 		slot.classList.remove('is-collapsed');
@@ -627,6 +654,7 @@ function initComposeSlot(): void {
 			bar.hidden = true;
 		}
 		field?.focus({ preventScroll: true });
+		scrollAppTo(form);
 	};
 
 	const collapse = (): void => {
@@ -639,9 +667,10 @@ function initComposeSlot(): void {
 
 	trigger.addEventListener('click', (event) => {
 		// The forum screen's trigger is an anchor to #new-post, which is how it works
-		// without this script. With the script the composer opens in place, so the
-		// jump is redundant — and it would scroll the page under a field about to take
-		// focus. Cancelled only where there is a default to cancel.
+		// without this script. Cancelled only where there is a default to cancel —
+		// the jump would land on a form this script has just collapsed, so the browser
+		// would arrive at a fold instead of a composer. open() then does the travelling
+		// itself, to a form it has already expanded.
 		if (trigger.tagName === 'A') {
 			event.preventDefault();
 		}
@@ -649,9 +678,29 @@ function initComposeSlot(): void {
 	});
 
 	if (slot.dataset.bltnCompose === 'open') {
-		// A deep link. Nothing to collapse, but the caret still belongs in the field:
-		// the reader arrived here having already said which post they are answering.
+		// A deep link, or a submission the server sent back. Nothing to collapse, but
+		// the caret still belongs in the field: the reader arrived here having already
+		// said which post they are answering, or with a correction to make.
 		field?.focus({ preventScroll: true });
+		// The bar goes away for the reason it goes away on a tap — it IS the collapsed
+		// representation of a composer that is not collapsed. Left up it is worse here
+		// than anywhere: this branch adds no Cancel, so a fixed teal "Start a thread"
+		// would be the largest control on a screen whose actual next action is the
+		// Submit it sits below. Unreachable until now only because nobody was ever
+		// scrolled far enough to see the two disagree. Before the scroll, like in
+		// open(), because it is the scroll region's height that changes.
+		if (bar) {
+			bar.hidden = true;
+		}
+		// ⚠ **And a rejected submission has to be travelled to, exactly like a tap.**
+		// The server already refuses to collapse a form carrying bbPress's validation
+		// errors — but bbPress's forms post to the current URL with no fragment, so
+		// the reader lands at the TOP of the forum list or the thread with the error
+		// and their own text at the foot, out of sight. That is the same "nothing
+		// happened" this phase set out to fix, surviving one layer further down.
+		// Instant: the reader did not ask to travel, and a deep link's own `#new-post`
+		// is already aiming here, so an animation would either race it or replay it.
+		scrollAppTo(form, true);
 		return;
 	}
 

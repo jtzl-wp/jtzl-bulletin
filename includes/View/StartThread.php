@@ -103,8 +103,18 @@ class StartThread {
 	 * ⚠ **The control is an anchor to `#new-post`, not a button**, and that is what
 	 * makes the no-JS path work: with no script the form is already open at the foot of
 	 * the list and this jumps to it, which is an ordinary in-page link doing an ordinary
-	 * thing. The script upgrades it — collapsing the form, then opening and focusing it
-	 * on tap — but it enhances a control that already worked.
+	 * thing. The script then collapses the form and opens it on tap.
+	 *
+	 * ⚠ **And for one release the script made that upgrade a downgrade.** Cancelling
+	 * the anchor's jump left the tap with nothing to travel by: this bar is *fixed to
+	 * the foot of the viewport* and the form it opens is at the foot of the *list*, so
+	 * on the fixture the composer opened 1,956px below the top of the scroll region
+	 * with none of its 660px on screen. The bar disappeared, nothing replaced it, and
+	 * the control read as broken — reported by Yoren, 2026-08-16. `reading.ts` now
+	 * scrolls to the form itself, which is what the anchor was doing before the script
+	 * took the job over. Anything that stops rendering this form at the foot of `<main>`
+	 * has to keep that in mind: the distance between control and target is the hazard,
+	 * not the markup.
 	 *
 	 * @since 0.5.0
 	 *

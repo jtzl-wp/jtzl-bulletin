@@ -1517,7 +1517,12 @@ a.bltn-compose__open {
 /* An anchor, not a button — see View\StartThread. With no script the form is
    already open at the foot of the list and this jumps to it, which is an ordinary
    in-page link doing an ordinary thing; the script upgrades a control that already
-   worked rather than supplying one that did not. */
+   worked rather than supplying one that did not.
+
+   ⚠ Which means the script owes the same journey. This bar is fixed to the foot of
+   the viewport and the form is at the foot of the list, so a tap that cancels the
+   jump and does not scroll opens a composer nobody can see — measured at 0 visible
+   pixels of 660, and reported as a broken button. reading.ts scrolls to it. */
 .bltn-composebar__btn {
 	display: flex;
 	flex: 1 1 auto;
