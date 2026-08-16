@@ -88,6 +88,39 @@ function scrollAppTo(el: HTMLElement, instant = false): void {
 }
 
 /**
+ * The first thing in a composer a member types into.
+ *
+ * ⚠ **Neither "the textarea" nor "the first focusable element" is right, and both were
+ * tried.** bbPress's own field order says why, measured on 2.6.14:
+ *
+ * | Form | DOM order |
+ * |---|---|
+ * | `form-topic.php` | anonymous fields (l.80) → **title** (l.86) → 11 quicktag buttons → body |
+ * | `form-reply.php` | anonymous fields (l.68) → 11 quicktag buttons → **body** |
+ *
+ * Taking the textarea skips the topic form's **title**, which is the one field
+ * `bbp_new_topic_handler()` refuses without — so a member wrote a whole post and was
+ * answered "Your topic needs a title." for a field the composer had moved them past
+ * (#118). Taking the first *focusable* element lands on the `b` quicktag button on the
+ * reply form, because those eleven `input[type=button]`s sit between the anonymous
+ * block and the body.
+ *
+ * So the rule is the first **entry** field: buttons, checkboxes, radios and hidden
+ * inputs are not places to start, and a disabled field cannot be focused at all —
+ * `focus()` on one silently does nothing, which is the failure this must not have.
+ *
+ * It follows rather than special-cases. On the topic form it resolves to the title; on
+ * the reply form to the body; and for a logged-out visitor on either, to the anonymous
+ * **name** — which is correct for the same reason the title is, since bbPress refuses
+ * an anonymous post with no name or email. "Start where the form starts" needs no
+ * screen to be named, and survives a template stack reordering anything.
+ */
+const ENTRY_FIELD =
+	'input:not([type=hidden]):not([type=checkbox]):not([type=radio])' +
+	':not([type=button]):not([type=submit]):not([type=reset]):not([disabled]),' +
+	'textarea:not([disabled]), select:not([disabled])';
+
+/**
  * Moderation mode (issue #36).
  *
  * The trays are already in the DOM — server-rendered under the thread header and under
@@ -622,7 +655,7 @@ function initComposeSlot(): void {
 	// the CSS folds it with the rest of the slot.
 	const bar = trigger.closest<HTMLElement>('.bltn-composebar');
 
-	const field = form.querySelector<HTMLTextAreaElement>('textarea');
+	const field = form.querySelector<HTMLElement>(ENTRY_FIELD);
 
 	improveAnonymousFields(form);
 
