@@ -3,7 +3,7 @@
  * The way out of an edit or moderation form.
  *
  * @package JTZL\Bulletin
- * @since 0.5.2
+ * @since 0.5.3
  */
 
 namespace JTZL\Bulletin\Chrome;
@@ -65,7 +65,7 @@ use JTZL\Bulletin\WordPress\ContextInterface;
  * implementation that asked about the topic first would work by accident on one and
  * send the reader to the thread rather than to their own post on the other.
  *
- * @since 0.5.2
+ * @since 0.5.3
  */
 class EditExit {
 
@@ -79,7 +79,7 @@ class EditExit {
 	/**
 	 * Constructor.
 	 *
-	 * @since 0.5.2
+	 * @since 0.5.3
 	 *
 	 * @param ContextInterface $wp WordPress/bbPress seam.
 	 */
@@ -90,7 +90,7 @@ class EditExit {
 	/**
 	 * Whether this request is a form the reader may want to abandon.
 	 *
-	 * @since 0.5.2
+	 * @since 0.5.3
 	 *
 	 * @return bool
 	 */
@@ -119,7 +119,7 @@ class EditExit {
 	 * stop resolving mid-edit — trashed under the member, or a filtered permalink —
 	 * and the index is a worse destination but a real one.
 	 *
-	 * @since 0.5.2
+	 * @since 0.5.3
 	 *
 	 * @return array{url: string, label: string}
 	 */
@@ -157,7 +157,7 @@ class EditExit {
 	 * unresolvable reply — see the table on `destination()`. It is not empty, so an
 	 * emptiness test lets it through, and as a destination it means "stay here".
 	 *
-	 * @since 0.5.2
+	 * @since 0.5.3
 	 *
 	 * @param string $url Candidate destination.
 	 * @return bool
@@ -179,7 +179,7 @@ class EditExit {
 	 * need to: there, script failing leaves bbPress's own uncollapsed form, and the
 	 * control has nothing to do. Here, script failing leaves a form with one action.
 	 *
-	 * @since 0.5.2
+	 * @since 0.5.3
 	 */
 	public function render_cancel(): void {
 		if ( ! $this->is_edit_form() ) {

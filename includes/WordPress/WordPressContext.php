@@ -175,7 +175,7 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * Whether this request is the topic edit form.
 	 *
-	 * @since 0.5.2
+	 * @since 0.5.3
 	 *
 	 * @return bool
 	 */
@@ -186,7 +186,7 @@ class WordPressContext implements ContextInterface {
 	/**
 	 * Whether this request is the reply edit form.
 	 *
-	 * @since 0.5.2
+	 * @since 0.5.3
 	 *
 	 * @return bool
 	 */

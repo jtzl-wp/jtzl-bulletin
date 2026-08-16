@@ -153,7 +153,7 @@ interface ContextInterface {
 	 * exactly right for deciding where the reader goes when they leave, since all
 	 * three leave to the same topic.
 	 *
-	 * @since 0.5.2
+	 * @since 0.5.3
 	 *
 	 * @return bool
 	 */
@@ -166,7 +166,7 @@ interface ContextInterface {
 	 * `bbp_is_reply_move()` is this plus an `action` parameter
 	 * (`common/template.php:505`).
 	 *
-	 * @since 0.5.2
+	 * @since 0.5.3
 	 *
 	 * @return bool
 	 */

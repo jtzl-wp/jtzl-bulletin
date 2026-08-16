@@ -5,7 +5,7 @@ Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.2
 Requires Plugins: bbpress
-Stable tag: 0.5.2
+Stable tag: 0.5.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,12 @@ One table, `{prefix}jtzl_bltn_topic_reads`, recording which member has read whic
 Yes. Bulletin defers to bbPress's own access control, including forums nested under a restricted parent.
 
 == Changelog ==
+
+= 0.5.3 =
+
+A way out. Opening a form to edit a post now offers the same way to change your mind that writing a new one always has.
+
+* Fixed: The topic and reply edit forms had a Submit and nothing beside it, while the reply composer has always offered Cancel — two forms that look alike behaving differently. Editing now carries a Cancel that returns a member to the post they were editing, and the back control at the top of those screens goes there too, instead of to the forums index.
 
 = 0.5.2 =
 
