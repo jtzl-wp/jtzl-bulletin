@@ -1176,6 +1176,30 @@ body.admin-bar .bltn-app {
 	font-weight: 600;
 	color: var(--bltn-caution);
 }
+/* ⚠ An outline removed on purpose, which is otherwise close to never the answer.
+
+   Since #119 this line is the redirect's fragment target and carries `tabindex="-1"`
+   so assistive tech lands on it (see View\HeldNotice). The browser then paints its
+   default focus ring — and measured on the fixture, that turns a deliberately
+   BOXLESS quiet line into a rounded outlined box sitting directly above the reply
+   composer, where it reads as an empty input. DESIGN.md is explicit that this
+   message gets no box; the ring was handing it one.
+
+   Safe here, and only here, because `tabindex="-1"` keeps the element out of the tab
+   order: this is a programmatic landing spot, not a keyboard-operable control, and
+   nothing happens if a reader types into it. WCAG's Focus Visible is about the
+   latter. It is the same pattern a skip-link target uses. Do not copy this rule to
+   anything a reader can Tab to.
+
+   ⚠ `.bltn` is carried on the selector to beat `.bltn :focus-visible` further down
+   this file, and `:focus-visible` is the state to name because that is the one the
+   global rule matches. Without the extra class the two tie at (0,2,0) and source
+   order hands it to the global rule — which is what happened on the first attempt,
+   measured as `outline: 2px solid rgb(14, 124, 107)` still painted. */
+.bltn .bltn-compose__note--held:focus-visible,
+.bltn .bltn-compose__note--held:focus {
+	outline: none;
+}
 
 /* ---- the composer itself ----------------------------------------------------
 

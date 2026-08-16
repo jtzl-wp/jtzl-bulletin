@@ -66,6 +66,15 @@ class HeldNotice {
 	public const FLAG = 'bltn_held';
 
 	/**
+	 * The id of the acknowledgement, and the fragment the redirect aims at.
+	 *
+	 * @since 0.5.2
+	 *
+	 * @var string
+	 */
+	public const ANCHOR = 'bltn-held';
+
+	/**
 	 * WordPress/bbPress seam.
 	 *
 	 * @var ContextInterface
@@ -125,7 +134,46 @@ class HeldNotice {
 			return $url;
 		}
 
-		return $this->wp->add_query_arg( self::FLAG, '1', $url );
+		/*
+		 * ⚠ **bbPress's anchor is replaced, not kept, and this is the whole of #119.**
+		 * It points at `#post-{id}` — and reaching this line has already established
+		 * that no query will return that post, because that is what the two tests
+		 * above decided. So the fragment names a row nobody can see, the browser
+		 * finds nothing to scroll to, and the reader lands at the TOP of the thread
+		 * with the one sentence written for them at the foot. Measured on the fixture
+		 * at 390x844: `scrollTop 0` of 2217, and 0 visible pixels of the note.
+		 *
+		 * Dropping the fragment does not fix that — it only stops the URL lying. The
+		 * reader still lands at the top, because the top is where a fragmentless URL
+		 * lands. So it is re-aimed at the acknowledgement itself, which `render()`
+		 * gives the matching id. Measured after: `scrollTop 1445`, the whole note on
+		 * screen, moved by ordinary fragment navigation with no script involved —
+		 * which is the point. Every client-side alternative fails toward "the
+		 * acknowledgement is invisible", and that is the bug.
+		 */
+		$flagged = $this->wp->add_query_arg( self::FLAG, '1', $this->without_fragment( $url ) );
+
+		return $flagged . '#' . self::ANCHOR;
+	}
+
+	/**
+	 * The URL up to its fragment.
+	 *
+	 * Done here rather than by letting `add_query_arg()` juggle it. Core does handle a
+	 * fragment correctly — it splits one off, appends to the query and puts it back,
+	 * and `HeldNoticeRedirectTest` still asserts that because it is core behaviour this
+	 * file sits on. But this method wants the fragment **gone**, not preserved, so
+	 * removing it first means the result never depends on that behaviour at all.
+	 *
+	 * @since 0.5.2
+	 *
+	 * @param string $url URL that may carry a fragment.
+	 * @return string
+	 */
+	private function without_fragment( string $url ): string {
+		$hash = strpos( $url, '#' );
+
+		return false === $hash ? $url : substr( $url, 0, $hash );
 	}
 
 	/**
@@ -161,8 +209,22 @@ class HeldNotice {
 			return;
 		}
 
+		/*
+		 * The id is load-bearing: `filter_redirect()` aims the redirect's fragment at
+		 * it, so a rename here without a rename there returns the reader to the top of
+		 * the thread with nothing to see — the exact defect #119 closed. The constant
+		 * is why they cannot drift.
+		 *
+		 * `tabindex="-1"` so the fragment target can take focus rather than only being
+		 * scrolled to. A browser focuses a fragment target when it is focusable, which
+		 * puts a screen reader on the sentence instead of leaving it to notice a
+		 * `role="status"` region that was already present at load and therefore never
+		 * "changed". bbPress marks its own notices the same way
+		 * (`form-topic-split.php:100`).
+		 */
 		printf(
-			'<p class="bltn-compose__note bltn-compose__note--held" role="status">%s</p>',
+			'<p id="%1$s" class="bltn-compose__note bltn-compose__note--held" role="status" tabindex="-1">%2$s</p>',
+			esc_attr( self::ANCHOR ),
 			esc_html__( 'Your reply is awaiting review.', 'jtzl-bulletin' )
 		);
 	}
