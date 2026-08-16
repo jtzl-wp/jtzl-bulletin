@@ -5,7 +5,7 @@ Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.2
 Requires Plugins: bbpress
-Stable tag: 0.5.1
+Stable tag: 0.5.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,13 @@ One table, `{prefix}jtzl_bltn_topic_reads`, recording which member has read whic
 Yes. Bulletin defers to bbPress's own access control, including forums nested under a restricted parent.
 
 == Changelog ==
+
+= 0.5.2 =
+
+Two more places a member could not see what had just happened. Both were reachable the moment 0.5.1 made a composer easy to open.
+
+* Fixed: Starting a thread put the cursor in the post body, past the title — the one field the forum will not accept a thread without. A member could write a whole post and be refused for a field they had never been shown. The cursor now starts where each form starts: the title on a new thread, the message on a reply, and the name field for a member posting without an account.
+* Fixed: A reply held for review by someone posting without an account left them at the top of the thread, with "Your reply is awaiting review." out of sight at the foot. Nothing else marks such a reply — no row, no badge, no profile to check — so from their side the post had simply vanished. They now land on the message.
 
 = 0.5.1 =
 
