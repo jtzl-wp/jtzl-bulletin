@@ -12,6 +12,7 @@ use DI\Container;
 use JTZL\Bulletin\Ajax\Endpoints;
 use JTZL\Bulletin\Asset\AssetManager;
 use JTZL\Bulletin\Asset\TakeoverScriptSuppressor;
+use JTZL\Bulletin\Chrome\EditExit;
 use JTZL\Bulletin\Chrome\Furniture;
 use JTZL\Bulletin\Chrome\Namings;
 use JTZL\Bulletin\Chrome\UnreadClasses;
@@ -247,6 +248,19 @@ class Bootstrap {
 		$wp->add_action( 'bbp_theme_before_reply_content', array( $protected, 'open_row_slot' ) );
 		$wp->add_action( 'bbp_theme_after_reply_content', array( $protected, 'close_row_slot' ) );
 		$wp->add_filter( 'the_password_form', array( $protected, 'filter_password_form' ) );
+
+		/*
+		 * A way out of an edit form, beside the Submit it sits next to (Yoren,
+		 * 2026-08-16). Two hooks because bbPress fires a different one per template,
+		 * and only two of the five forms in this tier fire anything at all — the three
+		 * moderation templates carry no do_action, so Chrome\EditExit reaches them
+		 * through the app bar's destination instead. Its own gate is what keeps this
+		 * off the composer, which renders the same two templates on the takeover tier
+		 * and already has a Cancel.
+		 */
+		$exit = $this->service( EditExit::class );
+		$wp->add_action( 'bbp_theme_after_reply_form_submit_button', array( $exit, 'render_cancel' ) );
+		$wp->add_action( 'bbp_theme_after_topic_form_submit_button', array( $exit, 'render_cancel' ) );
 	}
 
 	/**

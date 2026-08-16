@@ -129,17 +129,48 @@ interface ContextInterface {
 	/**
 	 * Whether this is the create/edit-forum form (keymaster administration).
 	 *
-	 * The one bbPress front-end screen Bulletin still leaves to the active theme, and
-	 * so the only edit conditional the seam needs. Topic edit, reply edit and the
-	 * three moderation forms built on them (merge, split, move) all reskin now, which
-	 * they do by falling through Screen\ScreenClassifier rather than by being asked
-	 * about — so asking about them is surface with no caller.
+	 * The one bbPress front-end screen Bulletin still leaves to the active theme.
+	 *
+	 * ⚠ This docblock used to add that it was "the only edit conditional the seam
+	 * needs", because topic and reply edit reskin by *falling through* the classifier
+	 * rather than by being asked about. True until 0.5.2, when the two below acquired
+	 * a caller: an edit screen has to know which post it is editing so the reader can
+	 * get back to it.
 	 *
 	 * @since 0.3.0
 	 *
 	 * @return bool
 	 */
 	public function is_forum_edit(): bool;
+
+	/**
+	 * Whether this request is the topic edit form.
+	 *
+	 * ⚠ **True on the moderation forms as well**, and that is bbPress's design rather
+	 * than a leak: `bbp_is_topic_merge()` and `bbp_is_topic_split()` are this
+	 * conditional plus an `action` parameter (`common/template.php:317`, `:338`). So a
+	 * caller asking "is a topic being edited here" gets yes on all three — which is
+	 * exactly right for deciding where the reader goes when they leave, since all
+	 * three leave to the same topic.
+	 *
+	 * @since 0.5.2
+	 *
+	 * @return bool
+	 */
+	public function is_topic_edit(): bool;
+
+	/**
+	 * Whether this request is the reply edit form.
+	 *
+	 * ⚠ **True on the reply move form too**, for the reason given above:
+	 * `bbp_is_reply_move()` is this plus an `action` parameter
+	 * (`common/template.php:505`).
+	 *
+	 * @since 0.5.2
+	 *
+	 * @return bool
+	 */
+	public function is_reply_edit(): bool;
 
 	/**
 	 * Whether this is a member profile's Subscriptions tab.

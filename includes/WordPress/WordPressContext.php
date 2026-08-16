@@ -173,6 +173,28 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * Whether this request is the topic edit form.
+	 *
+	 * @since 0.5.2
+	 *
+	 * @return bool
+	 */
+	public function is_topic_edit(): bool {
+		return bbp_is_topic_edit();
+	}
+
+	/**
+	 * Whether this request is the reply edit form.
+	 *
+	 * @since 0.5.2
+	 *
+	 * @return bool
+	 */
+	public function is_reply_edit(): bool {
+		return bbp_is_reply_edit();
+	}
+
+	/**
 	 * Whether this is a member profile's Subscriptions tab.
 	 *
 	 * @since 0.3.0

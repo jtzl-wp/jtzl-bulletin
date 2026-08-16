@@ -1510,6 +1510,17 @@ body.admin-bar .bltn-app {
 .bltn-compose__cancel:hover {
 	background: color-mix(in srgb, var(--bltn-accent) 12%, var(--bltn-wash));
 }
+/* The edit forms' Cancel is an ANCHOR, because there it navigates rather than
+   collapsing something in place (Chrome\EditExit) — which also means it works with no
+   script, unlike the composer's. A button centres its own label and an anchor does
+   not, so the block above leaves it top-left in a 40px box; these three lines are the
+   whole difference. Same shape as `a.bltn-compose__open` below, for the same reason. */
+a.bltn-compose__cancel {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	text-decoration: none;
+}
 /* The sign-in control is not collapsible — it IS the resting state — so it opts back
    in on its own. An anchor rather than a button is what tells the two apart, and it
    is also what makes them different controls: one opens something on this page, the

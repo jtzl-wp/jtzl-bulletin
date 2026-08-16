@@ -35,13 +35,24 @@ $bltn_heading   = $bltn_container->get( \JTZL\Bulletin\View\ScreenHeading::class
 <body <?php body_class( 'bltn bltn-reskin' ); ?>>
 <div class="bltn-app">
 	<?php
-	// Chrome only: a back control to the forums index and the account button. The
-	// title stays the site name and is not a heading — the screen's h1 is rendered
-	// below, in the content region, exactly as the four takeover templates do it.
+	/*
+	 * Chrome only: a back control and the account button. The title stays the site
+	 * name and is not a heading — the screen's h1 is rendered below, in the content
+	 * region, exactly as the four takeover templates do it.
+	 *
+	 * ⚠ **The destination used to be the forums index for every screen in this tier,
+	 * and on an edit form that was the whole defect** (Yoren, 2026-08-16). It was a
+	 * fair default when the tier held archives and profiles, whose parent really is
+	 * the index; topic and reply edit joined in 0.5.0 and inherited it, so a member
+	 * who opened Edit forty replies deep and changed their mind was dropped at the top
+	 * of the site. Chrome\EditExit answers per screen now and still says "the forums
+	 * index" for everything that is not an edit form.
+	 */
+	$bltn_exit = $bltn_container->get( \JTZL\Bulletin\Chrome\EditExit::class )->destination();
 	$bltn_appbar->render(
 		array(
-			'back_url'   => bbp_get_forums_url(),
-			'back_label' => __( 'Back to forums', 'jtzl-bulletin' ),
+			'back_url'   => $bltn_exit['url'],
+			'back_label' => $bltn_exit['label'],
 			'heading'    => false,
 		)
 	);
