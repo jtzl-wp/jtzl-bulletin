@@ -5,7 +5,7 @@ Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.2
 Requires Plugins: bbpress
-Stable tag: 0.5.0
+Stable tag: 0.5.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -69,6 +69,14 @@ One table, `{prefix}jtzl_bltn_topic_reads`, recording which member has read whic
 Yes. Bulletin defers to bbPress's own access control, including forums nested under a restricted parent.
 
 == Changelog ==
+
+= 0.5.1 =
+
+Answering, without having to go looking for the form. Every way a member reaches a composer now puts it on the screen in front of them.
+
+* Fixed: "Start a thread" opened the form at the foot of a long thread list, off the bottom of the screen. The control is fixed to the foot of the viewport and the form is not, so on a busy forum nothing appeared to happen and the button read as broken. Tapping it now moves the screen to the form.
+* Fixed: A post the forum refused — an empty reply, a thread with no title — sent the member back to the top of the screen, with the reason and their own unsent draft out of sight at the foot. Both are now where they land.
+* Fixed: The fixed "Start a thread" bar no longer sits over a form that is already open, where it offered a second time what the screen was already doing.
 
 = 0.5.0 =
 
