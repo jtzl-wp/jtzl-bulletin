@@ -745,6 +745,31 @@ interface ContextInterface {
 	public function get_forum_content( int $forum_id ): string;
 
 	/**
+	 * A forum's description as plain text, with its markup removed.
+	 *
+	 * The API publishes a description as a string a client will put in a label, so
+	 * the stripping belongs on this side of the seam rather than in a serializer:
+	 * a caller that has to remember to strip is a caller that will one day forget,
+	 * and the markup would reach the app as literal tags.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $forum_id Forum ID.
+	 * @return string
+	 */
+	public function get_forum_description( int $forum_id ): string;
+
+	/**
+	 * The forum a forum sits in, or 0 for a top-level one.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $forum_id Forum ID.
+	 * @return int
+	 */
+	public function get_forum_parent_id( int $forum_id ): int;
+
+	/**
 	 * A forum's topic count, sub-forum topics included.
 	 *
 	 * @since 0.3.0

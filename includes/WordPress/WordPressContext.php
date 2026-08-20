@@ -896,6 +896,30 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * A forum's description as plain text.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $forum_id Forum ID.
+	 * @return string
+	 */
+	public function get_forum_description( int $forum_id ): string {
+		return wp_strip_all_tags( $this->get_forum_content( $forum_id ) );
+	}
+
+	/**
+	 * The forum a forum sits in, or 0 for a top-level one.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $forum_id Forum ID.
+	 * @return int
+	 */
+	public function get_forum_parent_id( int $forum_id ): int {
+		return (int) get_post_field( 'post_parent', $forum_id, 'raw' );
+	}
+
+	/**
 	 * A forum's topic count, sub-forum topics included.
 	 *
 	 * @since 0.3.0

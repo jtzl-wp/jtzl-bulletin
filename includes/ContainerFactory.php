@@ -15,6 +15,8 @@ use JTZL\Bulletin\Asset\BuiltAssets;
 use JTZL\Bulletin\Takeover\TemplateController;
 use JTZL\Bulletin\Unread\ReadCursor;
 use JTZL\Bulletin\WordPress\ContextInterface;
+use JTZL\Bulletin\WordPress\RestContext;
+use JTZL\Bulletin\WordPress\RestContextInterface;
 use JTZL\Bulletin\WordPress\WordPressContext;
 use function DI\autowire;
 
@@ -74,14 +76,19 @@ class ContainerFactory {
 		$templates_dir = $plugin_dir . 'templates/';
 
 		return array(
-			ContextInterface::class   => autowire( WordPressContext::class ),
+			ContextInterface::class     => autowire( WordPressContext::class ),
+
+			// A second seam beside the first, for what only the API asks. Both are
+			// boundary classes over the same globals; they are separate so the
+			// browser's double does not have to grow the API's whole surface.
+			RestContextInterface::class => autowire( RestContext::class ),
 
 			// The one global the container cannot autowire: \wpdb is constructed by
 			// WordPress before any of this runs, and there is exactly one of it.
 			// Database\Schema and Unread\ReadState take it as a constructor argument
 			// like any other dependency, so they stay testable against a handle a test
 			// supplies rather than reaching for the global themselves.
-			\wpdb::class              => static function (): \wpdb {
+			\wpdb::class                => static function (): \wpdb {
 				global $wpdb;
 
 				return $wpdb;
@@ -90,16 +97,16 @@ class ContainerFactory {
 			// The signing secret is a WordPress value, not a service, and asking for it
 			// through the context seam would add a method with one caller. Bound here
 			// instead, where every other scalar this container supplies is bound.
-			ReadCursor::class         => static fn(): ReadCursor => new ReadCursor( wp_salt( 'auth' ) ),
+			ReadCursor::class           => static fn(): ReadCursor => new ReadCursor( wp_salt( 'auth' ) ),
 
-			BuiltAssets::class        => autowire()
+			BuiltAssets::class          => autowire()
 				->constructorParameter( 'plugin_dir', $plugin_dir )
 				->constructorParameter( 'plugin_url', $plugin_url ),
 
-			AssetManager::class       => autowire()
+			AssetManager::class         => autowire()
 				->constructorParameter( 'version', $plugin_ver ),
 
-			TemplateController::class => autowire()
+			TemplateController::class   => autowire()
 				->constructorParameter( 'templates_dir', $templates_dir ),
 		);
 	}

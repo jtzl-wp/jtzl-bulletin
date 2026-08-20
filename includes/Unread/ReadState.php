@@ -84,20 +84,30 @@ class ReadState {
 	private ForumTree $tree;
 
 	/**
+	 * The shared movement comparison.
+	 *
+	 * @var ActivityComparison
+	 * @since 0.6.0
+	 */
+	private ActivityComparison $comparison;
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 0.5.0
 	 *
-	 * @param \wpdb            $wpdb   WordPress database handle.
-	 * @param Schema           $schema Schema definition.
-	 * @param ContextInterface $wp     WordPress/bbPress seam.
-	 * @param ForumTree        $tree   The forum hierarchy.
+	 * @param \wpdb              $wpdb   WordPress database handle.
+	 * @param Schema             $schema Schema definition.
+	 * @param ContextInterface   $wp     WordPress/bbPress seam.
+	 * @param ForumTree          $tree       The forum hierarchy.
+	 * @param ActivityComparison $comparison The shared movement comparison.
 	 */
-	public function __construct( \wpdb $wpdb, Schema $schema, ContextInterface $wp, ForumTree $tree ) {
-		$this->wpdb   = $wpdb;
-		$this->schema = $schema;
-		$this->wp     = $wp;
-		$this->tree   = $tree;
+	public function __construct( \wpdb $wpdb, Schema $schema, ContextInterface $wp, ForumTree $tree, ActivityComparison $comparison ) {
+		$this->wpdb       = $wpdb;
+		$this->schema     = $schema;
+		$this->wp         = $wp;
+		$this->tree       = $tree;
+		$this->comparison = $comparison;
 	}
 
 	/**
@@ -132,14 +142,7 @@ class ReadState {
 			  LEFT JOIN {$reads} r
 				     ON r.topic_id = p.ID AND r.user_id = %d
 				  WHERE p.ID IN ( {$placeholders} )
-				    AND (
-				          r.read_time IS NULL
-				          OR COALESCE( NULLIF( m.meta_value, '' ), p.post_date ) > r.read_time
-				          OR (
-				               COALESCE( NULLIF( m.meta_value, '' ), p.post_date ) = r.read_time
-				               AND CAST( COALESCE( NULLIF( i.meta_value, '' ), p.ID ) AS UNSIGNED ) > r.read_id
-				             )
-				        )",
+				    AND {$this->comparison->moved_past( 'p' )}",
 				array_merge( array( $user_id ), $topic_ids )
 			)
 		);
@@ -163,11 +166,29 @@ class ReadState {
 	 *
 	 * @since 0.5.0
 	 *
-	 * @param array<int,int> $forum_ids Forum IDs.
-	 * @param int            $user_id   Member ID; 0 for logged out.
+	 * ## The optional scope
+	 *
+	 * The website asks this question of forums it is already rendering, so the rows it
+	 * asks about are rows the reader can see. The API asks it of a whole branch at
+	 * once, and a branch can contain a forum the reader may not open — one behind a
+	 * password, or beneath a forum behind one. Rolling those up would light a parent
+	 * for activity the reader cannot reach, which is a small disclosure with a large
+	 * shape: the dot says *something happened in there*.
+	 *
+	 * So a caller may hand over the forums it considers readable, and the roll-up is
+	 * intersected with that set before anything is asked of the database. Passing null
+	 * — every website caller — keeps the previous behaviour exactly. The existing SQL
+	 * already excludes a topic's own password; this excludes a branch by its forum.
+	 *
+	 * @since 0.5.0
+	 *
+	 * @param array<int,int>      $forum_ids         Forum IDs.
+	 * @param int                 $user_id           Member ID; 0 for logged out.
+	 * @param array<int,int>|null $allowed_forum_ids Forums the caller will admit, or
+	 *                                               null for no restriction.
 	 * @return array<int,bool> Keyed by forum ID. Every input ID is present.
 	 */
-	public function unread_forums( array $forum_ids, int $user_id ): array {
+	public function unread_forums( array $forum_ids, int $user_id, ?array $allowed_forum_ids = null ): array {
 		$forum_ids = $this->clean_ids( $forum_ids );
 		$answer    = array_fill_keys( $forum_ids, false );
 
@@ -177,6 +198,19 @@ class ReadState {
 
 		$descendants = $this->tree->descendants_of( $forum_ids );
 		$scope       = $this->clean_ids( array_merge( $forum_ids, ...array_values( $descendants ) ) );
+
+		if ( null !== $allowed_forum_ids ) {
+			$allowed = array_flip( $this->clean_ids( $allowed_forum_ids ) );
+			$scope   = array_values( array_filter( $scope, static fn( int $id ): bool => isset( $allowed[ $id ] ) ) );
+		}
+
+		// ⚠ forums_holding_unread() states an unempty precondition and would build
+		// `IN ( )` without it. A scope filtered down to nothing is an ordinary answer
+		// — a reader who may open none of these forums — not a caller's mistake.
+		if ( array() === $scope ) {
+			return $answer;
+		}
+
 		$with_unread = $this->forums_holding_unread( $scope, $user_id );
 
 		foreach ( $forum_ids as $forum_id ) {
@@ -338,14 +372,7 @@ class ReadState {
 				    AND t.post_status IN ( {$status_slots} )
 				    AND t.post_password = ''
 				    AND t.post_parent IN ( {$placeholders} )
-				    AND (
-				          r.read_time IS NULL
-				          OR COALESCE( NULLIF( m.meta_value, '' ), t.post_date ) > r.read_time
-				          OR (
-				               COALESCE( NULLIF( m.meta_value, '' ), t.post_date ) = r.read_time
-				               AND CAST( COALESCE( NULLIF( i.meta_value, '' ), t.ID ) AS UNSIGNED ) > r.read_id
-				             )
-				        )",
+				    AND {$this->comparison->moved_past( 't' )}",
 				array_merge( array( $user_id, $this->wp->get_topic_post_type() ), $statuses, $forum_ids )
 			)
 		);
