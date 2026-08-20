@@ -13,6 +13,7 @@ use DI\ContainerBuilder;
 use JTZL\Bulletin\Asset\AssetManager;
 use JTZL\Bulletin\Asset\BuiltAssets;
 use JTZL\Bulletin\Takeover\TemplateController;
+use JTZL\Bulletin\Unread\ReadCursor;
 use JTZL\Bulletin\WordPress\ContextInterface;
 use JTZL\Bulletin\WordPress\WordPressContext;
 use function DI\autowire;
@@ -85,6 +86,11 @@ class ContainerFactory {
 
 				return $wpdb;
 			},
+
+			// The signing secret is a WordPress value, not a service, and asking for it
+			// through the context seam would add a method with one caller. Bound here
+			// instead, where every other scalar this container supplies is bound.
+			ReadCursor::class         => static fn(): ReadCursor => new ReadCursor( wp_salt( 'auth' ) ),
 
 			BuiltAssets::class        => autowire()
 				->constructorParameter( 'plugin_dir', $plugin_dir )

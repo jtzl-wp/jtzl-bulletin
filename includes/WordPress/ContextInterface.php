@@ -1018,6 +1018,30 @@ interface ContextInterface {
 	public function get_topic_last_active_datetime( int $topic_id ): string;
 
 	/**
+	 * The ID of the post a topic was last active on.
+	 *
+	 * The tiebreak beside get_topic_last_active_datetime(), and the reason both are
+	 * needed: bbPress stamps last-active to the second, so a thread that takes two
+	 * replies inside one second is indistinguishable by time alone. Comparing the
+	 * pair separates them.
+	 *
+	 * Falls back to the topic's own ID when bbPress has not stamped one, which is the
+	 * same fallback Unread\ReadState applies in SQL — so a topic bbPress left alone
+	 * compares equal on both sides instead of reading as permanently unread.
+	 *
+	 * ⚠ **The stored ID wins even when it is lower than the topic's own**, which an
+	 * import can easily produce. Taking the larger of the two would swallow a reply
+	 * that arrived in the same second as the read, which is the case this exists to
+	 * catch.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $topic_id Topic ID.
+	 * @return int Post ID, or 0 when the topic does not exist.
+	 */
+	public function get_topic_last_active_id( int $topic_id ): int;
+
+	/**
 	 * A topic's reply count.
 	 *
 	 * @since 0.1.0

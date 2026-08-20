@@ -1251,6 +1251,27 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * The ID of the post a topic was last active on.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $topic_id Topic ID.
+	 * @return int Post ID, or 0 when the topic does not exist.
+	 */
+	public function get_topic_last_active_id( int $topic_id ): int {
+		$stored = (int) get_post_meta( $topic_id, '_bbp_last_active_id', true );
+
+		if ( $stored > 0 ) {
+			return $stored;
+		}
+
+		// 'raw' rather than the default context: get_post_field() would otherwise run
+		// the field through sanitize_post_field(), and CLAUDE.md's trap #5 is what
+		// happens when that fires a filter inside a loop over the same post type.
+		return (int) get_post_field( 'ID', $topic_id, 'raw' );
+	}
+
+	/**
 	 * A topic's reply count.
 	 *
 	 * @since 0.1.0

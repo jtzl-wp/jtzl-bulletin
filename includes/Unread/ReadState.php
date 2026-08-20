@@ -22,8 +22,12 @@ if ( ! defined( 'ABSPATH' ) ) {
  * have. Everything the unread accent knows comes from here.
  *
  * **A topic is unread when the member has no row for it, or when the topic has moved
- * since the row was written** — `_bbp_last_active_time` newer than `read_time`. A
- * forum is unread when any topic inside it, or inside any forum beneath it, is.
+ * since the row was written** — bbPress's `(_bbp_last_active_time, _bbp_last_active_id)`
+ * past the stored `(read_time, read_id)`. The ID is the tiebreak, and it is not
+ * decoration: last-active is stamped to the second, so without it a second reply
+ * inside one second is "not newer than" what was read and the thread stays quietly
+ * clear. A forum is unread when any topic inside it, or inside any forum beneath it,
+ * is.
  *
  * Two properties are load-bearing and both are about the same thing — this runs on
  * every list a reader sees:
@@ -123,10 +127,19 @@ class ReadState {
 				   FROM {$this->wpdb->posts} p
 			  LEFT JOIN {$this->wpdb->postmeta} m
 				     ON m.post_id = p.ID AND m.meta_key = '_bbp_last_active_time'
+			  LEFT JOIN {$this->wpdb->postmeta} i
+				     ON i.post_id = p.ID AND i.meta_key = '_bbp_last_active_id'
 			  LEFT JOIN {$reads} r
 				     ON r.topic_id = p.ID AND r.user_id = %d
 				  WHERE p.ID IN ( {$placeholders} )
-				    AND ( r.read_time IS NULL OR COALESCE( NULLIF( m.meta_value, '' ), p.post_date ) > r.read_time )",
+				    AND (
+				          r.read_time IS NULL
+				          OR COALESCE( NULLIF( m.meta_value, '' ), p.post_date ) > r.read_time
+				          OR (
+				               COALESCE( NULLIF( m.meta_value, '' ), p.post_date ) = r.read_time
+				               AND CAST( COALESCE( NULLIF( i.meta_value, '' ), p.ID ) AS UNSIGNED ) > r.read_id
+				             )
+				        )",
 				array_merge( array( $user_id ), $topic_ids )
 			)
 		);
@@ -183,51 +196,64 @@ class ReadState {
 	/**
 	 * Record that a member has read a topic as far as the topic had got.
 	 *
-	 * Stamped with the topic's own last-active time rather than "now", so a reply
+	 * Stamped with the topic's own last-active position rather than "now", so a reply
 	 * that lands while the page is open is still unread on the next visit instead of
 	 * being swallowed by the act of having been on the screen when it arrived.
 	 *
-	 * The write is skipped when the stored value already matches, which is the common
-	 * case: re-opening a thread nobody has posted to costs a read and no write. That
-	 * matters because this is the one place the plugin writes during a GET.
+	 * **The position can only move forward, and the statement is what enforces it.**
+	 * Two requests can carry two positions and arrive in either order — a phone that
+	 * retried on a flaky connection sends the older one second — so the comparison
+	 * belongs where the write happens rather than in a check before it. A position
+	 * that is not ahead of the stored one performs a harmless no-op update.
+	 *
+	 * ⚠ There is deliberately no read-before-write. The version of this that skipped
+	 * the write when the stored timestamp matched could not survive the ID: a second
+	 * reply in the same second leaves the timestamp identical and the ID higher, which
+	 * is exactly the case the skip declined to write. One statement is also cheaper
+	 * than the lookup it replaced, which matters — this is the one place the plugin
+	 * writes during a GET.
 	 *
 	 * @since 0.5.0
 	 *
 	 * @param int    $topic_id  Topic ID.
 	 * @param int    $user_id   Member ID.
 	 * @param string $read_time MySQL datetime the topic was last active.
+	 * @param int    $read_id   ID of the post that activity was; 0 only for a legacy row.
 	 */
-	public function mark_topic_read( int $topic_id, int $user_id, string $read_time ): void {
-		if ( $topic_id <= 0 || $user_id <= 0 || '' === $read_time ) {
+	public function mark_topic_read( int $topic_id, int $user_id, string $read_time, int $read_id ): void {
+		if ( $topic_id <= 0 || $user_id <= 0 || '' === $read_time || $read_id < 0 ) {
 			return;
 		}
 
 		$reads = $this->schema->topic_reads_table();
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$stored = $this->wpdb->get_var(
+		//
+		// The primary key already states one row per member per topic, so the database
+		// can enforce it in one statement and two concurrent requests cannot race into
+		// a duplicate.
+		//
+		// ⚠ read_id is assigned before read_time. Assignments in ON DUPLICATE KEY
+		// UPDATE run in order and see each other's results, so comparing against
+		// read_time after GREATEST() had already advanced it would compare the new
+		// value against itself and drop the tiebreak.
+		$this->wpdb->query(
 			$this->wpdb->prepare(
-				"SELECT read_time FROM {$reads} WHERE user_id = %d AND topic_id = %d",
+				"INSERT INTO {$reads} ( user_id, topic_id, read_time, read_id )
+				 VALUES ( %d, %d, %s, %d )
+				 ON DUPLICATE KEY UPDATE
+				   read_id = IF(
+				     VALUES( read_time ) > read_time
+				       OR ( VALUES( read_time ) = read_time AND VALUES( read_id ) > read_id ),
+				     VALUES( read_id ),
+				     read_id
+				   ),
+				   read_time = GREATEST( read_time, VALUES( read_time ) )",
 				$user_id,
-				$topic_id
+				$topic_id,
+				$read_time,
+				$read_id
 			)
-		);
-
-		if ( (string) $stored === $read_time ) {
-			return;
-		}
-
-		// REPLACE rather than a read-then-insert-or-update: the primary key already
-		// states one row per member per topic, so the database can enforce it in one
-		// statement and two concurrent requests cannot race into a duplicate.
-		$this->wpdb->replace(
-			$reads,
-			array(
-				'user_id'   => $user_id,
-				'topic_id'  => $topic_id,
-				'read_time' => $read_time,
-			),
-			array( '%d', '%d', '%s' )
 		);
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 	}
@@ -304,13 +330,22 @@ class ReadState {
 				   FROM {$this->wpdb->posts} t
 			  LEFT JOIN {$this->wpdb->postmeta} m
 				     ON m.post_id = t.ID AND m.meta_key = '_bbp_last_active_time'
+			  LEFT JOIN {$this->wpdb->postmeta} i
+				     ON i.post_id = t.ID AND i.meta_key = '_bbp_last_active_id'
 			  LEFT JOIN {$reads} r
 				     ON r.topic_id = t.ID AND r.user_id = %d
 				  WHERE t.post_type = %s
 				    AND t.post_status IN ( {$status_slots} )
 				    AND t.post_password = ''
 				    AND t.post_parent IN ( {$placeholders} )
-				    AND ( r.read_time IS NULL OR COALESCE( NULLIF( m.meta_value, '' ), t.post_date ) > r.read_time )",
+				    AND (
+				          r.read_time IS NULL
+				          OR COALESCE( NULLIF( m.meta_value, '' ), t.post_date ) > r.read_time
+				          OR (
+				               COALESCE( NULLIF( m.meta_value, '' ), t.post_date ) = r.read_time
+				               AND CAST( COALESCE( NULLIF( i.meta_value, '' ), t.ID ) AS UNSIGNED ) > r.read_id
+				             )
+				        )",
 				array_merge( array( $user_id, $this->wp->get_topic_post_type() ), $statuses, $forum_ids )
 			)
 		);

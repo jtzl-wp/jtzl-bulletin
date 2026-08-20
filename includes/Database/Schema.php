@@ -23,7 +23,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * in it, so whatever a reader has seen has to be stored by us.
  *
  * **A row means "this member has opened this topic, and the topic had not moved past
- * `read_time` when they did". No row means unread.** That is the whole model. It is
+ * `(read_time, read_id)` when they did". No row means unread.** That is the whole
+ * model — a position in a thread, not a date. It is
  * deliberately not a per-user "last visit" watermark, which is the cheaper shape and
  * the wrong one: a watermark can only ever advance by declaring topics read that the
  * member never opened, and the product decision (Yoren, 2026-08-11) is that a topic
@@ -88,6 +89,20 @@ class Schema {
 	 * Converting on either side of that comparison would be a chance to get the
 	 * timezone wrong once and be subtly wrong forever.
 	 *
+	 * `read_id` is the second half of that comparison and exists because the first
+	 * half cannot separate two posts in the same second — bbPress stamps last-active
+	 * to the second, and an import or a busy thread puts two replies inside one. It
+	 * holds `_bbp_last_active_id`, so the pair compares against the pair bbPress
+	 * stores.
+	 *
+	 * ⚠ **The default of 0 is not the migration.** dbDelta() gives every existing row
+	 * that default, and 0 loses the tiebreak to any real activity ID — so on a v1
+	 * site, where being caught up meant `read_time` equalled the topic's last-active
+	 * time, every already-read topic on the forum would light up at once. Migrator
+	 * backfills the recoverable rows before recording the version; the default then
+	 * applies only to rows nothing can be said about, such as a read whose topic has
+	 * since been deleted.
+	 *
 	 * @since 0.5.0
 	 *
 	 * @return array<int,string>
@@ -101,6 +116,7 @@ class Schema {
   user_id bigint(20) UNSIGNED NOT NULL,
   topic_id bigint(20) UNSIGNED NOT NULL,
   read_time datetime NOT NULL,
+  read_id bigint(20) UNSIGNED NOT NULL DEFAULT 0,
   PRIMARY KEY  (user_id,topic_id),
   KEY idx_topic_id (topic_id)
 ) $charset_collate;",

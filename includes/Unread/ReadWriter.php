@@ -97,7 +97,8 @@ class ReadWriter {
 		$this->reads->mark_topic_read(
 			$topic_id,
 			$this->wp->get_current_user_id(),
-			$this->wp->get_topic_last_active_datetime( $topic_id )
+			$this->wp->get_topic_last_active_datetime( $topic_id ),
+			$this->wp->get_topic_last_active_id( $topic_id )
 		);
 	}
 }
