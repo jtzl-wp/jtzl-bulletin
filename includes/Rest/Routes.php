@@ -72,6 +72,14 @@ class Routes {
 	private TopicController $topics;
 
 	/**
+	 * Reply reads.
+	 *
+	 * @var ReplyController
+	 * @since 0.6.0
+	 */
+	private ReplyController $replies;
+
+	/**
 	 * Tag reads.
 	 *
 	 * @var TagController
@@ -84,21 +92,24 @@ class Routes {
 	 *
 	 * @since 0.6.0
 	 *
-	 * @param ContextInterface $wp     WordPress/bbPress seam.
-	 * @param ForumController  $forums Forum reads.
-	 * @param TopicController  $topics Topic reads.
-	 * @param TagController    $tags   Tag reads.
+	 * @param ContextInterface $wp      WordPress/bbPress seam.
+	 * @param ForumController  $forums  Forum reads.
+	 * @param TopicController  $topics  Topic reads.
+	 * @param ReplyController  $replies Reply reads.
+	 * @param TagController    $tags    Tag reads.
 	 */
 	public function __construct(
 		ContextInterface $wp,
 		ForumController $forums,
 		TopicController $topics,
+		ReplyController $replies,
 		TagController $tags
 	) {
-		$this->wp     = $wp;
-		$this->forums = $forums;
-		$this->topics = $topics;
-		$this->tags   = $tags;
+		$this->wp      = $wp;
+		$this->forums  = $forums;
+		$this->topics  = $topics;
+		$this->replies = $replies;
+		$this->tags    = $tags;
 	}
 
 	/**
@@ -126,6 +137,6 @@ class Routes {
 	 * @return ControllerInterface[]
 	 */
 	private function controllers(): array {
-		return array( $this->forums, $this->topics, $this->tags );
+		return array( $this->forums, $this->topics, $this->replies, $this->tags );
 	}
 }

@@ -9,6 +9,7 @@
 namespace JTZL\Bulletin\Rest;
 
 use JTZL\Bulletin\Query\ForumQuery;
+use JTZL\Bulletin\Query\ReplyQuery;
 use JTZL\Bulletin\Query\TopicQuery;
 use JTZL\Bulletin\WordPress\ContextInterface;
 use JTZL\Bulletin\WordPress\RestContextInterface;
@@ -90,6 +91,14 @@ class CollectionRepository {
 	private TopicQuery $topics;
 
 	/**
+	 * Shared reply-query builder.
+	 *
+	 * @var ReplyQuery
+	 * @since 0.6.0
+	 */
+	private ReplyQuery $replies;
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 0.6.0
@@ -99,19 +108,22 @@ class CollectionRepository {
 	 * @param CollectionVisibility $visibility Collection scope.
 	 * @param ForumQuery           $forums     Shared forum-query builder.
 	 * @param TopicQuery           $topics     Shared topic-query builder.
+	 * @param ReplyQuery           $replies    Shared reply-query builder.
 	 */
 	public function __construct(
 		ContextInterface $wp,
 		RestContextInterface $rest,
 		CollectionVisibility $visibility,
 		ForumQuery $forums,
-		TopicQuery $topics
+		TopicQuery $topics,
+		ReplyQuery $replies
 	) {
 		$this->wp         = $wp;
 		$this->rest       = $rest;
 		$this->visibility = $visibility;
 		$this->forums     = $forums;
 		$this->topics     = $topics;
+		$this->replies    = $replies;
 	}
 
 	/**
@@ -176,6 +188,67 @@ class CollectionRepository {
 
 		return array(
 			'ids'         => $needed > 0 ? array_merge( $page_ids, $rest_of_page['ids'] ) : $page_ids,
+			'total'       => $total,
+			'total_pages' => (int) ceil( $total / max( 1, $per_page ) ),
+		);
+	}
+
+	/**
+	 * One page of a thread's replies, flat, in the website's own reading order.
+	 *
+	 * ## Both queries are the website's, and that is a rule rather than a preference
+	 *
+	 * The page comes from `Query\ReplyQuery::args()` and a threaded total from
+	 * `Query\ReplyQuery::ordered_ids()`, always. Neither is reconstructed here: both
+	 * carry `Query\PendingVisibility`'s marker and `Query\ProtectedStatusGuard`'s, so
+	 * arguments assembled locally would either hand a stranger somebody's held reply
+	 * or drop the author's own from a page the total still counted — CLAUDE.md trap #4
+	 * with a moderation queue in place of a tied timestamp.
+	 *
+	 * ## Where the total comes from, and why it is not one answer
+	 *
+	 * | Threading | Page | Total |
+	 * |---|---|---|
+	 * | off | a `LIMIT` over the thread | that query's `found_posts` |
+	 * | on | a slice fetched by `post__in` | the length of the order it was sliced from |
+	 *
+	 * ⚠ **A threaded page cannot report its own total.** It is handed one page of IDs,
+	 * so `found_posts` is the size of the page however long the thread is — and a page
+	 * past the end is `post__in => array( 0 )` at `paged => 1`, which looks like a
+	 * first page that found nothing, so not even WordPress\RestContext's recount would
+	 * catch it. The app would be told the thread ends where it is standing.
+	 *
+	 * ## The forum scope is armed, and it is not what refuses a locked thread
+	 *
+	 * `Rest\AccessPolicy::topic()` has already ruled on this exact parent — including
+	 * a password anywhere in its forum chain, and including an author's own held
+	 * thread, which is why `scope_replies()` is deliberately not used here. The scope
+	 * added below therefore admits every reply under a topic that got this far, so the
+	 * page and the threaded total agree by construction. It stays armed all the same:
+	 * it costs one call, and it is what makes an imported reply whose `post_parent`
+	 * disagrees with its `_bbp_forum_id` fail closed — a short page, never a
+	 * disclosure.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $topic_id Thread whose replies are wanted.
+	 * @param int $page     1-based page number.
+	 * @param int $per_page Rows per page, already bounded.
+	 * @return array{ids:int[],total:int,total_pages:int}
+	 */
+	public function topic_replies( int $topic_id, int $page, int $per_page ): array {
+		$result = $this->rest->query(
+			$this->visibility->scope( $this->replies->args( $topic_id, $page, $per_page ) )
+		);
+
+		if ( ! $this->wp->is_thread_replies_active() ) {
+			return $result;
+		}
+
+		$total = count( $this->replies->ordered_ids( $topic_id ) );
+
+		return array(
+			'ids'         => $result['ids'],
 			'total'       => $total,
 			'total_pages' => (int) ceil( $total / max( 1, $per_page ) ),
 		);

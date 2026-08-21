@@ -66,13 +66,23 @@ class ReplyQuery {
 	private ReplyOrder $order;
 
 	/**
-	 * Reading order per topic, for this request.
+	 * Reading order per topic and reader, for this request.
 	 *
 	 * Both args() and max_pages() need it, and the reading view calls them on the
 	 * same topic in the same request — so without this the one unbounded query
 	 * would run twice per screen.
 	 *
-	 * @var array<int,int[]>
+	 * ⚠ **Keyed by reader as well as topic, not by topic alone.** The order is not the
+	 * same for everybody: Query\PendingVisibility puts one author's own held reply
+	 * into it, so a memo keyed by topic answers the second reader with the first
+	 * reader's order. A request has one reader, so a topic-only key is correct in
+	 * production and quietly wrong anywhere the current user changes — a test walking
+	 * a matrix of roles, or any future code answering for somebody other than the
+	 * caller. The answer depends on who is asking, so the cache does too. (The same
+	 * reasoning keys WordPress\RestContext's forum scope; found here by a REST test
+	 * that read one thread as two members and was handed the first one's page count.)
+	 *
+	 * @var array<string,int[]>
 	 */
 	private array $ordered = array();
 
@@ -110,13 +120,21 @@ class ReplyQuery {
 	/**
 	 * Reply-query args for a topic and 1-based page.
 	 *
-	 * @since 0.1.0
+	 * The page size is the one thing a caller may override, and only the API does:
+	 * the website has a single page size — bbPress's `_bbp_replies_per_page` — while
+	 * a REST collection is paged by the request, bounded by Rest\RequestBounds long
+	 * before it arrives here. Omitting the argument is the website's call and is
+	 * byte-identical to what it has always built.
 	 *
-	 * @param int $topic_id Topic to load replies for.
-	 * @param int $page     1-based page number.
+	 * @since 0.1.0
+	 * @since 0.6.0 Optional page size, for the API.
+	 *
+	 * @param int      $topic_id Topic to load replies for.
+	 * @param int      $page     1-based page number.
+	 * @param int|null $per_page Rows per page, or null for the website's own.
 	 * @return array<string,mixed>
 	 */
-	public function args( int $topic_id, int $page ): array {
+	public function args( int $topic_id, int $page, ?int $per_page = null ): array {
 		$page = max( 1, $page );
 
 		// Spelled out per branch rather than merged onto a shared base: `+` keeps the
@@ -133,7 +151,7 @@ class ReplyQuery {
 						'post_parent'    => $topic_id,
 						'post_type'      => $this->wp->get_reply_post_type(),
 						'hierarchical'   => false,
-						'posts_per_page' => $this->wp->get_replies_per_page(),
+						'posts_per_page' => $this->page_size( $per_page ),
 						'paged'          => $page,
 						'orderby'        => array(
 							'date' => 'ASC',
@@ -145,8 +163,8 @@ class ReplyQuery {
 			);
 		}
 
-		$per_page = max( 1, $this->wp->get_replies_per_page() );
-		$slice    = array_slice( $this->reading_order( $topic_id ), ( $page - 1 ) * $per_page, $per_page );
+		$size  = max( 1, $this->page_size( $per_page ) );
+		$slice = array_slice( $this->ordered_ids( $topic_id ), ( $page - 1 ) * $size, $size );
 
 		// An empty post__in is not "match nothing" to WP_Query — it drops the
 		// constraint entirely and returns the whole post type. A page past the
@@ -166,7 +184,7 @@ class ReplyQuery {
 				$topic_id,
 				// The slice, not the topic: here `post__in` IS the scope, and a widening
 				// that named only the thread would escape the page and repeat the held
-				// reply on every one of them. It is already in the order — reading_order()
+				// reply on every one of them. It is already in the order — ordered_ids()
 				// asked for it — so this admits it exactly on the page it belongs to.
 				$in
 			)
@@ -194,22 +212,32 @@ class ReplyQuery {
 
 		$per_page = max( 1, $this->wp->get_replies_per_page() );
 
-		return (int) ceil( count( $this->reading_order( $topic_id ) ) / $per_page );
+		return (int) ceil( count( $this->ordered_ids( $topic_id ) ) / $per_page );
 	}
 
 	/**
 	 * The topic's replies in reading order, computed once per request.
 	 *
+	 * ⚠ **Public since 0.6.0, and it is the only source of a threaded total.** A
+	 * threaded page is a slice fetched by `post__in`, so the query that returns it
+	 * reports a `found_posts` of one page however long the thread is — and a REST
+	 * collection reading its `X-WP-Total` off that query would tell the app the thread
+	 * ends at the page it is holding. The count has to come from the order, which is
+	 * also what the page was sliced out of, so the two cannot disagree.
+	 *
 	 * @since 0.3.0
+	 * @since 0.6.0 Public, for REST totals.
 	 *
 	 * @param int $topic_id Topic to read.
 	 * @return int[]
 	 */
-	private function reading_order( int $topic_id ): array {
-		if ( ! isset( $this->ordered[ $topic_id ] ) ) {
+	public function ordered_ids( int $topic_id ): array {
+		$key = $topic_id . ':' . $this->wp->get_current_user_id();
+
+		if ( ! isset( $this->ordered[ $key ] ) ) {
 			// The second query site. Armed from the same object as the page query, so
 			// the order and the page it slices cannot disagree about a held reply.
-			$this->ordered[ $topic_id ] = $this->order->flatten(
+			$this->ordered[ $key ] = $this->order->flatten(
 				$this->wp->get_reply_parents(
 					$topic_id,
 					$this->pending->marker( $topic_id ) + $this->guard->marker()
@@ -217,6 +245,18 @@ class ReplyQuery {
 			);
 		}
 
-		return $this->ordered[ $topic_id ];
+		return $this->ordered[ $key ];
+	}
+
+	/**
+	 * The page size this call runs with.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int|null $per_page Requested size, or null for the website's own.
+	 * @return int
+	 */
+	private function page_size( ?int $per_page ): int {
+		return null === $per_page ? $this->wp->get_replies_per_page() : max( 1, $per_page );
 	}
 }
