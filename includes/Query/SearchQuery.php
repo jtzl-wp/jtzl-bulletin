@@ -57,14 +57,22 @@ class SearchQuery {
 	/**
 	 * Search-query args for a set of terms and a 1-based page.
 	 *
+	 * ⚠ **The page size is omitted unless one is asked for**, rather than defaulted
+	 * to `bbp_get_replies_per_page()` here. bbPress fills it in through
+	 * `bbp_parse_args()`, which is a filter — a site that repaginates its own search
+	 * does it there, and a value written into the arguments beforehand would override
+	 * the site rather than defer to it. The website has never passed one; the API
+	 * always does, because it pages to a size the request names.
+	 *
 	 * @since 0.3.0
 	 *
-	 * @param string $terms Search terms.
-	 * @param int    $page  1-based page number.
+	 * @param string   $terms    Search terms.
+	 * @param int      $page     1-based page number.
+	 * @param int|null $per_page Rows per page, or null for the site's own.
 	 * @return array<string,mixed>
 	 */
-	public function args( string $terms, int $page ): array {
-		return array(
+	public function args( string $terms, int $page, ?int $per_page = null ): array {
+		$args = array(
 			's'       => $terms,
 			'paged'   => max( 1, $page ),
 			'orderby' => array(
@@ -72,6 +80,12 @@ class SearchQuery {
 				'ID'   => 'DESC',
 			),
 		);
+
+		if ( null !== $per_page ) {
+			$args['posts_per_page'] = max( 1, $per_page );
+		}
+
+		return $args;
 	}
 
 	/**

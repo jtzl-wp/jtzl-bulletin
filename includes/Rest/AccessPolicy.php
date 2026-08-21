@@ -197,6 +197,49 @@ class AccessPolicy {
 	}
 
 	/**
+	 * Is there a search to run at all?
+	 *
+	 * The sibling of `topic_tags()`, and the same kind of answer: a site-wide setting,
+	 * identical for every reader, asked in the shape a route can return. bbPress
+	 * leaves its search *template* reachable when the setting is off, so nothing else
+	 * about the request says the feature is gone.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @return true|\WP_Error
+	 */
+	public function search() {
+		if ( $this->wp->allow_search() ) {
+			return true;
+		}
+
+		return new \WP_Error(
+			'search_disabled',
+			__( 'Search is not enabled on this forum.', 'jtzl-bulletin' ),
+			array( 'status' => 403 )
+		);
+	}
+
+	/**
+	 * Is this somebody?
+	 *
+	 * The one 404 here that is not about visibility: a forum profile is public, so the
+	 * only question is whether the ID names a member. It is asked all the same, and by
+	 * all three profile routes rather than the singular one alone — a collection that
+	 * answered 200 with an empty array for an ID nobody holds would disagree with the
+	 * profile route about the same number, and would let a caller distinguish "nobody"
+	 * from "somebody who has written nothing" without either route saying so.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $id User ID.
+	 * @return true|\WP_Error
+	 */
+	public function user( int $id ) {
+		return $id > 0 && null !== $this->rest->get_user( $id ) ? true : $this->not_found();
+	}
+
+	/**
 	 * May a new or edited reply point at this one?
 	 *
 	 * One error for every way it can be wrong — the target does not exist, belongs to

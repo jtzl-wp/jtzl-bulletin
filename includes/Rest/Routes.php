@@ -88,6 +88,22 @@ class Routes {
 	private TagController $tags;
 
 	/**
+	 * Search reads.
+	 *
+	 * @var SearchController
+	 * @since 0.6.0
+	 */
+	private SearchController $search;
+
+	/**
+	 * Public profile reads.
+	 *
+	 * @var UserController
+	 * @since 0.6.0
+	 */
+	private UserController $users;
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 0.6.0
@@ -97,19 +113,25 @@ class Routes {
 	 * @param TopicController  $topics  Topic reads.
 	 * @param ReplyController  $replies Reply reads.
 	 * @param TagController    $tags    Tag reads.
+	 * @param SearchController $search  Search reads.
+	 * @param UserController   $users   Public profile reads.
 	 */
 	public function __construct(
 		ContextInterface $wp,
 		ForumController $forums,
 		TopicController $topics,
 		ReplyController $replies,
-		TagController $tags
+		TagController $tags,
+		SearchController $search,
+		UserController $users
 	) {
 		$this->wp      = $wp;
 		$this->forums  = $forums;
 		$this->topics  = $topics;
 		$this->replies = $replies;
 		$this->tags    = $tags;
+		$this->search  = $search;
+		$this->users   = $users;
 	}
 
 	/**
@@ -130,13 +152,14 @@ class Routes {
 	 *
 	 * The one list to add to when a resource is added. Order is not significant to
 	 * WordPress — routes are matched by pattern — but it is what the tests assert
-	 * against, so it stays the order a reader would expect: the hierarchy first.
+	 * against, so it stays the order a reader would expect: the hierarchy first, then
+	 * the two ways in that begin nowhere in it.
 	 *
 	 * @since 0.6.0
 	 *
 	 * @return ControllerInterface[]
 	 */
 	private function controllers(): array {
-		return array( $this->forums, $this->topics, $this->replies, $this->tags );
+		return array( $this->forums, $this->topics, $this->replies, $this->tags, $this->search, $this->users );
 	}
 }

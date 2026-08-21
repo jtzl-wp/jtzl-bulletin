@@ -111,6 +111,27 @@ class RequestBounds {
 	}
 
 	/**
+	 * The search terms a request asks for, with the whitespace taken off.
+	 *
+	 * ⚠ Trimmed here rather than compared here. A whitespace-only `q` is refused by
+	 * the route that reads it, because `bbp_has_search_results()` does not survive
+	 * being asked to search for nothing — see Query\SearchQuery::is_runnable() — and
+	 * this is where the two spellings of "nothing" become one.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param \WP_REST_Request $request Request.
+	 * @return string
+	 */
+	public function terms( \WP_REST_Request $request ): string {
+		$raw = $request->get_param( 'q' );
+
+		// Scalar-checked rather than cast: WordPress accepts an array for a query
+		// parameter (`?q[]=x`), and casting one would search for the word "Array".
+		return is_scalar( $raw ) ? trim( (string) $raw ) : '';
+	}
+
+	/**
 	 * Route arguments every collection accepts.
 	 *
 	 * @since 0.6.0
@@ -155,6 +176,59 @@ class RequestBounds {
 			'type'              => 'integer',
 			'validate_callback' => 'rest_validate_request_arg',
 			'sanitize_callback' => 'absint',
+		);
+	}
+
+	/**
+	 * A string route argument, declared so WordPress will actually check it.
+	 *
+	 * The sibling of `integer_arg()` and it exists for the same reason: without a
+	 * `validate_callback` the schema is decoration, and `required` in particular does
+	 * nothing at all. With one, an absent argument is refused as
+	 * `rest_missing_callback_param` before any callback runs — which is what keeps a
+	 * terms-less search from ever reaching `bbp_has_search_results()`.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param array<string,mixed> $overrides Argument-specific keys; they win.
+	 * @return array<string,mixed>
+	 */
+	public function string_arg( array $overrides = array() ): array {
+		return $overrides + array(
+			'type'              => 'string',
+			'validate_callback' => 'rest_validate_request_arg',
+			'sanitize_callback' => 'sanitize_text_field',
+		);
+	}
+
+	/**
+	 * A read route, declared the one way every read route in this API is declared.
+	 *
+	 * Two invariants live here rather than at each of a dozen call sites, because both
+	 * of them are decisions that would be invisible if one route quietly differed:
+	 *
+	 * - **`READABLE`.** Nothing in v1's read surface answers anything else, and a
+	 *   controller that declared `ALLMETHODS` by accident would take POST traffic Task
+	 *   8's routes are supposed to own.
+	 * - **`__return_true`.** Bulletin's forums are public-read, and *what a reader may
+	 *   have* is a per-row answer no permission callback can give: Rest\AccessPolicy
+	 *   answers it for a singular route, and Rest\CollectionVisibility answers it inside
+	 *   the query for a collection, before `found_posts`, so the total describes the
+	 *   rows. A route that reached for a capability check here would be adding a second,
+	 *   coarser opinion beside the real one.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param array{0:object,1:string}          $callback Controller method to answer with.
+	 * @param array<string,array<string,mixed>> $args     Argument schema.
+	 * @return array<string,mixed>
+	 */
+	public function readable_route( array $callback, array $args = array() ): array {
+		return array(
+			'methods'             => \WP_REST_Server::READABLE,
+			'callback'            => $callback,
+			'permission_callback' => '__return_true',
+			'args'                => $args,
 		);
 	}
 

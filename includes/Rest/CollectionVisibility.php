@@ -175,9 +175,13 @@ class CollectionVisibility {
 			return $where;
 		}
 
-		// The website's own clause, reused rather than reimplemented: it already
-		// covers a reply whose real parent is unreadable, and preserves the imported
-		// orphan rule — a reply with no parent at all keeps its own status's answer.
+		// The website's own clause, reused rather than reimplemented: it already covers
+		// a reply whose real parent is unreadable, and it says nothing about a reply
+		// with no parent at all — that one keeps its own status's answer here, as it
+		// does on the website. ⚠ It is still absent from the collection, because the
+		// forum scope above asks a stricter question and answers it with an `EXISTS`:
+		// a reply attached to nothing sits inside no forum. Deliberate — a listed
+		// orphan would be a row `Rest\AccessPolicy::reply()` then refuses to open.
 		return $where . $this->wp->reply_parent_where_clause(
 			$this->wp->get_reply_post_type(),
 			$this->wp->get_topic_post_type(),

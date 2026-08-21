@@ -38,11 +38,11 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * ## Public route, private answer
  *
- * `__return_true` on both, for the reason every read route in this API has it:
- * Bulletin's forums are public-read, and *what this reader may have* is a per-row
- * answer no permission callback can give. `Rest\AccessPolicy` answers it for the
- * singular route; `Rest\CollectionVisibility` answers it inside the query for the
- * collection, before `found_posts`, so the total describes the rows.
+ * Both routes are declared through `Rest\RequestBounds::readable_route()`, which owns
+ * the open permission callback and the reason for it. Which class answers instead is
+ * per-route and belongs here: `Rest\AccessPolicy` for the singular route,
+ * `Rest\CollectionVisibility` inside the query for the collection — before
+ * `found_posts`, so the total describes the rows.
  *
  * @since 0.6.0
  */
@@ -122,11 +122,9 @@ class TopicController implements ControllerInterface {
 	 */
 	public function routes(): array {
 		return array(
-			'/topics'               => array(
-				'methods'             => \WP_REST_Server::READABLE,
-				'callback'            => array( $this, 'get_tag_collection' ),
-				'permission_callback' => '__return_true',
-				'args'                => $this->bounds->collection_args() + array(
+			'/topics'               => $this->bounds->readable_route(
+				array( $this, 'get_tag_collection' ),
+				$this->bounds->collection_args() + array(
 					// Required, so WordPress refuses a bare `/topics` with
 					// `rest_missing_callback_param` before the callback runs.
 					'tag' => $this->bounds->integer_arg(
@@ -137,13 +135,11 @@ class TopicController implements ControllerInterface {
 					),
 				),
 			),
-			'/topics/(?P<id>[\d]+)' => array(
-				'methods'             => \WP_REST_Server::READABLE,
-				'callback'            => array( $this, 'get_item' ),
-				'permission_callback' => '__return_true',
-				'args'                => array(
+			'/topics/(?P<id>[\d]+)' => $this->bounds->readable_route(
+				array( $this, 'get_item' ),
+				array(
 					'id' => $this->bounds->integer_arg( array( 'required' => true ) ),
-				) + $this->bounds->avatar_args(),
+				) + $this->bounds->avatar_args()
 			),
 		);
 	}

@@ -112,11 +112,9 @@ class TagController implements ControllerInterface {
 	 */
 	public function routes(): array {
 		return array(
-			'/tags' => array(
-				'methods'             => \WP_REST_Server::READABLE,
-				'callback'            => array( $this, 'get_collection' ),
-				'permission_callback' => '__return_true',
-				'args'                => $this->bounds->collection_args(),
+			'/tags' => $this->bounds->readable_route(
+				array( $this, 'get_collection' ),
+				$this->bounds->collection_args()
 			),
 		);
 	}

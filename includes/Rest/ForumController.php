@@ -44,12 +44,10 @@ if ( ! defined( 'ABSPATH' ) ) {
  *
  * ## Public route, private answer
  *
- * The permission callback is `__return_true` on both routes. That is not an oversight
- * and it is not "no access control": Bulletin's forums are public-read, so refusing
- * an unauthenticated request outright would be wrong, and *what this reader may have*
- * is a per-row answer that a permission callback with only the route in hand cannot
- * give. Rest\AccessPolicy answers it for the singular route and
- * Rest\CollectionVisibility answers it inside the query for the collection — before
+ * Every route here is declared through `Rest\RequestBounds::readable_route()`, which
+ * is where the open permission callback lives and why. What is worth saying *here* is
+ * which class answers instead: Rest\AccessPolicy for the singular route, and
+ * Rest\CollectionVisibility inside the query for the collection — before
  * `found_posts`, so the total describes the rows.
  *
  * @since 0.6.0
@@ -141,11 +139,9 @@ class ForumController implements ControllerInterface {
 	 */
 	public function routes(): array {
 		return array(
-			'/forums'                      => array(
-				'methods'             => \WP_REST_Server::READABLE,
-				'callback'            => array( $this, 'get_collection' ),
-				'permission_callback' => '__return_true',
-				'args'                => $this->bounds->collection_args() + array(
+			'/forums'                      => $this->bounds->readable_route(
+				array( $this, 'get_collection' ),
+				$this->bounds->collection_args() + array(
 					'parent' => $this->bounds->integer_arg(
 						array(
 							'default' => 0,
@@ -154,23 +150,19 @@ class ForumController implements ControllerInterface {
 					),
 				),
 			),
-			'/forums/(?P<id>[\d]+)'        => array(
-				'methods'             => \WP_REST_Server::READABLE,
-				'callback'            => array( $this, 'get_item' ),
-				'permission_callback' => '__return_true',
-				// Only the ID. A forum has no author, so `avatar_size` would be an
-				// argument this route declares and then ignores; the collection
-				// carries it because it takes the shared bundle whole, and the
-				// bundle is shared with the collections that do serialize people.
-				'args'                => array(
+			// Only the ID. A forum has no author, so `avatar_size` would be an argument
+			// this route declares and then ignores; the collection carries it because it
+			// takes the shared bundle whole, and the bundle is shared with the
+			// collections that do serialize people.
+			'/forums/(?P<id>[\d]+)'        => $this->bounds->readable_route(
+				array( $this, 'get_item' ),
+				array(
 					'id' => $this->bounds->integer_arg( array( 'required' => true ) ),
-				),
+				)
 			),
-			'/forums/(?P<id>[\d]+)/topics' => array(
-				'methods'             => \WP_REST_Server::READABLE,
-				'callback'            => array( $this, 'get_topics' ),
-				'permission_callback' => '__return_true',
-				'args'                => $this->bounds->collection_args() + array(
+			'/forums/(?P<id>[\d]+)/topics' => $this->bounds->readable_route(
+				array( $this, 'get_topics' ),
+				$this->bounds->collection_args() + array(
 					'id' => $this->bounds->integer_arg( array( 'required' => true ) ),
 				),
 			),

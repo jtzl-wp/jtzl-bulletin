@@ -124,23 +124,19 @@ class ReplyController implements ControllerInterface {
 	 */
 	public function routes(): array {
 		return array(
-			'/topics/(?P<id>[\d]+)/replies' => array(
-				'methods'             => \WP_REST_Server::READABLE,
-				'callback'            => array( $this, 'get_collection' ),
-				'permission_callback' => '__return_true',
-				'args'                => $this->bounds->collection_args() + array(
+			'/topics/(?P<id>[\d]+)/replies' => $this->bounds->readable_route(
+				array( $this, 'get_collection' ),
+				$this->bounds->collection_args() + array(
 					'id' => $this->bounds->integer_arg( array( 'required' => true ) ),
 				),
 			),
-			'/replies/(?P<id>[\d]+)'        => array(
-				'methods'             => \WP_REST_Server::READABLE,
-				'callback'            => array( $this, 'get_item' ),
-				'permission_callback' => '__return_true',
-				// A reply has an author, so the singular route takes the avatar size
-				// its collection takes — unlike a forum's, which has nobody to draw.
-				'args'                => array(
+			// A reply has an author, so the singular route takes the avatar size its
+			// collection takes — unlike a forum's, which has nobody to draw.
+			'/replies/(?P<id>[\d]+)'        => $this->bounds->readable_route(
+				array( $this, 'get_item' ),
+				array(
 					'id' => $this->bounds->integer_arg( array( 'required' => true ) ),
-				) + $this->bounds->avatar_args(),
+				) + $this->bounds->avatar_args()
 			),
 		);
 	}
