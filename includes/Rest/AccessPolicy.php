@@ -172,6 +172,31 @@ class AccessPolicy {
 	}
 
 	/**
+	 * Is there a tag vocabulary to ask about at all?
+	 *
+	 * The one refusal here that is not about a reader: tagging is a site-wide setting,
+	 * so the answer is the same for everybody. It lives beside the others because a
+	 * route asks it in the same place and in the same shape — `true` or the error to
+	 * return — and because bbPress leaves the taxonomy registered when the setting is
+	 * off, so nothing else about the request reveals that the feature is gone.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @return true|\WP_Error
+	 */
+	public function topic_tags() {
+		if ( $this->rest->topic_tags_enabled() ) {
+			return true;
+		}
+
+		return new \WP_Error(
+			'tags_disabled',
+			__( 'Topic tags are not enabled on this forum.', 'jtzl-bulletin' ),
+			array( 'status' => 403 )
+		);
+	}
+
+	/**
 	 * May a new or edited reply point at this one?
 	 *
 	 * One error for every way it can be wrong — the target does not exist, belongs to

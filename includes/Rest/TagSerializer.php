@@ -19,6 +19,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * A tag is `id`, `slug`, `name` and `count` — and the count is the interesting field.
  *
+ * ⚠ **A forum with tagging switched off serializes `tags: []`, and asking the setting
+ * is the only way to know.** bbPress leaves the taxonomy registered when the option is
+ * cleared — it stops offering the field and revokes `assign_topic_tags`, but every term
+ * already attached to a topic stays in the database and `get_the_terms()` keeps
+ * answering with them. So both entry points here ask first.
+ *
  * ⚠ **`count` is what this reader may see, not what the site holds.** WordPress's own
  * `WP_Term::$count` counts every topic carrying the tag, including ones in a forum
  * this reader cannot open. Handing that number to the app puts a number beside a list
@@ -58,6 +64,10 @@ class TagSerializer {
 	 * @return int[]
 	 */
 	public function term_ids( array $topic_ids ): array {
+		if ( ! $this->rest->topic_tags_enabled() ) {
+			return array();
+		}
+
 		$ids = array();
 
 		foreach ( $topic_ids as $topic_id ) {
@@ -79,6 +89,10 @@ class TagSerializer {
 	 * @return array<int,array{id:int,slug:string,name:string,count:int}>
 	 */
 	public function topic_tags( int $topic_id, array $counts ): array {
+		if ( ! $this->rest->topic_tags_enabled() ) {
+			return array();
+		}
+
 		return $this->tags( $this->rest->get_topic_tags( $topic_id ), $counts );
 	}
 

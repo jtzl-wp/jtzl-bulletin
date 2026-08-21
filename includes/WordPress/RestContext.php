@@ -113,10 +113,10 @@ class RestContext implements RestContextInterface {
 	 * same thing for the same reason.
 	 *
 	 * The extra query costs nothing on the path that matters: it runs only when a page
-	 * came back empty and was not the first. "Not the first" is read off `paged`,
-	 * which is how every collection in this plugin pages; a caller that paged with
-	 * `offset` instead would get WordPress's 0 back, and would need this to ask about
-	 * that too.
+	 * came back empty and was not the first. "Not the first" is read off `paged` *and*
+	 * off `offset`, because a forum's topic list pages with both — its pinned prefix
+	 * shifts the ordinary slice by a number of rows rather than a number of pages, and
+	 * an offset past the end would otherwise report the collection as empty.
 	 *
 	 * @since 0.6.0
 	 *
@@ -125,10 +125,11 @@ class RestContext implements RestContextInterface {
 	 * @return array{total:int,total_pages:int}
 	 */
 	private function totals( \WP_Query $query, array $args ): array {
-		$total = (int) $query->found_posts;
-		$paged = (int) ( $args['paged'] ?? 1 );
+		$total  = (int) $query->found_posts;
+		$paged  = (int) ( $args['paged'] ?? 1 );
+		$offset = (int) ( $args['offset'] ?? 0 );
 
-		if ( 0 !== $total || $paged < 2 ) {
+		if ( 0 !== $total || ( $paged < 2 && $offset < 1 ) ) {
 			return array(
 				'total'       => $total,
 				'total_pages' => (int) $query->max_num_pages,
@@ -148,7 +149,7 @@ class RestContext implements RestContextInterface {
 		// leaves `posts_per_page` out.
 		$per_page = max( 1, (int) $query->get( 'posts_per_page' ) );
 
-		unset( $args['paged'] );
+		unset( $args['paged'], $args['offset'] );
 		$args['posts_per_page'] = 1;
 
 		$count = new \WP_Query( $args );
@@ -264,6 +265,191 @@ class RestContext implements RestContextInterface {
 		}
 
 		return $counts;
+	}
+
+	/**
+	 * One page of the tag vocabulary this reader can actually reach.
+	 *
+	 * The same join, statuses and forum scope as `visible_tag_counts()` — deliberately,
+	 * because the two answer the same question from opposite ends and the app compares
+	 * them: a tag's count here and the same tag's count inside a topic's `tags[]` are
+	 * the same number, and would drift the moment one grew a predicate the other did
+	 * not.
+	 *
+	 * ⚠ The grouped query is what selects the page, so a term whose every topic is
+	 * unreadable produces no row at all. Filtering afterwards would leave it in the
+	 * list with a count of nought, which names a tag in a forum the reader cannot open.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param array<string,mixed> $topic_query_args The caller's topic query, for its statuses.
+	 * @param int                 $page             1-based page number.
+	 * @param int                 $per_page         Terms per page.
+	 * @return array{terms:\WP_Term[],counts:array<int,int>,total:int}
+	 */
+	public function visible_tags( array $topic_query_args, int $page, int $per_page ): array {
+		$empty = array(
+			'terms'  => array(),
+			'counts' => array(),
+			'total'  => 0,
+		);
+
+		$forums = $this->readable_forum_ids();
+
+		if ( array() === $forums ) {
+			return $empty;
+		}
+
+		$where  = $this->visible_tag_where( $forums, $this->statuses_from( $topic_query_args ) );
+		$total  = $this->visible_tag_total( $where );
+		$counts = $this->visible_tag_page( $where, max( 1, $page ), max( 1, $per_page ) );
+
+		if ( 0 === $total || array() === $counts ) {
+			return array_merge( $empty, array( 'total' => $total ) );
+		}
+
+		return array(
+			// ⚠ Hydrated only once the page is known to be non-empty: `get_terms()`
+			// ignores an empty `include` and would answer with the whole taxonomy.
+			'terms'  => $this->terms_in_order( array_keys( $counts ) ),
+			'counts' => $counts,
+			'total'  => $total,
+		);
+	}
+
+	/**
+	 * Whether this forum tags its topics at all.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @return bool
+	 */
+	public function topic_tags_enabled(): bool {
+		return (bool) bbp_allow_topic_tags();
+	}
+
+	/**
+	 * The taxonomy bbPress keeps topic tags in.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @return string
+	 */
+	public function topic_tag_taxonomy(): string {
+		return (string) bbp_get_topic_tag_tax_id();
+	}
+
+	/**
+	 * The join and conditions both halves of the vocabulary query share.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int[]    $forums   Forums the reader may open.
+	 * @param string[] $statuses Topic statuses the reader may see.
+	 * @return string
+	 */
+	private function visible_tag_where( array $forums, array $statuses ): string {
+		$forum_slots  = implode( ',', array_fill( 0, count( $forums ), '%d' ) );
+		$status_slots = implode( ',', array_fill( 0, count( $statuses ), '%s' ) );
+
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		return (string) $this->wpdb->prepare(
+			"FROM {$this->wpdb->term_relationships} tr
+			   JOIN {$this->wpdb->term_taxonomy} tt
+			     ON tt.term_taxonomy_id = tr.term_taxonomy_id
+			   JOIN {$this->wpdb->terms} t
+			     ON t.term_id = tt.term_id
+			   JOIN {$this->wpdb->posts} p
+			     ON p.ID = tr.object_id
+			  WHERE tt.taxonomy = %s
+			    AND p.post_type = %s
+			    AND p.post_status IN ( {$status_slots} )
+			    AND p.post_password = ''
+			    AND p.post_parent IN ( {$forum_slots} )",
+			array_merge(
+				array( bbp_get_topic_tag_tax_id(), bbp_get_topic_post_type() ),
+				$statuses,
+				$forums
+			)
+		);
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	}
+
+	/**
+	 * How many terms survive the visibility filter.
+	 *
+	 * The fragment arrives from `visible_tag_where()` already through
+	 * `$wpdb->prepare()` — every value in it is a placeholder that has been bound —
+	 * which is why it is interpolated here rather than prepared a second time.
+	 * Preparing an already-prepared string is not a no-op: a literal `%` surviving in
+	 * a bound value would be read as a new placeholder.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string $where Prepared FROM/WHERE fragment.
+	 * @return int
+	 */
+	private function visible_tag_total( string $where ): int {
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		return (int) $this->wpdb->get_var( "SELECT COUNT( DISTINCT tt.term_id ) {$where}" );
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+	}
+
+	/**
+	 * One ordered page of term IDs with their visible topic counts.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string $where    Prepared FROM/WHERE fragment.
+	 * @param int    $page     1-based page number.
+	 * @param int    $per_page Terms per page.
+	 * @return array<int,int> Counts keyed by term ID, in name order.
+	 */
+	private function visible_tag_page( string $where, int $page, int $per_page ): array {
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$rows = $this->wpdb->get_results(
+			$this->wpdb->prepare(
+				"SELECT tt.term_id AS term_id, COUNT( DISTINCT p.ID ) AS visible
+				 {$where}
+			   GROUP BY tt.term_id
+			   ORDER BY t.name ASC, tt.term_id ASC
+				  LIMIT %d OFFSET %d",
+				$per_page,
+				( $page - 1 ) * $per_page
+			),
+			ARRAY_A
+		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		$counts = array();
+		foreach ( (array) $rows as $row ) {
+			$counts[ (int) $row['term_id'] ] = (int) $row['visible'];
+		}
+
+		return $counts;
+	}
+
+	/**
+	 * Terms hydrated in the order they were asked for.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int[] $term_ids Terms, in the order the page wants them.
+	 * @return \WP_Term[]
+	 */
+	private function terms_in_order( array $term_ids ): array {
+		$terms = get_terms(
+			array(
+				'taxonomy'   => bbp_get_topic_tag_tax_id(),
+				'include'    => $term_ids,
+				'orderby'    => 'include',
+				'hide_empty' => false,
+			)
+		);
+
+		return is_array( $terms )
+			? array_values( array_filter( $terms, static fn( $term ): bool => $term instanceof \WP_Term ) )
+			: array();
 	}
 
 	/**

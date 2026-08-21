@@ -104,6 +104,57 @@ interface RestContextInterface {
 	public function visible_tag_counts( array $term_ids, array $topic_query_args ): array;
 
 	/**
+	 * One page of the tag vocabulary this reader can actually reach.
+	 *
+	 * ⚠ **A term nobody may reach is absent, not zero.** This route *is* an
+	 * enumeration — it exists so the app can build a tag filter without scraping IDs
+	 * out of topics it happened to fetch — so a term returned with a count of nought
+	 * would name a tag that exists somewhere the reader cannot go, and a list of those
+	 * names describes the forum they came from. Hence the visibility filter selects
+	 * the terms rather than merely counting them.
+	 *
+	 * The counts come from the same grouped query as the page, and the total is taken
+	 * after the same filtering, so the vocabulary, its counts and its `X-WP-Total`
+	 * cannot disagree.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param array<string,mixed> $topic_query_args The caller's topic query, for its
+	 *                                              statuses — carried for the same
+	 *                                              reason `visible_tag_counts()` takes
+	 *                                              it, so a caller cannot forget the
+	 *                                              vocabulary is a reader's and not the
+	 *                                              site's.
+	 * @param int                 $page             1-based page number.
+	 * @param int                 $per_page         Terms per page, already bounded.
+	 * @return array{terms:\WP_Term[],counts:array<int,int>,total:int}
+	 */
+	public function visible_tags( array $topic_query_args, int $page, int $per_page ): array;
+
+	/**
+	 * Whether this forum tags its topics at all.
+	 *
+	 * ⚠ Asked rather than inferred from whether a topic carries terms. bbPress leaves
+	 * the taxonomy *registered* when the setting is off — it only stops using it — so
+	 * a topic tagged before the switch was thrown keeps its terms in the database, and
+	 * `get_the_terms()` keeps returning them.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @return bool
+	 */
+	public function topic_tags_enabled(): bool;
+
+	/**
+	 * The taxonomy bbPress keeps topic tags in.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @return string
+	 */
+	public function topic_tag_taxonomy(): string;
+
+	/**
 	 * The avatar for whoever wrote a post, at one size.
 	 *
 	 * ⚠ An anonymous post carries its author's email in post meta, and that email is

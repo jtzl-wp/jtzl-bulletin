@@ -94,6 +94,43 @@ class TopicQuery {
 	}
 
 	/**
+	 * Args for every topic carrying one tag, across the forums the reader may see.
+	 *
+	 * Built here rather than beside its caller so the API pages a tag exactly as the
+	 * website pages a forum: same `(last-active, ID)` order, same admin-status guard,
+	 * same reliance on bbPress's own forum-visibility normalizer. A second copy of that
+	 * order is how one surface comes to serve a tied row twice while the other does not.
+	 *
+	 * No `post_parent`: a tag crosses forums, and that is the whole point of the
+	 * screen it feeds. Stickies are neither hoisted nor excluded — `show_stickies` is
+	 * off in the shared base, and a pinned topic still carries its tags.
+	 *
+	 * The taxonomy is passed in rather than asked for: this class holds the browser's
+	 * seam, which has no reason to know bbPress's tag taxonomy, and the one caller
+	 * that needs this already holds the seam that does.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string $taxonomy Topic-tag taxonomy.
+	 * @param int    $term_id  Tag to filter by.
+	 * @param int    $page     1-based page number.
+	 * @return array<string,mixed>
+	 */
+	public function tagged_args( string $taxonomy, int $term_id, int $page ): array {
+		return $this->base() + array(
+			'posts_per_page' => $this->wp->get_topics_per_page(),
+			'paged'          => max( 1, $page ),
+			'tax_query'      => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query -- The tag filter is the query.
+				array(
+					'taxonomy' => $taxonomy,
+					'field'    => 'term_id',
+					'terms'    => array( $term_id ),
+				),
+			),
+		);
+	}
+
+	/**
 	 * Args for the site-wide super stickies, which lead the pinned section.
 	 *
 	 * A super sticky is pinned into every forum, so it usually lives under a
