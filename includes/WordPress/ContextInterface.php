@@ -70,6 +70,24 @@ interface ContextInterface {
 	 */
 	public function apply_filters( string $hook, $value );
 
+	/**
+	 * Register one REST route under a namespace.
+	 *
+	 * Wrapped for the reason `add_action()` is: it binds something to WordPress
+	 * rather than answering a question, and a controller that called the global
+	 * directly could only be checked by booting a REST server. Through the seam, the
+	 * routes a controller declares — their paths, methods, permission callbacks and
+	 * argument schemas — are readable in a unit test, and the integration tests are
+	 * then free to prove the dispatcher agrees rather than being the only witness.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string              $route_namespace Route namespace, e.g. `jtzl-bulletin/v1`.
+	 * @param string              $route           Route pattern, e.g. `/forums/(?P<id>[\d]+)`.
+	 * @param array<string,mixed> $args            Route arguments, as register_rest_route() takes them.
+	 */
+	public function register_rest_route( string $route_namespace, string $route, array $args ): void;
+
 	// --- bbPress conditional tags ------------------------------------------
 
 	/**

@@ -96,6 +96,19 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * Register one REST route under a namespace.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string              $route_namespace Route namespace.
+	 * @param string              $route           Route pattern.
+	 * @param array<string,mixed> $args            Route arguments.
+	 */
+	public function register_rest_route( string $route_namespace, string $route, array $args ): void {
+		register_rest_route( $route_namespace, $route, $args );
+	}
+
+	/**
 	 * Whether the main query is a bbPress page.
 	 *
 	 * @since 0.1.0

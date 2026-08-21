@@ -91,10 +91,74 @@ class RestContext implements RestContextInterface {
 
 		wp_reset_postdata();
 
+		$totals = $this->totals( $query, $args );
+
 		return array(
 			'ids'         => array_values( $ids ),
-			'total'       => (int) $query->found_posts,
-			'total_pages' => (int) $query->max_num_pages,
+			'total'       => $totals['total'],
+			'total_pages' => $totals['total_pages'],
+		);
+	}
+
+	/**
+	 * How many rows the collection holds, and how many pages that is.
+	 *
+	 * ⚠ **WordPress does not count a page past the end.** `WP_Query::set_found_posts()`
+	 * returns early when the page came back as an empty array, so `found_posts` and
+	 * `max_num_pages` are both 0 — and a client paging to the end would be told the
+	 * collection it has just finished reading is empty. Worse, the two answers
+	 * disagree: page 1 of the same collection says 40. The contract promises
+	 * `X-WP-Total` describes the collection, not the page, so an empty page past the
+	 * first is counted again without its paging. Core's own posts controller does the
+	 * same thing for the same reason.
+	 *
+	 * The extra query costs nothing on the path that matters: it runs only when a page
+	 * came back empty and was not the first. "Not the first" is read off `paged`,
+	 * which is how every collection in this plugin pages; a caller that paged with
+	 * `offset` instead would get WordPress's 0 back, and would need this to ask about
+	 * that too.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param \WP_Query           $query The query that produced the page.
+	 * @param array<string,mixed> $args  Its arguments.
+	 * @return array{total:int,total_pages:int}
+	 */
+	private function totals( \WP_Query $query, array $args ): array {
+		$total = (int) $query->found_posts;
+		$paged = (int) ( $args['paged'] ?? 1 );
+
+		if ( 0 !== $total || $paged < 2 ) {
+			return array(
+				'total'       => $total,
+				'total_pages' => (int) $query->max_num_pages,
+			);
+		}
+
+		// One row, not a page of them. `SQL_CALC_FOUND_ROWS` is added whenever there is
+		// any LIMIT at all, so the count is the same either way and this stops the
+		// recount materialising up to a hundred IDs it would immediately discard.
+		//
+		// ⚠ **But the page count then has to be worked out here.** WordPress derives
+		// `max_num_pages` as `ceil( found_posts / posts_per_page )`, so asking for one
+		// row makes it report one page per row — a collection of 40 would come back as
+		// 40 pages. The size the *caller* asked for is what the pages are counted in,
+		// and it is read off the finished query rather than the arguments because
+		// WP_Query writes its default back into its own query vars when a caller
+		// leaves `posts_per_page` out.
+		$per_page = max( 1, (int) $query->get( 'posts_per_page' ) );
+
+		unset( $args['paged'] );
+		$args['posts_per_page'] = 1;
+
+		$count = new \WP_Query( $args );
+		$total = (int) $count->found_posts;
+
+		wp_reset_postdata();
+
+		return array(
+			'total'       => $total,
+			'total_pages' => (int) ceil( $total / $per_page ),
 		);
 	}
 

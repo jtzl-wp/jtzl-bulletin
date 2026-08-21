@@ -23,6 +23,7 @@ use JTZL\Bulletin\Query\SearchVisibility;
 use JTZL\Bulletin\Query\StableOrder;
 use JTZL\Bulletin\Query\StickyHoisting;
 use JTZL\Bulletin\Query\SubscribedForumQuery;
+use JTZL\Bulletin\Rest\Endpoints as RestEndpoints;
 use JTZL\Bulletin\Takeover\TemplateController;
 use JTZL\Bulletin\Unread\ReadPruner;
 use JTZL\Bulletin\Unread\ReadWriter;
@@ -87,6 +88,7 @@ class Bootstrap {
 		$this->register_pending_visibility();
 		$this->register_chrome();
 		$this->register_unread();
+		$this->register_rest();
 	}
 
 	/**
@@ -332,6 +334,24 @@ class Bootstrap {
 	private function register_chrome(): void {
 		$this->service( Furniture::class )->register();
 		$this->service( Namings::class )->register();
+	}
+
+	/**
+	 * The app's API: the forum scope every collection is narrowed to, and the routes
+	 * themselves, declared on `rest_api_init` (P5).
+	 *
+	 * ⚠ **Registered last, and that is not an ordering claim.** Its `posts_where`
+	 * filter sits at priority 20, which nothing else on this hook uses, and WordPress
+	 * sorts by priority before registration order — so this group arriving after the
+	 * `PHP_INT_MAX` widening in `register_pending_visibility()` changes nothing about
+	 * the order they run in. The order that *is* load-bearing (narrow at 10, narrow
+	 * at 20, widen last) is written out in Rest\Endpoints, which is where a reader
+	 * looking for it will be.
+	 *
+	 * @since 0.6.0
+	 */
+	private function register_rest(): void {
+		$this->service( RestEndpoints::class )->register();
 	}
 
 	/**
