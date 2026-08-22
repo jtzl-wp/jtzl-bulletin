@@ -330,6 +330,101 @@ interface RestContextInterface {
 	public function subscribed_topic_ids( int $user_id ): array;
 
 	/**
+	 * Whether favouriting is switched on site-wide.
+	 *
+	 * ⚠ The sibling flag, `is_subscriptions_active()`, is on WordPress\ContextInterface
+	 * rather than here — the website's Subscribe control needed it in 0.3.0 and the
+	 * API reuses that one instead of declaring a second. Favouriting has no website
+	 * surface in Bulletin, so this half of the pair arrives here. Two interfaces, one
+	 * question each, and no method answering the same thing twice.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @return bool
+	 */
+	public function favorites_enabled(): bool;
+
+	/**
+	 * Whether a member has already favourited a topic.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $user_id  Member ID.
+	 * @param int $topic_id Topic ID.
+	 * @return bool
+	 */
+	public function is_favorite( int $user_id, int $topic_id ): bool;
+
+	/**
+	 * Add a topic to a member's favourites.
+	 *
+	 * ⚠ **False means "did not happen", including "was already there".** bbPress
+	 * bails out of `bbp_add_user_favorite()` when the relationship exists, so this
+	 * cannot be called speculatively — ask `is_favorite()` first, or an idempotent
+	 * request reports a persistence failure for the one case that is actually fine.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $user_id  Member ID.
+	 * @param int $topic_id Topic ID.
+	 * @return bool Whether the relationship was written.
+	 */
+	public function add_favorite( int $user_id, int $topic_id ): bool;
+
+	/**
+	 * Take a topic out of a member's favourites.
+	 *
+	 * ⚠ False again means "did not happen", and again includes "was not there".
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $user_id  Member ID.
+	 * @param int $topic_id Topic ID.
+	 * @return bool Whether the relationship was removed.
+	 */
+	public function remove_favorite( int $user_id, int $topic_id ): bool;
+
+	/**
+	 * Whether a member subscribes to a forum or a topic.
+	 *
+	 * One method for both because bbPress has one relationship for both: a
+	 * subscription is stored against an object ID, and which kind of object it is
+	 * never enters the question.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $user_id   Member ID.
+	 * @param int $object_id Forum or topic ID.
+	 * @return bool
+	 */
+	public function is_subscribed( int $user_id, int $object_id ): bool;
+
+	/**
+	 * Subscribe a member to a forum or a topic.
+	 *
+	 * ⚠ False means "did not happen", "was already there" included — the same
+	 * pre-check `add_favorite()` needs.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $user_id   Member ID.
+	 * @param int $object_id Forum or topic ID.
+	 * @return bool Whether the relationship was written.
+	 */
+	public function add_subscription( int $user_id, int $object_id ): bool;
+
+	/**
+	 * Unsubscribe a member from a forum or a topic.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $user_id   Member ID.
+	 * @param int $object_id Forum or topic ID.
+	 * @return bool Whether the relationship was removed.
+	 */
+	public function remove_subscription( int $user_id, int $object_id ): bool;
+
+	/**
 	 * A post's creation time as an RFC 3339 string in UTC.
 	 *
 	 * ⚠ WordPress and bbPress store datetimes in the *site's* timezone, so this is a

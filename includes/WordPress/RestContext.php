@@ -831,6 +831,100 @@ class RestContext implements RestContextInterface {
 	}
 
 	/**
+	 * Whether favouriting is switched on site-wide.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @return bool
+	 */
+	public function favorites_enabled(): bool {
+		return (bool) bbp_is_favorites_active();
+	}
+
+	/**
+	 * Whether a member has already favourited a topic.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $user_id  Member ID.
+	 * @param int $topic_id Topic ID.
+	 * @return bool
+	 */
+	public function is_favorite( int $user_id, int $topic_id ): bool {
+		return (bool) bbp_is_user_favorite( $user_id, $topic_id );
+	}
+
+	/**
+	 * Add a topic to a member's favourites.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $user_id  Member ID.
+	 * @param int $topic_id Topic ID.
+	 * @return bool Whether the relationship was written.
+	 */
+	public function add_favorite( int $user_id, int $topic_id ): bool {
+		return (bool) bbp_add_user_favorite( $user_id, $topic_id );
+	}
+
+	/**
+	 * Take a topic out of a member's favourites.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $user_id  Member ID.
+	 * @param int $topic_id Topic ID.
+	 * @return bool Whether the relationship was removed.
+	 */
+	public function remove_favorite( int $user_id, int $topic_id ): bool {
+		return (bool) bbp_remove_user_favorite( $user_id, $topic_id );
+	}
+
+	/**
+	 * Whether a member subscribes to a forum or a topic.
+	 *
+	 * ⚠ `'post'` is passed explicitly rather than left to default. bbPress 2.6 added
+	 * the parameter so an engagement strategy can store subscriptions against
+	 * something other than a post, and the default is only right for as long as
+	 * nobody changes it — Bulletin subscribes to forums and topics, which are posts.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $user_id   Member ID.
+	 * @param int $object_id Forum or topic ID.
+	 * @return bool
+	 */
+	public function is_subscribed( int $user_id, int $object_id ): bool {
+		return (bool) bbp_is_user_subscribed( $user_id, $object_id, 'post' );
+	}
+
+	/**
+	 * Subscribe a member to a forum or a topic.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $user_id   Member ID.
+	 * @param int $object_id Forum or topic ID.
+	 * @return bool Whether the relationship was written.
+	 */
+	public function add_subscription( int $user_id, int $object_id ): bool {
+		return (bool) bbp_add_user_subscription( $user_id, $object_id, 'post' );
+	}
+
+	/**
+	 * Unsubscribe a member from a forum or a topic.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $user_id   Member ID.
+	 * @param int $object_id Forum or topic ID.
+	 * @return bool Whether the relationship was removed.
+	 */
+	public function remove_subscription( int $user_id, int $object_id ): bool {
+		return (bool) bbp_remove_user_subscription( $user_id, $object_id, 'post' );
+	}
+
+	/**
 	 * A post's creation time as an RFC 3339 string in UTC.
 	 *
 	 * @since 0.6.0

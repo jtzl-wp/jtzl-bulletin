@@ -47,10 +47,10 @@ class SearchController implements ControllerInterface {
 	/**
 	 * Whether there is a search to run at all.
 	 *
-	 * @var AccessPolicy
+	 * @var FeatureGate
 	 * @since 0.6.0
 	 */
-	private AccessPolicy $access;
+	private FeatureGate $features;
 
 	/**
 	 * Collection arguments.
@@ -89,20 +89,20 @@ class SearchController implements ControllerInterface {
 	 *
 	 * @since 0.6.0
 	 *
-	 * @param AccessPolicy         $access      Whether there is a search to run.
+	 * @param FeatureGate          $features    Whether there is a search to run.
 	 * @param UnanchoredRepository $collections Collection arguments.
 	 * @param SearchSerializer     $results     Result rows.
 	 * @param RequestBounds        $bounds      What a request may ask for.
 	 * @param ResponseFactory      $responses   What comes back.
 	 */
 	public function __construct(
-		AccessPolicy $access,
+		FeatureGate $features,
 		UnanchoredRepository $collections,
 		SearchSerializer $results,
 		RequestBounds $bounds,
 		ResponseFactory $responses
 	) {
-		$this->access      = $access;
+		$this->features    = $features;
 		$this->collections = $collections;
 		$this->results     = $results;
 		$this->bounds      = $bounds;
@@ -136,7 +136,7 @@ class SearchController implements ControllerInterface {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function get_collection( \WP_REST_Request $request ) {
-		$enabled = $this->access->search();
+		$enabled = $this->features->search();
 
 		if ( true !== $enabled ) {
 			return $enabled;

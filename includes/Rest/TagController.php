@@ -41,10 +41,10 @@ class TagController implements ControllerInterface {
 	/**
 	 * Whether there is a vocabulary at all.
 	 *
-	 * @var AccessPolicy
+	 * @var FeatureGate
 	 * @since 0.6.0
 	 */
-	private AccessPolicy $access;
+	private FeatureGate $features;
 
 	/**
 	 * Collection arguments.
@@ -83,20 +83,20 @@ class TagController implements ControllerInterface {
 	 *
 	 * @since 0.6.0
 	 *
-	 * @param AccessPolicy         $access      Whether there is a vocabulary at all.
+	 * @param FeatureGate          $features    Whether there is a vocabulary at all.
 	 * @param CollectionRepository $collections Collection arguments.
 	 * @param TagSerializer        $tags        Tag rows.
 	 * @param RequestBounds        $bounds      What a request may ask for.
 	 * @param ResponseFactory      $responses   What comes back.
 	 */
 	public function __construct(
-		AccessPolicy $access,
+		FeatureGate $features,
 		CollectionRepository $collections,
 		TagSerializer $tags,
 		RequestBounds $bounds,
 		ResponseFactory $responses
 	) {
-		$this->access      = $access;
+		$this->features    = $features;
 		$this->collections = $collections;
 		$this->tags        = $tags;
 		$this->bounds      = $bounds;
@@ -128,7 +128,7 @@ class TagController implements ControllerInterface {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function get_collection( \WP_REST_Request $request ) {
-		$enabled = $this->access->topic_tags();
+		$enabled = $this->features->topic_tags();
 
 		if ( true !== $enabled ) {
 			return $enabled;

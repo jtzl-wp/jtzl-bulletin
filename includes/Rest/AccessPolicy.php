@@ -48,6 +48,14 @@ if ( ! defined( 'ABSPATH' ) ) {
  * reader would quietly widen it. So the author branch is written out rather than
  * folded into a status list.
  *
+ * ## Site-wide settings are not here
+ *
+ * Whether tagging, search, favourites or subscriptions exist on this forum at all is
+ * Rest\FeatureGate's answer. Those four used to live here and read oddly the whole
+ * time — none of them depends on who is asking — so they left when this class reached
+ * its size gate. A controller asks one of them in the same place and in the same
+ * shape it asks this one; what changed is which class it names.
+ *
  * ## Editing is authorship, not moderation
  *
  * `can_edit_*` is the same three-gate policy the website's byline control uses
@@ -169,55 +177,6 @@ class AccessPolicy {
 		}
 
 		return $this->readable( $post, $this->wp->get_public_reply_statuses() ) ? true : $this->not_found();
-	}
-
-	/**
-	 * Is there a tag vocabulary to ask about at all?
-	 *
-	 * The one refusal here that is not about a reader: tagging is a site-wide setting,
-	 * so the answer is the same for everybody. It lives beside the others because a
-	 * route asks it in the same place and in the same shape — `true` or the error to
-	 * return — and because bbPress leaves the taxonomy registered when the setting is
-	 * off, so nothing else about the request reveals that the feature is gone.
-	 *
-	 * @since 0.6.0
-	 *
-	 * @return true|\WP_Error
-	 */
-	public function topic_tags() {
-		if ( $this->rest->topic_tags_enabled() ) {
-			return true;
-		}
-
-		return new \WP_Error(
-			'tags_disabled',
-			__( 'Topic tags are not enabled on this forum.', 'jtzl-bulletin' ),
-			array( 'status' => 403 )
-		);
-	}
-
-	/**
-	 * Is there a search to run at all?
-	 *
-	 * The sibling of `topic_tags()`, and the same kind of answer: a site-wide setting,
-	 * identical for every reader, asked in the shape a route can return. bbPress
-	 * leaves its search *template* reachable when the setting is off, so nothing else
-	 * about the request says the feature is gone.
-	 *
-	 * @since 0.6.0
-	 *
-	 * @return true|\WP_Error
-	 */
-	public function search() {
-		if ( $this->wp->allow_search() ) {
-			return true;
-		}
-
-		return new \WP_Error(
-			'search_disabled',
-			__( 'Search is not enabled on this forum.', 'jtzl-bulletin' ),
-			array( 'status' => 403 )
-		);
 	}
 
 	/**

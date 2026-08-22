@@ -39,6 +39,19 @@ if ( ! defined( 'ABSPATH' ) ) {
  * what a *stranger* may see of what that member wrote is settled inside the queries,
  * before the totals are taken.
  *
+ * ## `GET /me` is this route with the identity filled in
+ *
+ * Not a second callback — the same one. `Rest\RequestBounds::member()` takes the ID
+ * out of the path when there is one and answers with the caller when there is not, so
+ * a member reading their own profile is served by the code that serves everyone
+ * else's and the two cannot come to disagree about what a profile contains.
+ *
+ * ⚠ **It is nonetheless a different route in one respect**: its permission callback is
+ * real. `Rest\ResponseFactory::authenticated()` is what turns a logged-out `/me` into
+ * WordPress's own `rest_not_logged_in` 401. Without it the caller would resolve to 0,
+ * `Rest\AccessPolicy::user()` would answer 404, and the app would be told the route
+ * does not exist rather than that it needs to sign in.
+ *
  * @since 0.6.0
  */
 class UserController implements ControllerInterface {
@@ -139,6 +152,14 @@ class UserController implements ControllerInterface {
 	 */
 	public function routes(): array {
 		return array(
+			// The caller's own profile. Declared first because it is the one a signed-in
+			// app asks for on launch, and it takes the same arguments as the addressed
+			// route because it *is* the addressed route.
+			'/me'                          => $this->bounds->authenticated_route(
+				array( $this, 'get_item' ),
+				array( $this->responses, 'authenticated' ),
+				$this->bounds->avatar_args()
+			),
 			'/users/(?P<id>[\d]+)'         => $this->bounds->readable_route(
 				array( $this, 'get_item' ),
 				array(
@@ -169,7 +190,7 @@ class UserController implements ControllerInterface {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function get_item( \WP_REST_Request $request ) {
-		$user_id = (int) $request->get_param( 'id' );
+		$user_id = $this->bounds->member( $request );
 		$allowed = $this->access->user( $user_id );
 
 		if ( true !== $allowed ) {
@@ -201,7 +222,7 @@ class UserController implements ControllerInterface {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function get_topics( \WP_REST_Request $request ) {
-		$user_id = (int) $request->get_param( 'id' );
+		$user_id = $this->bounds->member( $request );
 		$allowed = $this->access->user( $user_id );
 
 		if ( true !== $allowed ) {
@@ -230,7 +251,7 @@ class UserController implements ControllerInterface {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function get_replies( \WP_REST_Request $request ) {
-		$user_id = (int) $request->get_param( 'id' );
+		$user_id = $this->bounds->member( $request );
 		$allowed = $this->access->user( $user_id );
 
 		if ( true !== $allowed ) {

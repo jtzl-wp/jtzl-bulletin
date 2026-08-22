@@ -42,9 +42,22 @@ if ( ! defined( 'ABSPATH' ) ) {
  * `Ajax\LoadForumsController` does — asking bbPress whether the reader may view forum
  * 0 would be a question about nothing.
  *
+ * ## The one state route carries no policy
+ *
+ * `PUT|DELETE /forums/{id}/subscription` reads an ID, reads a verb, and hands both to
+ * Rest\StateService — which is where the feature gate, the visibility question and the
+ * already-subscribed case are settled for all four of the API's state routes at once.
+ * Both verbs are idempotent and both answer with the current forum, so the app is told
+ * what is true after the write rather than assuming what it asked for took.
+ *
+ * ⚠ A forum entity carries no `is_subscribed` field — the contract puts subscription
+ * state on a topic and not on a forum, and this route does not add one. What comes
+ * back is the forum, so the app can refresh the row it drew the control on; whether
+ * the subscription now exists is the status code's answer.
+ *
  * ## Public route, private answer
  *
- * Every route here is declared through `Rest\RequestBounds::readable_route()`, which
+ * Every read route here is declared through `Rest\RequestBounds::readable_route()`, which
  * is where the open permission callback lives and why. What is worth saying *here* is
  * which class answers instead: Rest\AccessPolicy for the singular route, and
  * Rest\CollectionVisibility inside the query for the collection — before
@@ -103,6 +116,14 @@ class ForumController implements ControllerInterface {
 	private ResponseFactory $responses;
 
 	/**
+	 * What a member may change about their own relationship to a forum.
+	 *
+	 * @var StateService
+	 * @since 0.6.0
+	 */
+	private StateService $state;
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 0.6.0
@@ -113,6 +134,7 @@ class ForumController implements ControllerInterface {
 	 * @param TopicSerializer      $topics      Topic rows.
 	 * @param RequestBounds        $bounds      What a request may ask for.
 	 * @param ResponseFactory      $responses   What comes back.
+	 * @param StateService         $state       Personal state changes.
 	 */
 	public function __construct(
 		AccessPolicy $access,
@@ -120,7 +142,8 @@ class ForumController implements ControllerInterface {
 		ForumSerializer $forums,
 		TopicSerializer $topics,
 		RequestBounds $bounds,
-		ResponseFactory $responses
+		ResponseFactory $responses,
+		StateService $state
 	) {
 		$this->access      = $access;
 		$this->collections = $collections;
@@ -128,6 +151,7 @@ class ForumController implements ControllerInterface {
 		$this->topics      = $topics;
 		$this->bounds      = $bounds;
 		$this->responses   = $responses;
+		$this->state       = $state;
 	}
 
 	/**
@@ -139,7 +163,7 @@ class ForumController implements ControllerInterface {
 	 */
 	public function routes(): array {
 		return array(
-			'/forums'                      => $this->bounds->readable_route(
+			'/forums'                            => $this->bounds->readable_route(
 				array( $this, 'get_collection' ),
 				$this->bounds->collection_args() + array(
 					'parent' => $this->bounds->integer_arg(
@@ -154,19 +178,56 @@ class ForumController implements ControllerInterface {
 			// this route declares and then ignores; the collection carries it because it
 			// takes the shared bundle whole, and the bundle is shared with the
 			// collections that do serialize people.
-			'/forums/(?P<id>[\d]+)'        => $this->bounds->readable_route(
+			'/forums/(?P<id>[\d]+)'              => $this->bounds->readable_route(
 				array( $this, 'get_item' ),
 				array(
 					'id' => $this->bounds->integer_arg( array( 'required' => true ) ),
 				)
 			),
-			'/forums/(?P<id>[\d]+)/topics' => $this->bounds->readable_route(
+			'/forums/(?P<id>[\d]+)/topics'       => $this->bounds->readable_route(
 				array( $this, 'get_topics' ),
 				$this->bounds->collection_args() + array(
 					'id' => $this->bounds->integer_arg( array( 'required' => true ) ),
 				),
 			),
+			// `PUT` to subscribe and `DELETE` to unsubscribe, on one endpoint: the two
+			// differ by a single boolean and answer with the same forum, so the verb is
+			// read in the handler rather than declared twice.
+			'/forums/(?P<id>[\d]+)/subscription' => $this->bounds->authenticated_route(
+				array( $this, 'subscription' ),
+				array( $this->responses, 'authenticated' ),
+				array(
+					'id' => $this->bounds->integer_arg( array( 'required' => true ) ),
+				),
+				'PUT, DELETE'
+			),
 		);
+	}
+
+	/**
+	 * Subscribe to this forum, or unsubscribe from it.
+	 *
+	 * ⚠ The forum is serialized *after* the write and marked as a mutation, so the row
+	 * the app redraws is the one the site now holds and no shared cache keeps it.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param \WP_REST_Request $request Request.
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function subscription( \WP_REST_Request $request ) {
+		$forum_id = $this->bounds->id( $request );
+		$written  = $this->state->set_forum_subscription(
+			$forum_id,
+			$this->bounds->caller(),
+			'DELETE' !== strtoupper( $request->get_method() )
+		);
+
+		if ( true !== $written ) {
+			return $written;
+		}
+
+		return $this->responses->item( $this->forums->forum( $forum_id ), 200, true );
 	}
 
 	/**
@@ -206,7 +267,7 @@ class ForumController implements ControllerInterface {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function get_item( \WP_REST_Request $request ) {
-		$forum_id = (int) $request->get_param( 'id' );
+		$forum_id = $this->bounds->id( $request );
 		$allowed  = $this->access->forum( $forum_id );
 
 		if ( true !== $allowed ) {
@@ -231,7 +292,7 @@ class ForumController implements ControllerInterface {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function get_topics( \WP_REST_Request $request ) {
-		$forum_id = (int) $request->get_param( 'id' );
+		$forum_id = $this->bounds->id( $request );
 		$allowed  = $this->access->forum( $forum_id );
 
 		if ( true !== $allowed ) {

@@ -131,6 +131,41 @@ class TopicQuery {
 	}
 
 	/**
+	 * Args for a named set of topics, in the same order a forum lists its threads.
+	 *
+	 * The personal collections — a member's favourites, the threads they subscribe to
+	 * — are a set of IDs and nothing else. What order to put them in is not a new
+	 * question, so it is not answered again here: this is `base()` with a `post__in`
+	 * and a page, which means `(last active, ID)` descending exactly as a forum's
+	 * thread list has since 0.1.0. A second implementation of that order is how one
+	 * surface comes to serve a tied row twice while the other does not.
+	 *
+	 * ⚠ **`post__in` is never empty when this is called.** WP_Query ignores an empty
+	 * `post__in` rather than matching nothing, so a member with no favourites would be
+	 * handed every topic on the site. The caller short-circuits; this is where the
+	 * reason is written down.
+	 *
+	 * ⚠ **And the caller names `post_status`.** `base()` leaves it unset because
+	 * bbPress fills it from the reader's capabilities on the website's own screens.
+	 * These lists cross forums, so they take the same explicit, capability-derived
+	 * list the profile collections take (Rest\UnanchoredRepository::user_topics()).
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int[] $topic_ids Topics to list; must not be empty.
+	 * @param int   $page      1-based page number.
+	 * @param int   $per_page  Rows per page.
+	 * @return array<string,mixed>
+	 */
+	public function listed_args( array $topic_ids, int $page, int $per_page ): array {
+		return $this->base() + array(
+			'post__in'       => array_values( array_map( 'intval', $topic_ids ) ),
+			'posts_per_page' => max( 1, $per_page ),
+			'paged'          => max( 1, $page ),
+		);
+	}
+
+	/**
 	 * Args for the site-wide super stickies, which lead the pinned section.
 	 *
 	 * A super sticky is pinned into every forum, so it usually lives under a

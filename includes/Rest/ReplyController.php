@@ -150,7 +150,7 @@ class ReplyController implements ControllerInterface {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function get_collection( \WP_REST_Request $request ) {
-		$topic_id = (int) $request->get_param( 'id' );
+		$topic_id = $this->bounds->id( $request );
 		$allowed  = $this->access->topic( $topic_id );
 
 		if ( true !== $allowed ) {
@@ -184,7 +184,7 @@ class ReplyController implements ControllerInterface {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function get_item( \WP_REST_Request $request ) {
-		$reply_id = (int) $request->get_param( 'id' );
+		$reply_id = $this->bounds->id( $request );
 		$allowed  = $this->access->reply( $reply_id );
 
 		if ( true !== $allowed ) {

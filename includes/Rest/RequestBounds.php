@@ -8,6 +8,8 @@
 
 namespace JTZL\Bulletin\Rest;
 
+use JTZL\Bulletin\WordPress\ContextInterface;
+
 // @codeCoverageIgnoreStart
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -31,6 +33,11 @@ if ( ! defined( 'ABSPATH' ) ) {
  * `page` is different. An unusable page number is a mistake worth reporting, so it
  * keeps `minimum` and is validated; the accessor still clamps, as the floor beneath a
  * schema some future route forgets to declare.
+ *
+ * `caller()` and `id()` sit beside the paging accessors because they answer the same
+ * kind of question — what values does this callback act on. For
+ * `/topics/{id}/favorite` the topic comes out of the path and the member out of the
+ * session, and both are things the request carries.
  *
  * ⚠ **And a declared bound only exists if a `validate_callback` does** — see
  * `integer_arg()`. `register_rest_route()` supplies none, and
@@ -73,6 +80,71 @@ class RequestBounds {
 	 * @since 0.6.0
 	 */
 	private const AVATAR_MAX = 512;
+
+	/**
+	 * WordPress/bbPress seam.
+	 *
+	 * @var ContextInterface
+	 * @since 0.6.0
+	 */
+	private ContextInterface $wp;
+
+	/**
+	 * Constructor.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param ContextInterface $wp Seam, for the one question a request does not carry.
+	 */
+	public function __construct( ContextInterface $wp ) {
+		$this->wp = $wp;
+	}
+
+	/**
+	 * The resource a route was addressed to.
+	 *
+	 * ⚠ **`get_url_params()`, never `get_param()`**, which resolves body, then **query
+	 * string**, then path (`WP_REST_Request::get_parameter_order()`): `get_param( 'id' )`
+	 * on `/users/9/topics?id=7` answers **7**. Untidy on a public read route; on
+	 * `/me/favorites?id=7` it would be somebody else's private list.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param \WP_REST_Request $request Request.
+	 * @return int
+	 */
+	public function id( \WP_REST_Request $request ): int {
+		return (int) ( $request->get_url_params()['id'] ?? 0 );
+	}
+
+	/**
+	 * Whoever is signed in, or 0. Read at the point of use, never held.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @return int
+	 */
+	public function caller(): int {
+		return $this->wp->get_current_user_id();
+	}
+
+	/**
+	 * The member a request is about: the ID in the path, or — on `/me`, whose path has
+	 * none — whoever is asking. That is the whole of what `/me` is.
+	 *
+	 * ⚠ Presence, not truthiness: `/users/0` matches `[\d]+` and must stay the 404 it
+	 * is, where a `?:` would serve the caller their own profile.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param \WP_REST_Request $request Request.
+	 * @return int
+	 */
+	public function member( \WP_REST_Request $request ): int {
+		$path = $request->get_url_params();
+
+		return array_key_exists( 'id', $path ) ? (int) $path['id'] : $this->caller();
+	}
 
 	/**
 	 * The page a request asks for.
@@ -228,6 +300,39 @@ class RequestBounds {
 			'methods'             => \WP_REST_Server::READABLE,
 			'callback'            => $callback,
 			'permission_callback' => '__return_true',
+			'args'                => $args,
+		);
+	}
+
+	/**
+	 * A route only a signed-in member may reach.
+	 *
+	 * The counterpart of `readable_route()`, differing in the two places that method's
+	 * docblock calls decisions. **`methods` defaults to `READABLE`** — a favourite is
+	 * `PUT` to set and `DELETE` to clear on one endpoint rather than two, so the
+	 * handler reads the verb (see Rest\TopicController). **The permission callback is
+	 * real** — Rest\ResponseFactory::authenticated(), which answers only *whether there
+	 * is a member*; whether they may touch this thing is Rest\AccessPolicy's, asked
+	 * inside the handler.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param array{0:object,1:string}          $callback   Controller method to answer with.
+	 * @param array{0:object,1:string}          $permission Permission callback.
+	 * @param array<string,array<string,mixed>> $args       Argument schema.
+	 * @param string                            $methods    HTTP verbs, comma separated.
+	 * @return array<string,mixed>
+	 */
+	public function authenticated_route(
+		array $callback,
+		array $permission,
+		array $args = array(),
+		string $methods = \WP_REST_Server::READABLE
+	): array {
+		return array(
+			'methods'             => $methods,
+			'callback'            => $callback,
+			'permission_callback' => $permission,
 			'args'                => $args,
 		);
 	}
