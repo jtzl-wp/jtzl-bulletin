@@ -83,6 +83,19 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
+	 * Remove a filter registered as a closure.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string   $hook     Filter name.
+	 * @param callable $callback Callback to remove.
+	 * @param int      $priority Priority it was added at.
+	 */
+	public function remove_filter_callback( string $hook, callable $callback, int $priority ): void {
+		remove_filter( $hook, $callback, $priority );
+	}
+
+	/**
 	 * Apply filters to a value.
 	 *
 	 * @since 0.1.0

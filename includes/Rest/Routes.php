@@ -80,6 +80,14 @@ class Routes {
 	private ReplyController $replies;
 
 	/**
+	 * A forum's thread list, read and written.
+	 *
+	 * @var ForumTopicsController
+	 * @since 0.6.0
+	 */
+	private ForumTopicsController $forum_topics;
+
+	/**
 	 * Tag reads.
 	 *
 	 * @var TagController
@@ -108,30 +116,33 @@ class Routes {
 	 *
 	 * @since 0.6.0
 	 *
-	 * @param ContextInterface $wp      WordPress/bbPress seam.
-	 * @param ForumController  $forums  Forum reads.
-	 * @param TopicController  $topics  Topic reads.
-	 * @param ReplyController  $replies Reply reads.
-	 * @param TagController    $tags    Tag reads.
-	 * @param SearchController $search  Search reads.
-	 * @param UserController   $users   Public profile reads.
+	 * @param ContextInterface      $wp           WordPress/bbPress seam.
+	 * @param ForumController       $forums       Forum reads.
+	 * @param TopicController       $topics       Topic reads.
+	 * @param ReplyController       $replies      Reply reads and writes.
+	 * @param ForumTopicsController $forum_topics A forum's thread list, read and written.
+	 * @param TagController         $tags         Tag reads.
+	 * @param SearchController      $search       Search reads.
+	 * @param UserController        $users        Public profile reads.
 	 */
 	public function __construct(
 		ContextInterface $wp,
 		ForumController $forums,
 		TopicController $topics,
 		ReplyController $replies,
+		ForumTopicsController $forum_topics,
 		TagController $tags,
 		SearchController $search,
 		UserController $users
 	) {
-		$this->wp      = $wp;
-		$this->forums  = $forums;
-		$this->topics  = $topics;
-		$this->replies = $replies;
-		$this->tags    = $tags;
-		$this->search  = $search;
-		$this->users   = $users;
+		$this->wp           = $wp;
+		$this->forums       = $forums;
+		$this->topics       = $topics;
+		$this->replies      = $replies;
+		$this->forum_topics = $forum_topics;
+		$this->tags         = $tags;
+		$this->search       = $search;
+		$this->users        = $users;
 	}
 
 	/**
@@ -160,6 +171,14 @@ class Routes {
 	 * @return ControllerInterface[]
 	 */
 	private function controllers(): array {
-		return array( $this->forums, $this->topics, $this->replies, $this->tags, $this->search, $this->users );
+		return array(
+			$this->forums,
+			$this->forum_topics,
+			$this->topics,
+			$this->replies,
+			$this->tags,
+			$this->search,
+			$this->users,
+		);
 	}
 }

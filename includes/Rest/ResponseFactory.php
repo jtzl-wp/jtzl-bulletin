@@ -106,6 +106,38 @@ class ResponseFactory {
 	}
 
 	/**
+	 * A completed write, as whichever of the two answers the contract has for one.
+	 *
+	 * ## Why this is not written out at each create route
+	 *
+	 * Because it is the *decision*, not the plumbing. "201 with the entity when the
+	 * author can read it back, and the fixed acknowledgement when they cannot" is one
+	 * rule, and a second create route spelling it out again is a second place for it to
+	 * drift — a create that answered 200, or one that reached for an ID a discarded
+	 * write never had. Rest\MutationResult makes the second of those a type error; this
+	 * makes the first impossible to write.
+	 *
+	 * The serializer arrives as a callable rather than an object so this class stays
+	 * ignorant of what a topic or a reply looks like. It is handed an ID and gives back a
+	 * row; which serializer that is belongs to the controller.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param MutationResult|\WP_Error $written   What the mutation service reported.
+	 * @param callable                 $serialize Turns the written ID into a row.
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function written( $written, callable $serialize ) {
+		if ( ! $written instanceof MutationResult ) {
+			return $written;
+		}
+
+		return $written->is_accepted()
+			? $this->accepted()
+			: $this->item( $serialize( (int) $written->id() ), 201, true );
+	}
+
+	/**
 	 * True when somebody is signed in, and the standard refusal when not.
 	 *
 	 * The code is WordPress's own `rest_not_logged_in`, not a Bulletin invention: a

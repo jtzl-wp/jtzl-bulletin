@@ -15,13 +15,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 // @codeCoverageIgnoreEnd
 
 /**
- * `GET /forums`, `GET /forums/{id}` and `GET /forums/{id}/topics` — one level of the
- * hierarchy, one forum, and one forum's thread list.
+ * `GET /forums`, `GET /forums/{id}` and the forum's own subscription — one level of the
+ * hierarchy, one forum, and a member's relationship to it.
  *
- * The thread list lives here rather than beside the other topic routes because what it
- * is anchored to is a forum: it takes the forum's ID out of the path, refuses on the
- * forum's own terms, and is the second half of what "open this forum" means. Its rows
- * are serialized by the topic serializer all the same.
+ * ⚠ **A forum's *contents* are not here.** `GET|POST /forums/{id}/topics` is
+ * Rest\ForumTopicsController's, because the thread list and the act of adding to it are
+ * one resource with two verbs and belong together — and because what that route is
+ * really about is a topic lifecycle that happens to be addressed through a forum. What
+ * stays here is the forum's own record.
  *
  * ## The hierarchy is requested a level at a time
  *
@@ -92,14 +93,6 @@ class ForumController implements ControllerInterface {
 	private ForumSerializer $forums;
 
 	/**
-	 * Topic rows.
-	 *
-	 * @var TopicSerializer
-	 * @since 0.6.0
-	 */
-	private TopicSerializer $topics;
-
-	/**
 	 * What a request may ask for.
 	 *
 	 * @var RequestBounds
@@ -131,7 +124,6 @@ class ForumController implements ControllerInterface {
 	 * @param AccessPolicy         $access      Who may read what.
 	 * @param CollectionRepository $collections Collection arguments.
 	 * @param ForumSerializer      $forums      Forum rows.
-	 * @param TopicSerializer      $topics      Topic rows.
 	 * @param RequestBounds        $bounds      What a request may ask for.
 	 * @param ResponseFactory      $responses   What comes back.
 	 * @param StateService         $state       Personal state changes.
@@ -140,7 +132,6 @@ class ForumController implements ControllerInterface {
 		AccessPolicy $access,
 		CollectionRepository $collections,
 		ForumSerializer $forums,
-		TopicSerializer $topics,
 		RequestBounds $bounds,
 		ResponseFactory $responses,
 		StateService $state
@@ -148,7 +139,6 @@ class ForumController implements ControllerInterface {
 		$this->access      = $access;
 		$this->collections = $collections;
 		$this->forums      = $forums;
-		$this->topics      = $topics;
 		$this->bounds      = $bounds;
 		$this->responses   = $responses;
 		$this->state       = $state;
@@ -159,7 +149,7 @@ class ForumController implements ControllerInterface {
 	 *
 	 * @since 0.6.0
 	 *
-	 * @return array<string,array<string,mixed>>
+	 * @return array<string,array<mixed>>
 	 */
 	public function routes(): array {
 		return array(
@@ -183,12 +173,6 @@ class ForumController implements ControllerInterface {
 				array(
 					'id' => $this->bounds->integer_arg( array( 'required' => true ) ),
 				)
-			),
-			'/forums/(?P<id>[\d]+)/topics'       => $this->bounds->readable_route(
-				array( $this, 'get_topics' ),
-				$this->bounds->collection_args() + array(
-					'id' => $this->bounds->integer_arg( array( 'required' => true ) ),
-				),
 			),
 			// `PUT` to subscribe and `DELETE` to unsubscribe, on one endpoint: the two
 			// differ by a single boolean and answer with the same forum, so the verb is
@@ -275,40 +259,5 @@ class ForumController implements ControllerInterface {
 		}
 
 		return $this->responses->item( $this->forums->forum( $forum_id ) );
-	}
-
-	/**
-	 * One page of a forum's thread list.
-	 *
-	 * ⚠ **The forum is ruled on before its threads are queried**, for the reason the
-	 * child forum list is: a thread list under a forum the reader may not know about
-	 * is a table of contents for it, and the titles are most of what its privacy was
-	 * protecting. The refusal is returned unchanged, so this route inherits both the
-	 * singular route's 404 and its 403 on a protected branch.
-	 *
-	 * @since 0.6.0
-	 *
-	 * @param \WP_REST_Request $request Request.
-	 * @return \WP_REST_Response|\WP_Error
-	 */
-	public function get_topics( \WP_REST_Request $request ) {
-		$forum_id = $this->bounds->id( $request );
-		$allowed  = $this->access->forum( $forum_id );
-
-		if ( true !== $allowed ) {
-			return $allowed;
-		}
-
-		$page = $this->collections->forum_topics(
-			$forum_id,
-			$this->bounds->page( $request ),
-			$this->bounds->per_page( $request )
-		);
-
-		return $this->responses->collection(
-			$this->topics->topics( $page['ids'], $this->bounds->avatar_size( $request ) ),
-			$page['total'],
-			$page['total_pages']
-		);
 	}
 }

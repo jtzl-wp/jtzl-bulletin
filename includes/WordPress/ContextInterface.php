@@ -60,6 +60,23 @@ interface ContextInterface {
 	public function remove_filter( string $hook, string $callback, int $priority = 10 ): void;
 
 	/**
+	 * Remove a filter registered as a closure.
+	 *
+	 * The sibling of `remove_filter()`, which takes a string function name and so
+	 * cannot name one. A callback installed for the length of a single call — the
+	 * REST write path installs one around Akismet's pre-insert filter — has to be
+	 * removed by identity, and leaving it in place would apply it to every later
+	 * write in the request.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string   $hook     Filter name.
+	 * @param callable $callback Callback to remove.
+	 * @param int      $priority Priority it was added at.
+	 */
+	public function remove_filter_callback( string $hook, callable $callback, int $priority ): void;
+
+	/**
 	 * Apply filters to a value.
 	 *
 	 * @since 0.1.0

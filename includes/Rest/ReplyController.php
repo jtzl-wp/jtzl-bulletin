@@ -91,6 +91,22 @@ class ReplyController implements ControllerInterface {
 	private ResponseFactory $responses;
 
 	/**
+	 * What a write carries.
+	 *
+	 * @var WriteFields
+	 * @since 0.6.0
+	 */
+	private WriteFields $fields;
+
+	/**
+	 * Answering a thread.
+	 *
+	 * @var ReplyMutationService
+	 * @since 0.6.0
+	 */
+	private ReplyMutationService $mutations;
+
+	/**
 	 * Constructor.
 	 *
 	 * @since 0.6.0
@@ -100,19 +116,25 @@ class ReplyController implements ControllerInterface {
 	 * @param ReplySerializer      $replies     Reply rows.
 	 * @param RequestBounds        $bounds      What a request may ask for.
 	 * @param ResponseFactory      $responses   What comes back.
+	 * @param WriteFields          $fields      What a write carries.
+	 * @param ReplyMutationService $mutations   Answering a thread.
 	 */
 	public function __construct(
 		AccessPolicy $access,
 		CollectionRepository $collections,
 		ReplySerializer $replies,
 		RequestBounds $bounds,
-		ResponseFactory $responses
+		ResponseFactory $responses,
+		WriteFields $fields,
+		ReplyMutationService $mutations
 	) {
 		$this->access      = $access;
 		$this->collections = $collections;
 		$this->replies     = $replies;
 		$this->bounds      = $bounds;
 		$this->responses   = $responses;
+		$this->fields      = $fields;
+		$this->mutations   = $mutations;
 	}
 
 	/**
@@ -120,14 +142,27 @@ class ReplyController implements ControllerInterface {
 	 *
 	 * @since 0.6.0
 	 *
-	 * @return array<string,array<string,mixed>>
+	 * @return array<string,array<mixed>>
 	 */
 	public function routes(): array {
 		return array(
-			'/topics/(?P<id>[\d]+)/replies' => $this->bounds->readable_route(
-				array( $this, 'get_collection' ),
-				$this->bounds->collection_args() + array(
-					'id' => $this->bounds->integer_arg( array( 'required' => true ) ),
+			// Two handlers, one path: reading a thread's replies and adding one to it.
+			'/topics/(?P<id>[\d]+)/replies' => array(
+				$this->bounds->readable_route(
+					array( $this, 'get_collection' ),
+					$this->bounds->collection_args() + array(
+						'id' => $this->bounds->integer_arg( array( 'required' => true ) ),
+					),
+				),
+				$this->bounds->authenticated_route(
+					array( $this, 'create_item' ),
+					array( $this->responses, 'authenticated' ),
+					array(
+						'id'       => $this->bounds->integer_arg( array( 'required' => true ) ),
+						'content'  => $this->fields->content_arg(),
+						'reply_to' => $this->fields->reply_to_arg(),
+					) + $this->bounds->avatar_args(),
+					'POST'
 				),
 			),
 			// A reply has an author, so the singular route takes the avatar size its
@@ -138,6 +173,33 @@ class ReplyController implements ControllerInterface {
 					'id' => $this->bounds->integer_arg( array( 'required' => true ) ),
 				) + $this->bounds->avatar_args()
 			),
+		);
+	}
+
+	/**
+	 * Answer this thread.
+	 *
+	 * ⚠ **201 with the reply, or 202 with nothing.** A published reply and one held for
+	 * review both come back as the created entity — its `status` says which — because in
+	 * both cases their author can read them. Every other way the write could have ended
+	 * is the fixed acknowledgement, identical between outcomes.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param \WP_REST_Request $request Request.
+	 * @return \WP_REST_Response|\WP_Error
+	 */
+	public function create_item( \WP_REST_Request $request ) {
+		$size = $this->bounds->avatar_size( $request );
+
+		return $this->responses->written(
+			$this->mutations->create(
+				$this->bounds->id( $request ),
+				$this->bounds->caller(),
+				$this->fields->content( $request ),
+				$this->fields->reply_to( $request )
+			),
+			fn( int $reply_id ): array => $this->replies->reply( $reply_id, $size )
 		);
 	}
 

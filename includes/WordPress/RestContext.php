@@ -1108,4 +1108,363 @@ class RestContext implements RestContextInterface {
 	private function to_utc( string $local ): string {
 		return '' === $local ? '' : (string) get_gmt_from_date( $local, DATE_RFC3339 );
 	}
+
+	/**
+	 * Whether the current reader holds a capability against one object.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string $capability Capability name.
+	 * @param int    $object_id  Post the capability is asked about.
+	 * @return bool
+	 */
+	public function current_user_can_for( string $capability, int $object_id ): bool {
+		return (bool) current_user_can( $capability, $object_id );
+	}
+
+	/**
+	 * The status bbPress marks spam with.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @return string
+	 */
+	public function get_spam_status_id(): string {
+		return (string) bbp_get_spam_status_id();
+	}
+
+	/**
+	 * The status bbPress marks trash with.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @return string
+	 */
+	public function get_trash_status_id(): string {
+		return (string) bbp_get_trash_status_id();
+	}
+
+	/**
+	 * Whether a title exceeds the length bbPress accepts.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string $title Title to measure.
+	 * @return bool
+	 */
+	public function is_title_too_long( string $title ): bool {
+		return (bool) bbp_is_title_too_long( $title );
+	}
+
+	/**
+	 * Whether this author may post again yet.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $author_id Author ID.
+	 * @return bool True when there is no flooding.
+	 */
+	public function passes_flood_check( int $author_id ): bool {
+		return (bool) bbp_check_for_flood( array(), $author_id );
+	}
+
+	/**
+	 * Whether this author has already posted this content in this place.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string $post_type Post type being written.
+	 * @param int    $author_id Author ID.
+	 * @param int    $parent_id Forum ID for a topic, topic ID for a reply.
+	 * @param string $content   Content being written.
+	 * @return bool True when no duplicate was found.
+	 */
+	public function passes_duplicate_check( string $post_type, int $author_id, int $parent_id, string $content ): bool {
+		return (bool) bbp_check_for_duplicate(
+			array(
+				'post_type'      => $post_type,
+				'post_author'    => $author_id,
+				'post_content'   => $content,
+				'post_parent'    => $parent_id,
+				'anonymous_data' => array(),
+			)
+		);
+	}
+
+	/**
+	 * Whether this content clears the moderation keys.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int    $author_id Author ID.
+	 * @param string $title     Title being written.
+	 * @param string $content   Content being written.
+	 * @param bool   $strict    True for the disallowed list, false for moderation.
+	 * @return bool True when the content passes.
+	 */
+	public function passes_moderation_check( int $author_id, string $title, string $content, bool $strict ): bool {
+		return (bool) bbp_check_for_moderation( array(), $author_id, $title, $content, $strict );
+	}
+
+	/**
+	 * A topic's tags, in the comma-joined form bbPress's own write path passes around.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $topic_id Topic ID.
+	 * @return string
+	 */
+	public function get_topic_tag_names( int $topic_id ): string {
+		return (string) bbp_get_topic_tag_names( $topic_id );
+	}
+
+	/**
+	 * Replace a topic's tags.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int             $topic_id Topic ID.
+	 * @param string|string[] $terms    Comma-joined names, or a list of them.
+	 * @return bool Whether the taxonomy accepted them.
+	 */
+	public function set_topic_tags( int $topic_id, $terms ): bool {
+		$result = wp_set_post_terms( $topic_id, $terms, bbp_get_topic_tag_tax_id(), false );
+
+		return ! is_wp_error( $result ) && false !== $result;
+	}
+
+	/**
+	 * Let extensions rewrite the terms a new reply is about to set on its topic.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string $terms    Terms about to be set.
+	 * @param int    $topic_id Topic being tagged.
+	 * @param int    $reply_id Reply that occasioned it.
+	 * @return string
+	 */
+	public function filter_new_reply_terms( string $terms, int $topic_id, int $reply_id ): string {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- bbPress's own hook, fired so its listeners see a REST write.
+		return (string) apply_filters( 'bbp_new_reply_pre_set_terms', $terms, $topic_id, $reply_id );
+	}
+
+	/**
+	 * Insert a post.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param array<string,mixed> $data Post data, already filtered.
+	 * @return int|\WP_Error Post ID, or the failure WordPress reported.
+	 */
+	public function insert_post( array $data ) {
+		$result = wp_insert_post( $data, true );
+
+		return is_wp_error( $result ) ? $result : (int) $result;
+	}
+
+	/**
+	 * Close a topic, with bbPress's own bookkeeping.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $topic_id Topic ID.
+	 */
+	public function close_topic( int $topic_id ): void {
+		bbp_close_topic( $topic_id );
+	}
+
+	/**
+	 * Trash a post.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $post_id Post ID.
+	 */
+	public function trash_post( int $post_id ): void {
+		wp_trash_post( $post_id );
+	}
+
+	/**
+	 * Record the status a spammed post should return to when it is hammed.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $post_id Post ID.
+	 */
+	public function mark_spam_meta_status( int $post_id ): void {
+		add_post_meta( $post_id, '_bbp_spam_meta_status', bbp_get_public_status_id() );
+	}
+
+	/**
+	 * Fire `bbp_new_topic`, the action that updates every count and engagement.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $topic_id  Topic that was created.
+	 * @param int $forum_id  Forum it was created in.
+	 * @param int $author_id Author, as the filtered post data left it.
+	 */
+	public function fire_new_topic( int $topic_id, int $forum_id, int $author_id ): void {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- bbPress's own hook, fired so its listeners see a REST write.
+		do_action( 'bbp_new_topic', $topic_id, $forum_id, array(), $author_id );
+	}
+
+	/**
+	 * Fire `bbp_new_reply`, the action that updates every count, voice and engagement.
+	 *
+	 * ⚠ Argument six is `false` — bbPress's "is this an edit" flag. A REST create is
+	 * not one, and a listener that reads it as one would skip the very bookkeeping this
+	 * call exists to run.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $reply_id  Reply that was created.
+	 * @param int $topic_id  Topic it answers.
+	 * @param int $forum_id  Forum that topic sits in.
+	 * @param int $author_id Author, as the filtered post data left it.
+	 * @param int $reply_to  Reply this one answers, or 0.
+	 */
+	public function fire_new_reply( int $reply_id, int $topic_id, int $forum_id, int $author_id, int $reply_to ): void {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- bbPress's own hook, fired so its listeners see a REST write.
+		do_action( 'bbp_new_reply', $reply_id, $topic_id, $forum_id, array(), $author_id, false, $reply_to );
+	}
+
+	/**
+	 * Fire a `*_post_extras` action.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string $hook    Action name.
+	 * @param int    $post_id Post that was written.
+	 */
+	public function fire_post_extras( string $hook, int $post_id ): void {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- the caller names one of bbPress's own `*_post_extras` hooks.
+		do_action( $hook, $post_id );
+	}
+
+	/**
+	 * Fire a `*_pre_extras` action with the arguments bbPress passes it.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string $hook Action name.
+	 * @param int[]  $args Positional arguments.
+	 */
+	public function fire_pre_extras( string $hook, array $args ): void {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- the caller names one of bbPress's own `*_pre_extras` hooks.
+		do_action_ref_array( $hook, $args );
+	}
+
+	/**
+	 * Put a different error bag in bbPress's hand, and take the old one back.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param \WP_Error $fresh Bag to install.
+	 * @return \WP_Error The bag that was there.
+	 */
+	public function swap_bbp_errors( \WP_Error $fresh ): \WP_Error {
+		$bbp      = bbpress();
+		$previous = $bbp->errors instanceof \WP_Error ? $bbp->errors : new \WP_Error();
+
+		$bbp->errors = $fresh;
+
+		return $previous;
+	}
+
+	/**
+	 * Put sanitized form values where a form-compatible hook expects to read them.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param array<string,scalar> $values Form-equivalent values.
+	 * @return array{post:array<string,mixed>,request:array<string,mixed>} What was there.
+	 */
+	public function swap_request_globals( array $values ): array {
+		$previous = array(
+			'post'    => $_POST,    // phpcs:ignore WordPress.Security.NonceVerification.Missing
+			'request' => $_REQUEST, // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		);
+
+		$_POST    = $values; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$_REQUEST = $values;
+
+		return $previous;
+	}
+
+	/**
+	 * Put back what `swap_request_globals()` took.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param array{post:array<string,mixed>,request:array<string,mixed>} $previous Prior values.
+	 */
+	public function restore_request_globals( array $previous ): void {
+		$_POST    = $previous['post'];    // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$_REQUEST = $previous['request'];
+	}
+
+	/**
+	 * How many filters WordPress currently believes it is inside.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @return int
+	 */
+	public function current_filter_depth(): int {
+		global $wp_current_filter;
+
+		return is_array( $wp_current_filter ) ? count( $wp_current_filter ) : 0;
+	}
+
+	/**
+	 * Tell WordPress it is back out of the filters an exception was thrown through.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $depth Depth recorded before the call that threw.
+	 */
+	public function unwind_filters( int $depth ): void {
+		global $wp_current_filter;
+
+		if ( is_array( $wp_current_filter ) && count( $wp_current_filter ) > $depth ) {
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- repairing the stack an exception was thrown through; see the interface.
+			$wp_current_filter = array_slice( $wp_current_filter, 0, $depth );
+		}
+	}
+
+	/**
+	 * Whether Akismet is set to discard what it is certain about, rather than hold it.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @return bool
+	 */
+	public function is_akismet_strict(): bool {
+		return (bool) get_option( 'akismet_strictness' );
+	}
+
+	/**
+	 * A message with any markup taken out of it.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string $message Message, possibly carrying markup.
+	 * @return string
+	 */
+	public function strip_markup( string $message ): string {
+		return trim( (string) wp_strip_all_tags( $message ) );
+	}
+
+	/**
+	 * A value slashed the way PHP would have handed it to a form handler.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string $value Unslashed value.
+	 * @return string
+	 */
+	public function slash( string $value ): string {
+		return (string) wp_slash( $value );
+	}
 }

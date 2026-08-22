@@ -31,11 +31,16 @@ interface ControllerInterface {
 	 * The routes this controller answers, keyed by route pattern.
 	 *
 	 * Each value is exactly what `register_rest_route()` takes for one route,
-	 * minus the namespace.
+	 * minus the namespace — so it is either one handler group, or a numerically
+	 * keyed list of them when a path answers more than one verb with more than one
+	 * callback. `register_rest_route()` tells the two apart by looking for a
+	 * `callback` key, and both shapes are in use here: `GET`/`POST` on a collection
+	 * is a list, while `PUT`/`DELETE` on a state route is a single group whose
+	 * `methods` names both verbs, because one callback answers them.
 	 *
 	 * @since 0.6.0
 	 *
-	 * @return array<string,array<string,mixed>>
+	 * @return array<string,array<mixed>>
 	 */
 	public function routes(): array;
 }

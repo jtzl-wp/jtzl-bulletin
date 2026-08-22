@@ -501,4 +501,307 @@ interface RestContextInterface {
 	 * @return string|null
 	 */
 	public function normalize_status( string $status ): ?string;
+
+	/**
+	 * Whether the current reader holds a capability against one object.
+	 *
+	 * The object-aware sibling of `ContextInterface::current_user_can()`. bbPress maps
+	 * `edit_forum`, `read_forum` and `assign_topic_tags` per post, so asking without
+	 * the object answers a different question from the one the write path asks.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string $capability Capability name.
+	 * @param int    $object_id  Post the capability is asked about.
+	 * @return bool
+	 */
+	public function current_user_can_for( string $capability, int $object_id ): bool;
+
+	/**
+	 * The status bbPress marks spam with.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @return string
+	 */
+	public function get_spam_status_id(): string;
+
+	/**
+	 * The status bbPress marks trash with.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @return string
+	 */
+	public function get_trash_status_id(): string;
+
+	/**
+	 * Whether a title exceeds the length bbPress accepts.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string $title Title to measure.
+	 * @return bool
+	 */
+	public function is_title_too_long( string $title ): bool;
+
+	/**
+	 * Whether this author may post again yet.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $author_id Author ID.
+	 * @return bool True when there is no flooding.
+	 */
+	public function passes_flood_check( int $author_id ): bool;
+
+	/**
+	 * Whether this author has already posted this content in this place.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string $post_type Post type being written.
+	 * @param int    $author_id Author ID.
+	 * @param int    $parent_id Forum ID for a topic, topic ID for a reply.
+	 * @param string $content   Content being written.
+	 * @return bool True when no duplicate was found.
+	 */
+	public function passes_duplicate_check( string $post_type, int $author_id, int $parent_id, string $content ): bool;
+
+	/**
+	 * Whether this content clears the moderation keys.
+	 *
+	 * ⚠ The two settings are one function with a flag. Strict is bbPress's
+	 * *disallowed* list, whose failure means the post is refused outright; non-strict
+	 * is the *moderation* list, whose failure means the post is held. Both are asked,
+	 * in that order, exactly as the browser handlers ask them.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int    $author_id Author ID.
+	 * @param string $title     Title being written.
+	 * @param string $content   Content being written.
+	 * @param bool   $strict    True for the disallowed list, false for moderation.
+	 * @return bool True when the content passes.
+	 */
+	public function passes_moderation_check( int $author_id, string $title, string $content, bool $strict ): bool;
+
+	/**
+	 * A topic's tags, in the comma-joined form bbPress's own write path passes around.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $topic_id Topic ID.
+	 * @return string
+	 */
+	public function get_topic_tag_names( int $topic_id ): string;
+
+	/**
+	 * Replace a topic's tags.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int             $topic_id Topic ID.
+	 * @param string|string[] $terms    Comma-joined names, or a list of them.
+	 * @return bool Whether the taxonomy accepted them.
+	 */
+	public function set_topic_tags( int $topic_id, $terms ): bool;
+
+	/**
+	 * Let extensions rewrite the terms a new reply is about to set on its topic.
+	 *
+	 * Load-bearing beyond tagging: Akismet hooks this to stash a spammed reply's terms
+	 * in post meta and hand back the topic's existing ones, so a reply later hammed can
+	 * be restored. Skipping it would silently drop that.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string $terms    Terms about to be set.
+	 * @param int    $topic_id Topic being tagged.
+	 * @param int    $reply_id Reply that occasioned it.
+	 * @return string
+	 */
+	public function filter_new_reply_terms( string $terms, int $topic_id, int $reply_id ): string;
+
+	/**
+	 * Insert a post.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param array<string,mixed> $data Post data, already filtered.
+	 * @return int|\WP_Error Post ID, or the failure WordPress reported.
+	 */
+	public function insert_post( array $data );
+
+	/**
+	 * Close a topic, with bbPress's own bookkeeping.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $topic_id Topic ID.
+	 */
+	public function close_topic( int $topic_id ): void;
+
+	/**
+	 * Trash a post.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $post_id Post ID.
+	 */
+	public function trash_post( int $post_id ): void;
+
+	/**
+	 * Record the status a spammed post should return to when it is hammed.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $post_id Post ID.
+	 */
+	public function mark_spam_meta_status( int $post_id ): void;
+
+	/**
+	 * Fire `bbp_new_topic`, the action that updates every count and engagement.
+	 *
+	 * ⚠ Four arguments, in bbPress's order, with an empty anonymous-data array — the
+	 * API has no anonymous write. A listener reading argument three gets what the
+	 * browser handler gives it for a logged-in author.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $topic_id  Topic that was created.
+	 * @param int $forum_id  Forum it was created in.
+	 * @param int $author_id Author, as the filtered post data left it.
+	 */
+	public function fire_new_topic( int $topic_id, int $forum_id, int $author_id ): void;
+
+	/**
+	 * Fire `bbp_new_reply`, the action that updates every count, voice and engagement.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $reply_id  Reply that was created.
+	 * @param int $topic_id  Topic it answers.
+	 * @param int $forum_id  Forum that topic sits in.
+	 * @param int $author_id Author, as the filtered post data left it.
+	 * @param int $reply_to  Reply this one answers, or 0.
+	 */
+	public function fire_new_reply( int $reply_id, int $topic_id, int $forum_id, int $author_id, int $reply_to ): void;
+
+	/**
+	 * Fire a `*_post_extras` action.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string $hook    Action name.
+	 * @param int    $post_id Post that was written.
+	 */
+	public function fire_post_extras( string $hook, int $post_id ): void;
+
+	/**
+	 * Fire a `*_pre_extras` action with the arguments bbPress passes it.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string $hook Action name.
+	 * @param int[]  $args Positional arguments.
+	 */
+	public function fire_pre_extras( string $hook, array $args ): void;
+
+	/**
+	 * Put a different error bag in bbPress's hand, and take the old one back.
+	 *
+	 * `bbp_add_error()` writes to one process-global `WP_Error` on the bbPress
+	 * singleton. Swapping it is how a REST write gives a form-compatible hook somewhere
+	 * to complain without inheriting, or leaving behind, anybody else's complaints.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param \WP_Error $fresh Bag to install.
+	 * @return \WP_Error The bag that was there.
+	 */
+	public function swap_bbp_errors( \WP_Error $fresh ): \WP_Error;
+
+	/**
+	 * Put sanitized form values where a form-compatible hook expects to read them.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param array<string,scalar> $values Form-equivalent values.
+	 * @return array{post:array<string,mixed>,request:array<string,mixed>} What was there.
+	 */
+	public function swap_request_globals( array $values ): array;
+
+	/**
+	 * Put back what `swap_request_globals()` took.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param array{post:array<string,mixed>,request:array<string,mixed>} $previous Prior values.
+	 */
+	public function restore_request_globals( array $previous ): void;
+
+	/**
+	 * How many filters WordPress currently believes it is inside.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @return int
+	 */
+	public function current_filter_depth(): int;
+
+	/**
+	 * Tell WordPress it is back out of the filters an exception was thrown through.
+	 *
+	 * ⚠ `$wp_current_filter` is pushed by `apply_filters()` and popped only when it
+	 * returns normally. Throwing out of a callback leaves every enclosing hook name on
+	 * that stack for the rest of the process, so `current_filter()` lies afterwards and
+	 * the stack grows on every occurrence.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $depth Depth recorded before the call that threw.
+	 */
+	public function unwind_filters( int $depth ): void;
+
+	/**
+	 * Whether Akismet is set to discard what it is certain about, rather than hold it.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @return bool
+	 */
+	public function is_akismet_strict(): bool;
+
+	/**
+	 * A message with any markup taken out of it.
+	 *
+	 * Errors are written for a form by bbPress — `<strong>Error</strong>: …` — and an
+	 * extension writing one will match that house style. A JSON message is not markup,
+	 * and shipping it would put HTML in a field an app is going to render as text.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string $message Message, possibly carrying markup.
+	 * @return string
+	 */
+	public function strip_markup( string $message ): string;
+
+	/**
+	 * A value slashed the way PHP would have handed it to a form handler.
+	 *
+	 * ⚠ **Not decoration.** WordPress's write path is built on the assumption that
+	 * content arrives slashed: `wp_filter_kses()` strips slashes and adds them back,
+	 * `bbp_check_for_duplicate()` unslashes before it queries, and `wp_insert_post()`
+	 * unslashes immediately before the INSERT. REST hands over an unslashed string, so a
+	 * reply containing a quote or a backslash would be run through that pipeline one
+	 * unslash too many and reach the database with characters missing. Slashing on the
+	 * way in makes the REST lifecycle byte-identical to the browser one.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string $value Unslashed value.
+	 * @return string
+	 */
+	public function slash( string $value ): string;
 }
