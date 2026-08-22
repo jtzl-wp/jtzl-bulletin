@@ -14,6 +14,7 @@ use JTZL\Bulletin\Asset\AssetManager;
 use JTZL\Bulletin\Asset\BuiltAssets;
 use JTZL\Bulletin\Rest\ForumController;
 use JTZL\Bulletin\Rest\ForumTopicsController;
+use JTZL\Bulletin\Rest\PersonalController;
 use JTZL\Bulletin\Rest\ReplyController;
 use JTZL\Bulletin\Rest\Routes;
 use JTZL\Bulletin\Rest\SearchController;
@@ -123,11 +124,13 @@ class ContainerFactory {
 			// Every controller the REST API answers through. This list is the composition
 			// decision `Rest\Routes` used to hold as nine named dependencies — see that
 			// class for why it moved. Order is what Rest\EndpointsTest asserts against:
-			// the hierarchy first, then the two ways in that begin nowhere in it.
+			// the hierarchy first, then the three ways in that begin nowhere in it.
 			//
-			// ⚠ Rest\PersonalController is deliberately absent. It is built and covered,
-			// but confirmation 3 in docs/rest-api-plan.md is still open; adding it here is
-			// the whole of registering it.
+			// ⚠ Rest\PersonalController was withheld from this list for two tasks while
+			// confirmation 3 in docs/rest-api-plan.md was open, and joins it here — the
+			// whole of what registering those three paths cost. What it publishes is the
+			// shape the plan recommended rather than one the app team chose; if they ask
+			// for a different one, this line is where the answer lands.
 			Routes::class               => autowire()
 				->constructorParameter(
 					'controllers',
@@ -141,6 +144,7 @@ class ContainerFactory {
 						get( TagController::class ),
 						get( SearchController::class ),
 						get( UserController::class ),
+						get( PersonalController::class ),
 					)
 				),
 		);

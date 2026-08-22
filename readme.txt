@@ -64,6 +64,14 @@ Developed and tested against bbPress 2.6.x, the current stable release line.
 
 One table, `{prefix}jtzl_bltn_topic_reads`, recording which member has read which thread, plus the option holding that table's schema version. Both are removed on uninstall. Nothing is stored for logged-out visitors, who see no unread marks at all.
 
+= Does Bulletin provide an API for a mobile app? =
+
+Yes. Public reads are available under `/wp-json/jtzl-bulletin/v1/`. Personal state and posting use the authenticated WordPress user. For bearer-token mobile login, install and configure the JWT provider named in Bulletin's API documentation; Bulletin does not store or issue tokens itself.
+
+= What can the API not do? =
+
+By design, quite a lot. There is no delete route for a member's own topic or reply, no image or file upload, no way to unlock a password-protected forum from an app, no push notifications, no anonymous posting, and no moderation actions. Editing is authorship only: a member may edit their own post inside bbPress's edit window, and moderators use the website. The API applies exactly the same forum visibility, status, password and capability rules as your site does — it is a second way in, not a second set of permissions.
+
 = Does it work with my forum's private or hidden forums? =
 
 Yes. Bulletin defers to bbPress's own access control, including forums nested under a restricted parent.

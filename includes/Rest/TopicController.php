@@ -184,6 +184,20 @@ class TopicController implements ControllerInterface {
 	 * same refusal. Telling those apart would let anybody enumerate which IDs exist and
 	 * which of them they wrote, by watching the status change.
 	 *
+	 * ⚠ **Readability is asked first, and it is the gate the website never needed.**
+	 * bbPress's own `edit_topic` capability asks about authorship and the edit window
+	 * and nothing else — it never looks at forum visibility or a password — because on
+	 * the website an edit form is reached *through* the thread, and a thread in a hidden
+	 * forum does not render, so the form cannot be asked for. A REST route is addressed
+	 * by ID, so that reachability step does not exist and the check has to be written
+	 * out: without it an author kept editing their own post in a forum that had since
+	 * been hidden or locked, and the 200 handed them back a live `reply_count` and
+	 * `last_active` from a forum they could no longer open.
+	 *
+	 * The refusal is collapsed into the same `forbidden` as every other one. A
+	 * `password_required` here would tell an author which of the two happened, and this
+	 * route has promised one answer.
+	 *
 	 * @since 0.6.0
 	 *
 	 * @param \WP_REST_Request $request Request.
@@ -196,7 +210,9 @@ class TopicController implements ControllerInterface {
 			return $authenticated;
 		}
 
-		return $this->access->can_edit_topic( $this->bounds->id( $request ) )
+		$topic_id = $this->bounds->id( $request );
+
+		return true === $this->access->topic( $topic_id ) && $this->access->can_edit_topic( $topic_id )
 			? true
 			: new \WP_Error(
 				'forbidden',

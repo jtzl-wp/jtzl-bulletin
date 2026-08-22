@@ -26,15 +26,18 @@ if ( ! defined( 'ABSPATH' ) ) {
  * have no way to ask for the rest of one. So each is a collection, paged by the same
  * two arguments as every other collection here.
  *
- * ## ⚠ Not registered yet
+ * ## ⚠ Registered on the site owner's direction, not on the app team's answer
  *
- * Rest\Routes does not list this controller, and that is deliberate rather than an
- * oversight: these three paths are the subject of confirmation 3 in
- * `docs/rest-api-plan.md`, which the app team has not answered. Everything below is
- * built, wired and tested; what is withheld is the registration, because a path
- * published under a versioned namespace is a promise and the shape of these three is
- * still a question. Adding `$this->personal` to `Rest\Routes::controllers()` is the
- * whole of what the answer costs.
+ * These three paths were built in Task 7 and deliberately left unregistered for two
+ * tasks, because confirmation 3 in `docs/rest-api-plan.md` asks the app team whether
+ * they want paged collections here or arrays embedded in `/me`, and a path published
+ * under a versioned namespace is a promise. That question is still open. What changed
+ * is the instruction: ship the recommended shape now and revise it if the answer
+ * differs, rather than hold the release for a reply.
+ *
+ * So the shape below is a recommendation that has been published, and the thing to
+ * know before changing it is that it is now somebody's client code. The registration
+ * itself is one entry in `ContainerFactory`'s `Rest\Routes` controller list.
  *
  * ## No `Rest\AccessPolicy::user()` here
  *

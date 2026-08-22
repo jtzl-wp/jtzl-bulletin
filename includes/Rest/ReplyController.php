@@ -180,6 +180,10 @@ class ReplyController implements ControllerInterface {
 	 * this route can produce looks the same from outside, so a reply that does not exist
 	 * cannot be told from one somebody else wrote.
 	 *
+	 * ⚠ And readability is asked first, for the other reason that method gives: bbPress's
+	 * `edit_reply` capability never looks at the forum, because the website reaches an
+	 * edit form through a thread that has already rendered. This route is reached by ID.
+	 *
 	 * @since 0.6.0
 	 *
 	 * @param \WP_REST_Request $request Request.
@@ -192,7 +196,9 @@ class ReplyController implements ControllerInterface {
 			return $authenticated;
 		}
 
-		return $this->access->can_edit_reply( $this->bounds->id( $request ) )
+		$reply_id = $this->bounds->id( $request );
+
+		return true === $this->access->reply( $reply_id ) && $this->access->can_edit_reply( $reply_id )
 			? true
 			: new \WP_Error(
 				'forbidden',
