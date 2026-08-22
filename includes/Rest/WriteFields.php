@@ -109,6 +109,75 @@ class WriteFields {
 	}
 
 	/**
+	 * The body an *edit* may carry: the same field, neither required nor defaulted.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @return array<string,mixed>
+	 */
+	public function patch_content_arg(): array {
+		$arg = $this->content_arg();
+
+		unset( $arg['required'] );
+
+		return $arg;
+	}
+
+	/**
+	 * The tag names an *edit* may carry: the same field, without the default.
+	 *
+	 * ⚠ **Dropping the default is the whole point, and it is not cosmetic.**
+	 * `WP_REST_Request::get_parameter_order()` puts `defaults` last in the list
+	 * `has_param()` walks, so an argument declared with `'default' => array()` reports as
+	 * *present* on a request that never mentioned it. A PATCH tells omitted apart from
+	 * sent by exactly that call — with the default in place, every edit would look like a
+	 * request to clear the thread's tags. Measured against WordPress's own
+	 * `class-wp-rest-request.php`, not assumed.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @return array<string,mixed>
+	 */
+	public function patch_tags_arg(): array {
+		$arg = $this->tags_arg();
+
+		unset( $arg['default'] );
+
+		return $arg;
+	}
+
+	/**
+	 * The fields an edit actually asked to change, and only those.
+	 *
+	 * An absent key and a key sent empty are different requests — `tags: []` clears a
+	 * thread's tags, omitting `tags` leaves them alone — so presence is read from
+	 * `has_param()` and the value from the same type-checked readers a create uses.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param \WP_REST_Request $request Request.
+	 * @param string[]         $names   Field names this route accepts.
+	 * @return array<string,mixed> Present fields, keyed by name.
+	 */
+	public function changes( \WP_REST_Request $request, array $names ): array {
+		$changes = array();
+
+		foreach ( $names as $name ) {
+			if ( ! $request->has_param( $name ) ) {
+				continue;
+			}
+
+			$changes[ $name ] = match ( $name ) {
+				'tags'  => $this->tags( $request ),
+				'title' => $this->title( $request ),
+				default => $this->content( $request ),
+			};
+		}
+
+		return $changes;
+	}
+
+	/**
 	 * The tag names a request carried, as a list of strings.
 	 *
 	 * @since 0.6.0

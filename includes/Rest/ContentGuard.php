@@ -201,6 +201,52 @@ class ContentGuard {
 	}
 
 	/**
+	 * The status an *edited* post should keep, or why the edit cannot be made.
+	 *
+	 * ## Three differences from status(), all bbPress's
+	 *
+	 * 1. **No flood check.** The throttle is on *posting*, not on fixing a typo, and
+	 *    bbPress's edit handlers never ask it. An author who has just posted may edit
+	 *    immediately.
+	 * 2. **No duplicate check.** `bbp_check_for_duplicate()` looks for an existing post
+	 *    with the same body by the same author — which, on an edit that changes only the
+	 *    title, is the post being edited. Asking it would refuse every such edit.
+	 * 3. **The status is kept, not chosen.** A create picks public or pending; an edit
+	 *    starts from what is already stored and only ever moves *down*, when the
+	 *    moderation list catches it. A held post is not released by a clean edit — that
+	 *    is a moderator's decision, not an author's.
+	 *
+	 * ⚠ **bbPress guards the hold with `bbp_is_topic_public()` and this does not**, for
+	 * the reason `Rest\TopicMutationService::may_start()` gives about the private and
+	 * hidden checks: the guard exists so that forcing pending cannot quietly *un-spam* a
+	 * spammed post, and no post in that condition reaches here.
+	 * `Rest\AccessPolicy::can_edit_topic()` and `::can_edit_reply()` admit only a post
+	 * whose stored status is a public one, so `$current_status` is always public and the
+	 * two forms agree on every input. For the three statuses that would differ — spam,
+	 * trash, pending — the outcome is identical anyway: a held post that trips the list
+	 * is already held. If those gates ever widen to let an author edit a held post, this
+	 * is where `bbp_is_topic_public()` has to come back.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int    $author_id      Author ID.
+	 * @param string $title          Merged title, already filtered.
+	 * @param string $content        Merged content, already filtered.
+	 * @param string $current_status The status stored before this edit.
+	 * @return string|\WP_Error The status to store under.
+	 */
+	public function edited_status( int $author_id, string $title, string $content, string $current_status ) {
+		// The disallowed list, exactly as on create: the refusal says nothing about why.
+		if ( ! $this->rest->passes_moderation_check( $author_id, $title, $content, true ) ) {
+			return $this->refuse( 'moderation_rejected', __( 'This post cannot be edited at this time.', 'jtzl-bulletin' ), 400 );
+		}
+
+		return $this->rest->passes_moderation_check( $author_id, $title, $content, false )
+			? $current_status
+			: $this->wp->get_pending_status_id();
+	}
+
+	/**
 	 * One refusal, built the one way.
 	 *
 	 * @since 0.6.0

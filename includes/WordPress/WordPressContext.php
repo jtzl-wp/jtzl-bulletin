@@ -100,12 +100,13 @@ class WordPressContext implements ContextInterface {
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param string $hook  Hook name.
-	 * @param mixed  $value Value to filter.
+	 * @param string $hook    Hook name.
+	 * @param mixed  $value   Value to filter.
+	 * @param mixed  ...$args Further arguments the hook passes to its listeners.
 	 * @return mixed Filtered value.
 	 */
-	public function apply_filters( string $hook, $value ) {
-		return apply_filters( $hook, $value );
+	public function apply_filters( string $hook, $value, ...$args ) {
+		return apply_filters( $hook, $value, ...$args );
 	}
 
 	/**

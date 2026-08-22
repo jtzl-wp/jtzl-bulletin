@@ -110,12 +110,18 @@ class ResponseFactory {
 	 *
 	 * ## Why this is not written out at each create route
 	 *
-	 * Because it is the *decision*, not the plumbing. "201 with the entity when the
-	 * author can read it back, and the fixed acknowledgement when they cannot" is one
-	 * rule, and a second create route spelling it out again is a second place for it to
-	 * drift — a create that answered 200, or one that reached for an ID a discarded
-	 * write never had. Rest\MutationResult makes the second of those a type error; this
-	 * makes the first impossible to write.
+	 * Because it is the *decision*, not the plumbing. "the entity when the author can
+	 * read it back, and the fixed acknowledgement when they cannot" is one rule, and a
+	 * fourth write route spelling it out again is a fourth place for it to drift — a
+	 * create that answered 200, or one that reached for an ID a discarded write never
+	 * had. Rest\MutationResult makes the second of those a type error; this makes the
+	 * first impossible to write.
+	 *
+	 * ⚠ **Only the success code differs between a create and an edit**, which is why it
+	 * is a parameter rather than a second method: 201 says a resource came into
+	 * existence and 200 says one changed, and the *other* answer — the 202 that names
+	 * nothing — has to stay byte-identical across all four routes. Splitting the rule in
+	 * two to vary one integer is how the acknowledgements drift apart.
 	 *
 	 * The serializer arrives as a callable rather than an object so this class stays
 	 * ignorant of what a topic or a reply looks like. It is handed an ID and gives back a
@@ -125,16 +131,17 @@ class ResponseFactory {
 	 *
 	 * @param MutationResult|\WP_Error $written   What the mutation service reported.
 	 * @param callable                 $serialize Turns the written ID into a row.
+	 * @param int                      $status    Success code: 201 for a create, 200 for an edit.
 	 * @return \WP_REST_Response|\WP_Error
 	 */
-	public function written( $written, callable $serialize ) {
+	public function written( $written, callable $serialize, int $status = 201 ) {
 		if ( ! $written instanceof MutationResult ) {
 			return $written;
 		}
 
 		return $written->is_accepted()
 			? $this->accepted()
-			: $this->item( $serialize( (int) $written->id() ), 201, true );
+			: $this->item( $serialize( (int) $written->id() ), $status, true );
 	}
 
 	/**

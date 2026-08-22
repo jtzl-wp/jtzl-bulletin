@@ -56,93 +56,43 @@ class Routes {
 	private ContextInterface $wp;
 
 	/**
-	 * Forum reads.
+	 * Every controller the API answers through, in registration order.
 	 *
-	 * @var ForumController
+	 * ## Why this is a list and not nine named collaborators
+	 *
+	 * It was nine, and PHPMD is what changed it: an eighth controller put this class at
+	 * coupling 10 and its constructor at 9 parameters, against gates of 10 and 9. The
+	 * fix is not a suppression, because the gate was reporting something true — a class
+	 * that names every controller in the API acquires a dependency on each of them, and
+	 * that is one edge per resource for ever.
+	 *
+	 * What this class actually does needs none of those names. It registers whatever
+	 * controllers it is handed under one namespace; *which* controllers exist is a
+	 * composition decision, and composition is `ContainerFactory`'s — the one place in
+	 * the plugin already exempt from these gates, and exempt for exactly this reason.
+	 * The list lives there now, and adding a resource is a line in it.
+	 *
+	 * ⚠ **Order is not significant to WordPress** — routes are matched by pattern — but
+	 * it is what `Rest\EndpointsTest` asserts against, so the container keeps it in the
+	 * order a reader would expect: the hierarchy first, then the two ways in that begin
+	 * nowhere in it.
+	 *
+	 * @var ControllerInterface[]
 	 * @since 0.6.0
 	 */
-	private ForumController $forums;
-
-	/**
-	 * Topic reads.
-	 *
-	 * @var TopicController
-	 * @since 0.6.0
-	 */
-	private TopicController $topics;
-
-	/**
-	 * Reply reads.
-	 *
-	 * @var ReplyController
-	 * @since 0.6.0
-	 */
-	private ReplyController $replies;
-
-	/**
-	 * A forum's thread list, read and written.
-	 *
-	 * @var ForumTopicsController
-	 * @since 0.6.0
-	 */
-	private ForumTopicsController $forum_topics;
-
-	/**
-	 * Tag reads.
-	 *
-	 * @var TagController
-	 * @since 0.6.0
-	 */
-	private TagController $tags;
-
-	/**
-	 * Search reads.
-	 *
-	 * @var SearchController
-	 * @since 0.6.0
-	 */
-	private SearchController $search;
-
-	/**
-	 * Public profile reads.
-	 *
-	 * @var UserController
-	 * @since 0.6.0
-	 */
-	private UserController $users;
+	private array $controllers;
 
 	/**
 	 * Constructor.
 	 *
 	 * @since 0.6.0
 	 *
-	 * @param ContextInterface      $wp           WordPress/bbPress seam.
-	 * @param ForumController       $forums       Forum reads.
-	 * @param TopicController       $topics       Topic reads.
-	 * @param ReplyController       $replies      Reply reads and writes.
-	 * @param ForumTopicsController $forum_topics A forum's thread list, read and written.
-	 * @param TagController         $tags         Tag reads.
-	 * @param SearchController      $search       Search reads.
-	 * @param UserController        $users        Public profile reads.
+	 * @param ContextInterface      $wp          WordPress/bbPress seam.
+	 * @param ControllerInterface[] $controllers Every controller the API answers through.
 	 */
-	public function __construct(
-		ContextInterface $wp,
-		ForumController $forums,
-		TopicController $topics,
-		ReplyController $replies,
-		ForumTopicsController $forum_topics,
-		TagController $tags,
-		SearchController $search,
-		UserController $users
-	) {
-		$this->wp           = $wp;
-		$this->forums       = $forums;
-		$this->topics       = $topics;
-		$this->replies      = $replies;
-		$this->forum_topics = $forum_topics;
-		$this->tags         = $tags;
-		$this->search       = $search;
-		$this->users        = $users;
+	public function __construct( ContextInterface $wp, array $controllers ) {
+		$this->wp          = $wp;
+		$this->controllers = $controllers;
 	}
 
 	/**
@@ -151,34 +101,10 @@ class Routes {
 	 * @since 0.6.0
 	 */
 	public function register(): void {
-		foreach ( $this->controllers() as $controller ) {
+		foreach ( $this->controllers as $controller ) {
 			foreach ( $controller->routes() as $route => $args ) {
 				$this->wp->register_rest_route( self::NAMESPACE_V1, $route, $args );
 			}
 		}
-	}
-
-	/**
-	 * Every controller the API answers through, in the order they are registered.
-	 *
-	 * The one list to add to when a resource is added. Order is not significant to
-	 * WordPress — routes are matched by pattern — but it is what the tests assert
-	 * against, so it stays the order a reader would expect: the hierarchy first, then
-	 * the two ways in that begin nowhere in it.
-	 *
-	 * @since 0.6.0
-	 *
-	 * @return ControllerInterface[]
-	 */
-	private function controllers(): array {
-		return array(
-			$this->forums,
-			$this->forum_topics,
-			$this->topics,
-			$this->replies,
-			$this->tags,
-			$this->search,
-			$this->users,
-		);
 	}
 }

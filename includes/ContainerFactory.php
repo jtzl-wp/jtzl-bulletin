@@ -12,6 +12,16 @@ use DI\Container;
 use DI\ContainerBuilder;
 use JTZL\Bulletin\Asset\AssetManager;
 use JTZL\Bulletin\Asset\BuiltAssets;
+use JTZL\Bulletin\Rest\ForumController;
+use JTZL\Bulletin\Rest\ForumTopicsController;
+use JTZL\Bulletin\Rest\ReplyController;
+use JTZL\Bulletin\Rest\Routes;
+use JTZL\Bulletin\Rest\SearchController;
+use JTZL\Bulletin\Rest\TagController;
+use JTZL\Bulletin\Rest\TopicController;
+use JTZL\Bulletin\Rest\TopicRepliesController;
+use JTZL\Bulletin\Rest\TopicStateController;
+use JTZL\Bulletin\Rest\UserController;
 use JTZL\Bulletin\Takeover\TemplateController;
 use JTZL\Bulletin\Unread\ReadCursor;
 use JTZL\Bulletin\WordPress\ContextInterface;
@@ -19,6 +29,7 @@ use JTZL\Bulletin\WordPress\RestContext;
 use JTZL\Bulletin\WordPress\RestContextInterface;
 use JTZL\Bulletin\WordPress\WordPressContext;
 use function DI\autowire;
+use function DI\get;
 
 /**
  * Builds and configures the PHP-DI container. All service definitions live in
@@ -108,6 +119,30 @@ class ContainerFactory {
 
 			TemplateController::class   => autowire()
 				->constructorParameter( 'templates_dir', $templates_dir ),
+
+			// Every controller the REST API answers through. This list is the composition
+			// decision `Rest\Routes` used to hold as nine named dependencies — see that
+			// class for why it moved. Order is what Rest\EndpointsTest asserts against:
+			// the hierarchy first, then the two ways in that begin nowhere in it.
+			//
+			// ⚠ Rest\PersonalController is deliberately absent. It is built and covered,
+			// but confirmation 3 in docs/rest-api-plan.md is still open; adding it here is
+			// the whole of registering it.
+			Routes::class               => autowire()
+				->constructorParameter(
+					'controllers',
+					array(
+						get( ForumController::class ),
+						get( ForumTopicsController::class ),
+						get( TopicController::class ),
+						get( TopicStateController::class ),
+						get( TopicRepliesController::class ),
+						get( ReplyController::class ),
+						get( TagController::class ),
+						get( SearchController::class ),
+						get( UserController::class ),
+					)
+				),
 		);
 	}
 }

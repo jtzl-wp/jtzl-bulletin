@@ -804,4 +804,95 @@ interface RestContextInterface {
 	 * @return string
 	 */
 	public function slash( string $value ): string;
+
+	/**
+	 * A post's stored title, unfiltered.
+	 *
+	 * ⚠ **The `raw` context is not optional.** `get_post_field()` defaults to `display`,
+	 * which runs `sanitize_post_field()` and so applies the `the_title` filter — the very
+	 * filter CLAUDE.md's trap 5 documents bbPress hanging the request inside, when the
+	 * post being asked about is a reply with no topic. `raw` is the only context that
+	 * escapes it, and an edit reads a stored title on every request that omits one.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $post_id Post ID.
+	 * @return string
+	 */
+	public function get_post_title_raw( int $post_id ): string;
+
+	/**
+	 * A post's stored body, unfiltered.
+	 *
+	 * Raw for the same reason as the title, and additionally because the value is about
+	 * to be slashed and pushed back through bbPress's own `*_pre_content` chain: a body
+	 * that had already been through `the_content` would be filtered twice.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $post_id Post ID.
+	 * @return string
+	 */
+	public function get_post_content_raw( int $post_id ): string;
+
+	/**
+	 * Update a post, with revision support off for the length of the write.
+	 *
+	 * Revision support is removed around bbPress's own `wp_update_post()` so the edit does
+	 * not leave a duplicate revision behind, and added back afterwards. bbPress does that
+	 * with two straight-line statements, which means a fatal between them leaves the site
+	 * without revisions for the rest of the process; here the restore is in a `finally`,
+	 * so a listener that throws cannot strip a post type of a feature permanently.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param array<string,mixed> $data Post data, already filtered. Must carry `ID`.
+	 * @return int|\WP_Error Post ID, or the failure WordPress reported.
+	 */
+	public function update_post( array $data );
+
+	/**
+	 * Fire `bbp_edit_topic`, the action that updates everything an edit touches.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $topic_id  Topic that was edited.
+	 * @param int $forum_id  Forum it sits in.
+	 * @param int $author_id Its author.
+	 */
+	public function fire_edit_topic( int $topic_id, int $forum_id, int $author_id ): void;
+
+	/**
+	 * Fire `bbp_edit_reply`, the action that updates everything an edit touches.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $reply_id  Reply that was edited.
+	 * @param int $topic_id  Thread it answers.
+	 * @param int $forum_id  Forum that thread sits in.
+	 * @param int $author_id Its author.
+	 * @param int $reply_to  Reply it answers, or 0.
+	 */
+	public function fire_edit_reply( int $reply_id, int $topic_id, int $forum_id, int $author_id, int $reply_to ): void;
+
+	/**
+	 * Record who edited a post, and release the lock the form took out.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $post_id Post that was edited.
+	 */
+	public function record_edit( int $post_id ): void;
+
+	/**
+	 * Let extensions rewrite the terms an edited reply is about to set on its topic.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string $terms    Terms about to be set.
+	 * @param int    $topic_id Topic being tagged.
+	 * @param int    $reply_id Reply being edited.
+	 * @return string
+	 */
+	public function filter_edit_reply_terms( string $terms, int $topic_id, int $reply_id ): string;
 }

@@ -81,11 +81,12 @@ interface ContextInterface {
 	 *
 	 * @since 0.1.0
 	 *
-	 * @param string $hook  Hook name.
-	 * @param mixed  $value Value to filter.
+	 * @param string $hook    Hook name.
+	 * @param mixed  $value   Value to filter.
+	 * @param mixed  ...$args Further arguments the hook passes to its listeners.
 	 * @return mixed Filtered value.
 	 */
-	public function apply_filters( string $hook, $value );
+	public function apply_filters( string $hook, $value, ...$args );
 
 	/**
 	 * Register one REST route under a namespace.

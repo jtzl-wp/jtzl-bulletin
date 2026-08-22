@@ -1467,4 +1467,112 @@ class RestContext implements RestContextInterface {
 	public function slash( string $value ): string {
 		return (string) wp_slash( $value );
 	}
+
+	/**
+	 * A post's stored title, unfiltered.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $post_id Post ID.
+	 * @return string
+	 */
+	public function get_post_title_raw( int $post_id ): string {
+		return (string) get_post_field( 'post_title', $post_id, 'raw' );
+	}
+
+	/**
+	 * A post's stored body, unfiltered.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $post_id Post ID.
+	 * @return string
+	 */
+	public function get_post_content_raw( int $post_id ): string {
+		return (string) get_post_field( 'post_content', $post_id, 'raw' );
+	}
+
+	/**
+	 * Update a post, with revision support off for the length of the write.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param array<string,mixed> $data Post data, already filtered. Must carry `ID`.
+	 * @return int|\WP_Error Post ID, or the failure WordPress reported.
+	 */
+	public function update_post( array $data ) {
+		$post_type = (string) ( $data['post_type'] ?? '' );
+		$revisions = post_type_supports( $post_type, 'revisions' );
+
+		if ( $revisions ) {
+			remove_post_type_support( $post_type, 'revisions' );
+		}
+
+		try {
+			$result = wp_update_post( $data, true );
+		} finally {
+			if ( $revisions ) {
+				add_post_type_support( $post_type, 'revisions' );
+			}
+		}
+
+		return is_wp_error( $result ) ? $result : (int) $result;
+	}
+
+	/**
+	 * Fire `bbp_edit_topic`, the action that updates everything an edit touches.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $topic_id  Topic that was edited.
+	 * @param int $forum_id  Forum it sits in.
+	 * @param int $author_id Its author.
+	 */
+	public function fire_edit_topic( int $topic_id, int $forum_id, int $author_id ): void {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- bbPress's own hook, fired so its listeners see a REST write.
+		do_action( 'bbp_edit_topic', $topic_id, $forum_id, array(), $author_id, true );
+	}
+
+	/**
+	 * Fire `bbp_edit_reply`, the action that updates everything an edit touches.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $reply_id  Reply that was edited.
+	 * @param int $topic_id  Thread it answers.
+	 * @param int $forum_id  Forum that thread sits in.
+	 * @param int $author_id Its author.
+	 * @param int $reply_to  Reply it answers, or 0.
+	 */
+	public function fire_edit_reply( int $reply_id, int $topic_id, int $forum_id, int $author_id, int $reply_to ): void {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- bbPress's own hook, fired so its listeners see a REST write.
+		do_action( 'bbp_edit_reply', $reply_id, $topic_id, $forum_id, array(), $author_id, true, $reply_to );
+	}
+
+	/**
+	 * Record who edited a post, and release the lock the form took out.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param int $post_id Post that was edited.
+	 */
+	public function record_edit( int $post_id ): void {
+		update_post_meta( $post_id, '_edit_last', bbp_get_current_user_id() );
+		delete_post_meta( $post_id, '_edit_lock' );
+	}
+
+	/**
+	 * Let extensions rewrite the terms an edited reply is about to set on its topic.
+	 *
+	 * @since 0.6.0
+	 *
+	 * @param string $terms    Terms about to be set.
+	 * @param int    $topic_id Topic being tagged.
+	 * @param int    $reply_id Reply being edited.
+	 * @return string
+	 */
+	public function filter_edit_reply_terms( string $terms, int $topic_id, int $reply_id ): string {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- bbPress's own hook, fired so its listeners see a REST write.
+		return (string) apply_filters( 'bbp_edit_reply_pre_set_terms', $terms, $topic_id, $reply_id );
+	}
 }
