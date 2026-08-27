@@ -59,10 +59,10 @@ class TopicMutationService {
 	/**
 	 * REST tag validation.
 	 *
-	 * @var ContentGuard
+	 * @var TopicTagValidator
 	 * @since 0.6.0
 	 */
-	private ContentGuard $guard;
+	private TopicTagValidator $tags;
 
 	/**
 	 * Scoped native form-handler bridge.
@@ -80,7 +80,7 @@ class TopicMutationService {
 	 * @param RestContextInterface $rest     REST-side WordPress/bbPress seam.
 	 * @param AccessPolicy         $access   Who may have this forum.
 	 * @param FeatureGate          $features What the site has switched on.
-	 * @param ContentGuard         $guard    REST tag validation.
+	 * @param TopicTagValidator    $tags     REST tag validation.
 	 * @param BbpFormHandlerBridge $bridge   Native handler bridge.
 	 */
 	public function __construct(
@@ -88,14 +88,14 @@ class TopicMutationService {
 		RestContextInterface $rest,
 		AccessPolicy $access,
 		FeatureGate $features,
-		ContentGuard $guard,
+		TopicTagValidator $tags,
 		BbpFormHandlerBridge $bridge
 	) {
 		$this->wp       = $wp;
 		$this->rest     = $rest;
 		$this->access   = $access;
 		$this->features = $features;
-		$this->guard    = $guard;
+		$this->tags     = $tags;
 		$this->bridge   = $bridge;
 	}
 
@@ -119,7 +119,7 @@ class TopicMutationService {
 			return $allowed;
 		}
 
-		$tag_names = $this->guard->tags( $tag_names );
+		$tag_names = $this->tags->normalize( $tag_names );
 
 		if ( ! is_array( $tag_names ) ) {
 			return $tag_names;

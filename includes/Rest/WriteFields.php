@@ -73,7 +73,7 @@ class WriteFields {
 	 *
 	 * Names, not IDs — bbPress's own form takes names and creates the ones that do not
 	 * exist, and an ID-only API would let a member tag from the browser and never from
-	 * the app. What the names then have to satisfy is Rest\ContentGuard's.
+	 * the app. What the names then have to satisfy is Rest\TopicTagValidator's.
 	 *
 	 * @since 0.6.0
 	 *

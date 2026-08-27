@@ -48,9 +48,9 @@ class TopicEditService {
 	/**
 	 * REST tag validation.
 	 *
-	 * @var ContentGuard
+	 * @var TopicTagValidator
 	 */
-	private ContentGuard $guard;
+	private TopicTagValidator $tags;
 
 	/**
 	 * Scoped native form-handler bridge.
@@ -65,20 +65,20 @@ class TopicEditService {
 	 * @param ContextInterface     $wp       WordPress/bbPress seam.
 	 * @param RestContextInterface $rest     REST-side WordPress/bbPress seam.
 	 * @param FeatureGate          $features What the site has switched on.
-	 * @param ContentGuard         $guard    REST tag validation.
+	 * @param TopicTagValidator    $tags     REST tag validation.
 	 * @param BbpFormHandlerBridge $bridge   Native handler bridge.
 	 */
 	public function __construct(
 		ContextInterface $wp,
 		RestContextInterface $rest,
 		FeatureGate $features,
-		ContentGuard $guard,
+		TopicTagValidator $tags,
 		BbpFormHandlerBridge $bridge
 	) {
 		$this->wp       = $wp;
 		$this->rest     = $rest;
 		$this->features = $features;
-		$this->guard    = $guard;
+		$this->tags     = $tags;
 		$this->bridge   = $bridge;
 	}
 
@@ -182,7 +182,7 @@ class TopicEditService {
 			);
 		}
 
-		$names = $this->guard->tags( is_array( $changes['tags'] ) ? $changes['tags'] : array() );
+		$names = $this->tags->normalize( is_array( $changes['tags'] ) ? $changes['tags'] : array() );
 
 		return is_array( $names ) ? array_map( array( $this->rest, 'slash' ), $names ) : $names;
 	}
