@@ -1,6 +1,6 @@
 <?php
 /**
- * The checks both write paths share.
+ * REST-owned content checks.
  *
  * @package JTZL\Bulletin
  * @since 0.6.0
@@ -18,30 +18,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 // @codeCoverageIgnoreEnd
 
 /**
- * Flood, duplicate and moderation — asked in bbPress's order, answered in the API's
- * vocabulary.
- *
- * ## One place, because the two handlers ask identically
- *
- * `bbp_new_topic_handler()` and `bbp_new_reply_handler()` differ in almost everything —
- * what they validate, what they insert, what they fire afterwards — but this middle
- * stretch is the same four questions in the same order, against the same three bbPress
- * functions. Copied into both services it would be two places to keep in step with a
- * bbPress upgrade; here it is one, and the ordering is written down once.
- *
- * ## The order is the behaviour
- *
- * Flood, then duplicate, then the *disallowed* list, then the *moderation* list. The
- * last two are the same bbPress function under a flag and they mean opposite things:
- * failing the disallowed list refuses the post outright, failing the moderation list
- * holds it for a moderator. Asking them the other way round would hold posts that should
- * be refused.
- *
- * ⚠ **The first refusal wins, and bbPress's does not.** The browser handlers collect
- * every complaint and redraw the form with all of them listed; a REST error envelope has
- * one `code`, so the first is returned and the rest are not run. A member fixing one
- * problem may therefore meet the next one on their second attempt — which is what an app
- * showing one message at a time would do with a list anyway.
+ * Validates fields whose REST contract differs from bbPress's form contract and applies
+ * moderation policy to edits until those mutations can delegate to native handlers too.
  *
  * @since 0.6.0
  */
@@ -169,41 +147,9 @@ class ContentGuard {
 	}
 
 	/**
-	 * The status this post should be created under, or why it should not be.
-	 *
-	 * @since 0.6.0
-	 *
-	 * @param int    $author_id Author ID.
-	 * @param int    $parent_id Forum ID for a topic, topic ID for a reply.
-	 * @param string $post_type Post type being written.
-	 * @param string $title     Title, already filtered.
-	 * @param string $content   Content, already filtered.
-	 * @return string|\WP_Error bbPress's public or pending status.
-	 */
-	public function status( int $author_id, int $parent_id, string $post_type, string $title, string $content ) {
-		if ( ! $this->rest->passes_flood_check( $author_id ) ) {
-			return $this->refuse( 'rate_limited', __( 'Slow down; you are posting too fast.', 'jtzl-bulletin' ), 429 );
-		}
-
-		if ( ! $this->rest->passes_duplicate_check( $post_type, $author_id, $parent_id, $content ) ) {
-			return $this->refuse( 'duplicate_post', __( 'It looks as though you have already said that.', 'jtzl-bulletin' ), 409 );
-		}
-
-		// The disallowed list. ⚠ Its refusal says nothing about *why* — naming the word
-		// that caught it would hand a spammer the list one guess at a time.
-		if ( ! $this->rest->passes_moderation_check( $author_id, $title, $content, true ) ) {
-			return $this->refuse( 'moderation_rejected', __( 'This post cannot be created at this time.', 'jtzl-bulletin' ), 400 );
-		}
-
-		return $this->rest->passes_moderation_check( $author_id, $title, $content, false )
-			? $this->wp->get_public_status_id()
-			: $this->wp->get_pending_status_id();
-	}
-
-	/**
 	 * The status an *edited* post should keep, or why the edit cannot be made.
 	 *
-	 * ## Three differences from status(), all bbPress's
+	 * ## Three differences from bbPress's create lifecycle
 	 *
 	 * 1. **No flood check.** The throttle is on *posting*, not on fixing a typo, and
 	 *    bbPress's edit handlers never ask it. An author who has just posted may edit

@@ -546,29 +546,6 @@ interface RestContextInterface {
 	public function is_title_too_long( string $title ): bool;
 
 	/**
-	 * Whether this author may post again yet.
-	 *
-	 * @since 0.6.0
-	 *
-	 * @param int $author_id Author ID.
-	 * @return bool True when there is no flooding.
-	 */
-	public function passes_flood_check( int $author_id ): bool;
-
-	/**
-	 * Whether this author has already posted this content in this place.
-	 *
-	 * @since 0.6.0
-	 *
-	 * @param string $post_type Post type being written.
-	 * @param int    $author_id Author ID.
-	 * @param int    $parent_id Forum ID for a topic, topic ID for a reply.
-	 * @param string $content   Content being written.
-	 * @return bool True when no duplicate was found.
-	 */
-	public function passes_duplicate_check( string $post_type, int $author_id, int $parent_id, string $content ): bool;
-
-	/**
 	 * Whether this content clears the moderation keys.
 	 *
 	 * ⚠ The two settings are one function with a flag. Strict is bbPress's
@@ -624,25 +601,6 @@ interface RestContextInterface {
 	public function filter_new_reply_terms( string $terms, int $topic_id, int $reply_id ): string;
 
 	/**
-	 * Insert a post.
-	 *
-	 * @since 0.6.0
-	 *
-	 * @param array<string,mixed> $data Post data, already filtered.
-	 * @return int|\WP_Error Post ID, or the failure WordPress reported.
-	 */
-	public function insert_post( array $data );
-
-	/**
-	 * Close a topic, with bbPress's own bookkeeping.
-	 *
-	 * @since 0.6.0
-	 *
-	 * @param int $topic_id Topic ID.
-	 */
-	public function close_topic( int $topic_id ): void;
-
-	/**
 	 * Trash a post.
 	 *
 	 * @since 0.6.0
@@ -659,21 +617,6 @@ interface RestContextInterface {
 	 * @param int $post_id Post ID.
 	 */
 	public function mark_spam_meta_status( int $post_id ): void;
-
-	/**
-	 * Fire `bbp_new_topic`, the action that updates every count and engagement.
-	 *
-	 * ⚠ Four arguments, in bbPress's order, with an empty anonymous-data array — the
-	 * API has no anonymous write. A listener reading argument three gets what the
-	 * browser handler gives it for a logged-in author.
-	 *
-	 * @since 0.6.0
-	 *
-	 * @param int $topic_id  Topic that was created.
-	 * @param int $forum_id  Forum it was created in.
-	 * @param int $author_id Author, as the filtered post data left it.
-	 */
-	public function fire_new_topic( int $topic_id, int $forum_id, int $author_id ): void;
 
 	/**
 	 * Fire `bbp_new_reply`, the action that updates every count, voice and engagement.
