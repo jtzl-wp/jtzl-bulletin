@@ -723,6 +723,36 @@ interface RestContextInterface {
 	public function swap_bbp_errors( \WP_Error $fresh ): \WP_Error;
 
 	/**
+	 * Create a nonce for a native bbPress form action.
+	 *
+	 * @param string $action Nonce action.
+	 * @return string Nonce value.
+	 */
+	public function create_nonce( string $action ): string;
+
+	/**
+	 * Invoke one closed-list native bbPress form handler.
+	 *
+	 * @param string $action Native form action.
+	 */
+	public function run_bbp_form_handler( string $action ): void;
+
+	/**
+	 * Replace browser request globals for a native form-handler call.
+	 *
+	 * @param array<string,mixed> $values Form values.
+	 * @return array<string,mixed> Previous global state.
+	 */
+	public function swap_handler_globals( array $values ): array;
+
+	/**
+	 * Restore browser request globals after a native form-handler call.
+	 *
+	 * @param array<string,mixed> $previous Previous global state.
+	 */
+	public function restore_handler_globals( array $previous ): void;
+
+	/**
 	 * Put sanitized form values where a form-compatible hook expects to read them.
 	 *
 	 * @since 0.6.0

@@ -1373,6 +1373,97 @@ class RestContext implements RestContextInterface {
 	}
 
 	/**
+	 * Create a nonce for a native bbPress form action.
+	 *
+	 * @param string $action Nonce action.
+	 * @return string
+	 */
+	public function create_nonce( string $action ): string {
+		return wp_create_nonce( $action );
+	}
+
+	/**
+	 * Invoke one closed-list native bbPress form handler.
+	 *
+	 * @param string $action Native form action.
+	 * @throws \InvalidArgumentException When the action is not in the closed list.
+	 */
+	public function run_bbp_form_handler( string $action ): void {
+		match ( $action ) {
+			'bbp-new-topic'  => bbp_new_topic_handler( $action ),
+			'bbp-new-reply'  => bbp_new_reply_handler( $action ),
+			'bbp-edit-topic' => bbp_edit_topic_handler( $action ),
+			'bbp-edit-reply' => bbp_edit_reply_handler( $action ),
+			default          => throw new \InvalidArgumentException( 'Unknown bbPress form action.' ),
+		};
+	}
+
+	/**
+	 * Replace browser request globals for a native form-handler call.
+	 *
+	 * @param array<string,mixed> $values Form values.
+	 * @return array<string,mixed> Previous global state.
+	 */
+	public function swap_handler_globals( array $values ): array {
+		$server_keys = array(
+			'REQUEST_METHOD',
+			'HTTP_HOST',
+			'REQUEST_URI',
+			'HTTP_REFERER',
+			'SERVER_PORT',
+			'HTTPS',
+		);
+		$server      = array();
+		foreach ( $server_keys as $key ) {
+			$server[ $key ] = array(
+				'exists' => array_key_exists( $key, $_SERVER ),
+				'value'  => $_SERVER[ $key ] ?? null,
+			);
+		}
+
+		$previous = array(
+			'post'    => $_POST,    // phpcs:ignore WordPress.Security.NonceVerification.Missing
+			'request' => $_REQUEST, // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			'server'  => $server,
+		);
+		$home     = wp_parse_url( home_url( '/' ) );
+		$home     = is_array( $home ) ? $home : array();
+		$scheme   = isset( $home['scheme'] ) ? (string) $home['scheme'] : 'http';
+		$port     = isset( $home['port'] ) ? (int) $home['port'] : ( 'https' === $scheme ? 443 : 80 );
+		$host     = isset( $home['host'] ) ? (string) $home['host'] : '';
+		$host    .= isset( $home['port'] ) ? ':' . $port : '';
+
+		$_POST                     = $values; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$_REQUEST                  = $values;
+		$_SERVER['REQUEST_METHOD'] = 'POST';
+		$_SERVER['HTTP_HOST']      = $host;
+		$_SERVER['REQUEST_URI']    = isset( $home['path'] ) ? (string) $home['path'] : '/';
+		$_SERVER['HTTP_REFERER']   = home_url( '/' );
+		$_SERVER['SERVER_PORT']    = (string) $port;
+		$_SERVER['HTTPS']          = 'https' === $scheme ? 'on' : 'off';
+
+		return $previous;
+	}
+
+	/**
+	 * Restore browser request globals after a native form-handler call.
+	 *
+	 * @param array<string,mixed> $previous Previous global state.
+	 */
+	public function restore_handler_globals( array $previous ): void {
+		$_POST    = $previous['post'];    // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$_REQUEST = $previous['request'];
+
+		foreach ( $previous['server'] as $key => $state ) {
+			if ( $state['exists'] ) {
+				$_SERVER[ $key ] = $state['value'];
+			} else {
+				unset( $_SERVER[ $key ] );
+			}
+		}
+	}
+
+	/**
 	 * Put sanitized form values where a form-compatible hook expects to read them.
 	 *
 	 * @since 0.6.0
