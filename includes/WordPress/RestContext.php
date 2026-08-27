@@ -1537,20 +1537,6 @@ class RestContext implements RestContextInterface {
 	}
 
 	/**
-	 * Fire `bbp_edit_topic`, the action that updates everything an edit touches.
-	 *
-	 * @since 0.6.0
-	 *
-	 * @param int $topic_id  Topic that was edited.
-	 * @param int $forum_id  Forum it sits in.
-	 * @param int $author_id Its author.
-	 */
-	public function fire_edit_topic( int $topic_id, int $forum_id, int $author_id ): void {
-		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- bbPress's own hook, fired so its listeners see a REST write.
-		do_action( 'bbp_edit_topic', $topic_id, $forum_id, array(), $author_id, true );
-	}
-
-	/**
 	 * Fire `bbp_edit_reply`, the action that updates everything an edit touches.
 	 *
 	 * @since 0.6.0

@@ -825,17 +825,6 @@ interface RestContextInterface {
 	public function update_post( array $data );
 
 	/**
-	 * Fire `bbp_edit_topic`, the action that updates everything an edit touches.
-	 *
-	 * @since 0.6.0
-	 *
-	 * @param int $topic_id  Topic that was edited.
-	 * @param int $forum_id  Forum it sits in.
-	 * @param int $author_id Its author.
-	 */
-	public function fire_edit_topic( int $topic_id, int $forum_id, int $author_id ): void;
-
-	/**
 	 * Fire `bbp_edit_reply`, the action that updates everything an edit touches.
 	 *
 	 * @since 0.6.0
