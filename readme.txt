@@ -5,7 +5,7 @@ Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.2
 Requires Plugins: bbpress
-Stable tag: 0.5.3
+Stable tag: 0.6.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -35,6 +35,7 @@ It is a companion plugin. It never modifies bbPress, and it can be deactivated a
 * Moderation as a mode, off by default — the controls appear only when asked for
 * Native bbPress subscribe is retained, on forums and on threads
 * Fully responsive — built for a phone, scales cleanly to desktop
+* A REST API for a companion mobile app, under the same permissions as the website
 
 **What it deliberately does not do**
 
@@ -77,6 +78,16 @@ By design, quite a lot. There is no delete route for a member's own topic or rep
 Yes. Bulletin defers to bbPress's own access control, including forums nested under a restricted parent.
 
 == Changelog ==
+
+= 0.6.0 =
+
+A second way in. Everything a member can do on Bulletin's screens — read a forum, follow a thread, search it, take part in it — an app can now do over a REST API, under exactly the visibility, status, password and capability rules your website already applies. Nothing about the website itself changes.
+
+* Added: A read API at `/wp-json/jtzl-bulletin/v1/`, covering one level of the forum tree, a single forum and its threads, a thread and its replies, a single reply, topic tags and a tag's threads, search across forums, threads and replies together, and a member's public profile. Collections page, report their true totals, and say plainly when a request falls outside them.
+* Added: A member's own state over the same API — who they are, their favourites, their subscriptions, and the read position behind the unread marks.
+* Added: Writing over the API — starting a thread, replying to one, and editing your own post inside bbPress's edit window. Each write is handed to bbPress's own form handlers rather than reimplemented, so an app posts through the code path the website posts through: the same validation, the same flood check, the same spam handling, and the same held-for-review outcome, reported as such.
+* Added: The API is authentication-agnostic. It reads whichever user WordPress has already resolved, so bearer-token login for an app comes from whichever provider you install; Bulletin issues no tokens and stores no keys of its own.
+* Changed: A read position now records which reply it stopped at, not only when. Two replies posted in the same second no longer collapse into one position, so a thread can no longer be marked read past a reply the member has not been shown.
 
 = 0.5.3 =
 
