@@ -672,4 +672,21 @@ interface RestContextInterface {
 	 * @return string
 	 */
 	public function get_post_content_raw( int $post_id ): string;
+
+	/**
+	 * Store a member's display name.
+	 *
+	 * ⚠ **Display name only, and the narrowness is the point.** `wp_update_user()` will
+	 * write a password, an email address and a role from the same array, and this seam
+	 * deliberately cannot express any of them — so no future caller can widen the write
+	 * by passing a bigger array to a method that already exists. Widening it means
+	 * writing a new method and explaining why in its docblock.
+	 *
+	 * @since 0.6.1
+	 *
+	 * @param int    $user_id Member ID.
+	 * @param string $name    Display name, already sanitized.
+	 * @return bool Whether the write succeeded.
+	 */
+	public function update_display_name( int $user_id, string $name ): bool;
 }

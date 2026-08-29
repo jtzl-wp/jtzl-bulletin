@@ -39,18 +39,18 @@ if ( ! defined( 'ABSPATH' ) ) {
  * what a *stranger* may see of what that member wrote is settled inside the queries,
  * before the totals are taken.
  *
- * ## `GET /me` is this route with the identity filled in
+ * ## `/me` is no longer this route with the identity filled in
  *
- * Not a second callback — the same one. `Rest\RequestBounds::member()` takes the ID
- * out of the path when there is one and answers with the caller when there is not, so
- * a member reading their own profile is served by the code that serves everyone
- * else's and the two cannot come to disagree about what a profile contains.
+ * It was, for one release: `Rest\RequestBounds::member()` took the ID out of the path
+ * when there was one and answered with the caller when there was not, so both were
+ * served by one method and could not come to disagree about what a profile contains.
  *
- * ⚠ **It is nonetheless a different route in one respect**: its permission callback is
- * real. `Rest\ResponseFactory::authenticated()` is what turns a logged-out `/me` into
- * WordPress's own `rest_not_logged_in` 401. Without it the caller would resolve to 0,
- * `Rest\AccessPolicy::user()` would answer 404, and the app would be told the route
- * does not exist rather than that it needs to sign in.
+ * ⚠ **That arrangement ended when `/me` grew a write.** A controller holding the read
+ * collaborators *and* the write ones crossed PHPMD's coupling gate, and the gate was
+ * right — the two routes had stopped being the same shape. `/me` is now
+ * `Rest\ProfileController`'s, and the property that mattered survives the move in a
+ * better form: both controllers answer through `Rest\ProfilePresenter`, so the decision
+ * is named and shared rather than inherited by calling somebody else's method.
  *
  * @since 0.6.0
  */
@@ -73,12 +73,12 @@ class UserController implements ControllerInterface {
 	private UnanchoredRepository $collections;
 
 	/**
-	 * Profiles.
+	 * What a profile response is.
 	 *
-	 * @var UserSerializer
-	 * @since 0.6.0
+	 * @var ProfilePresenter
+	 * @since 0.6.1
 	 */
-	private UserSerializer $users;
+	private ProfilePresenter $profiles;
 
 	/**
 	 * Topic rows.
@@ -119,7 +119,7 @@ class UserController implements ControllerInterface {
 	 *
 	 * @param AccessPolicy         $access      Whether this ID names somebody.
 	 * @param UnanchoredRepository $collections Collection arguments.
-	 * @param UserSerializer       $users       Profiles.
+	 * @param ProfilePresenter     $profiles    What a profile response is.
 	 * @param TopicSerializer      $topics      Topic rows.
 	 * @param ReplySerializer      $replies     Reply rows.
 	 * @param RequestBounds        $bounds      What a request may ask for.
@@ -128,7 +128,7 @@ class UserController implements ControllerInterface {
 	public function __construct(
 		AccessPolicy $access,
 		UnanchoredRepository $collections,
-		UserSerializer $users,
+		ProfilePresenter $profiles,
 		TopicSerializer $topics,
 		ReplySerializer $replies,
 		RequestBounds $bounds,
@@ -136,7 +136,7 @@ class UserController implements ControllerInterface {
 	) {
 		$this->access      = $access;
 		$this->collections = $collections;
-		$this->users       = $users;
+		$this->profiles    = $profiles;
 		$this->topics      = $topics;
 		$this->replies     = $replies;
 		$this->bounds      = $bounds;
@@ -148,18 +148,10 @@ class UserController implements ControllerInterface {
 	 *
 	 * @since 0.6.0
 	 *
-	 * @return array<string,array<string,mixed>>
+	 * @return array<string,array<mixed>>
 	 */
 	public function routes(): array {
 		return array(
-			// The caller's own profile. Declared first because it is the one a signed-in
-			// app asks for on launch, and it takes the same arguments as the addressed
-			// route because it *is* the addressed route.
-			'/me'                          => $this->bounds->authenticated_route(
-				array( $this, 'get_item' ),
-				array( $this->responses, 'authenticated' ),
-				$this->bounds->avatar_args()
-			),
 			'/users/(?P<id>[\d]+)'         => $this->bounds->readable_route(
 				array( $this, 'get_item' ),
 				array(
@@ -190,27 +182,10 @@ class UserController implements ControllerInterface {
 	 * @return \WP_REST_Response|\WP_Error
 	 */
 	public function get_item( \WP_REST_Request $request ) {
-		$user_id = $this->bounds->member( $request );
-		$allowed = $this->access->user( $user_id );
-
-		if ( true !== $allowed ) {
-			return $allowed;
-		}
-
-		// One row each, for the totals rather than the rows: what a page of this
-		// member's work looks like is the two collection routes' job.
-		$profile = $this->users->user(
-			$user_id,
-			$this->bounds->avatar_size( $request ),
-			$this->collections->user_topics( $user_id, 1, 1 )['total'],
-			$this->collections->user_replies( $user_id, 1, 1 )['total']
+		return $this->profiles->present(
+			$this->bounds->id( $request ),
+			$this->bounds->avatar_size( $request )
 		);
-
-		// The policy has just established that this ID names somebody, so the
-		// serializer's null is unreachable here — and it is answered by asking the
-		// policy again rather than by a second 404 written out, so there stays one
-		// place that decides what a missing thing looks like.
-		return null === $profile ? $this->access->user( 0 ) : $this->responses->item( $profile );
 	}
 
 	/**

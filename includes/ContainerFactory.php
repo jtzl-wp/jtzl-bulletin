@@ -22,6 +22,7 @@ use JTZL\Bulletin\Rest\TagController;
 use JTZL\Bulletin\Rest\TopicController;
 use JTZL\Bulletin\Rest\TopicRepliesController;
 use JTZL\Bulletin\Rest\TopicStateController;
+use JTZL\Bulletin\Rest\ProfileController;
 use JTZL\Bulletin\Rest\UserController;
 use JTZL\Bulletin\Takeover\TemplateController;
 use JTZL\Bulletin\Unread\ReadCursor;
@@ -144,6 +145,7 @@ class ContainerFactory {
 						get( TagController::class ),
 						get( SearchController::class ),
 						get( UserController::class ),
+						get( ProfileController::class ),
 						get( PersonalController::class ),
 					)
 				),

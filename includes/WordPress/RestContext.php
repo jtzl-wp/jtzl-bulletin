@@ -1339,4 +1339,27 @@ class RestContext implements RestContextInterface {
 	public function get_post_content_raw( int $post_id ): string {
 		return (string) get_post_field( 'post_content', $post_id, 'raw' );
 	}
+
+	/**
+	 * Store a member's display name.
+	 *
+	 * `wp_update_user()` rather than a direct write, so that the `profile_update` hook
+	 * fires and anything else on the site that tracks a member's name stays in step.
+	 *
+	 * @since 0.6.1
+	 *
+	 * @param int    $user_id Member ID.
+	 * @param string $name    Display name, already sanitized.
+	 * @return bool Whether the write succeeded.
+	 */
+	public function update_display_name( int $user_id, string $name ): bool {
+		$result = wp_update_user(
+			array(
+				'ID'           => $user_id,
+				'display_name' => $name,
+			)
+		);
+
+		return ! is_wp_error( $result );
+	}
 }
