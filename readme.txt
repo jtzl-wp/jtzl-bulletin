@@ -5,7 +5,7 @@ Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 8.2
 Requires Plugins: bbpress
-Stable tag: 0.6.0
+Stable tag: 0.6.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -71,13 +71,21 @@ Yes. Public reads are available under `/wp-json/jtzl-bulletin/v1/`. Personal sta
 
 = What can the API not do? =
 
-By design, quite a lot. There is no delete route for a member's own topic or reply, no image or file upload, no way to unlock a password-protected forum from an app, no push notifications, no anonymous posting, and no moderation actions. Editing is authorship only: a member may edit their own post inside bbPress's edit window, and moderators use the website. The API applies exactly the same forum visibility, status, password and capability rules as your site does — it is a second way in, not a second set of permissions.
+By design, quite a lot. There is no delete route for a member's own topic or reply, no image or file upload, no way to unlock a password-protected forum from an app, no push notifications, no anonymous posting, and no moderation actions. Editing is authorship only: a member may edit their own post inside bbPress's edit window, and their own display name, and moderators use the website. A member cannot change their email address or password over Bulletin's API — those are account credentials, and Bulletin deliberately does not offer a route that changes them. The API applies exactly the same forum visibility, status, password and capability rules as your site does — it is a second way in, not a second set of permissions.
 
 = Does it work with my forum's private or hidden forums? =
 
 Yes. Bulletin defers to bbPress's own access control, including forums nested under a restricted parent.
 
 == Changelog ==
+
+= 0.6.1 =
+
+Three more things an app can ask for. All of them API-only: nothing about the website changes, and no new information is published that the site did not already publish.
+
+* Added: A member can change their own display name from an app. Nothing else — not their email address, not their password. Those are credentials, and a route that changes them belongs behind a challenge Bulletin has no way to make.
+* Added: A reply now knows where it sits in its thread, and a thread's replies can be asked for around a particular one. An app can open a link to a reply directly on the right page, and say which reply of how many it is showing, instead of paging from the top to find out. An ordinary page of replies costs nothing extra for this.
+* Added: A name can be resolved to a member. The search reads display names and profile slugs only — never email addresses, never login names — so it cannot be used to confirm whether an address has an account here. It returns a member's name, avatar and profile slug, and it requires an account to ask, which is the one read in the API that does so without being about the member asking.
 
 = 0.6.0 =
 
