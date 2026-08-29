@@ -101,6 +101,10 @@
 		"test:coverage": [
 			"@check",
 			"XDEBUG_MODE=coverage php ./vendor/bin/phpunit --coverage-html coverage/html --coverage-clover coverage/clover.xml --coverage-text"
+		],
+		"coverage:guard": [
+			"XDEBUG_MODE=coverage php ./vendor/bin/phpunit --coverage-clover coverage/clover.xml",
+			"@php ./bin/check-coverage"
 		]
 	}
 }
