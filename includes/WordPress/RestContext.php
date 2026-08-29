@@ -101,6 +101,83 @@ class RestContext implements RestContextInterface {
 	}
 
 	/**
+	 * Run a member query and report only what a collection needs.
+	 *
+	 * ⚠ **This method exists to hold one invariant: the columns the caller declared
+	 * are the columns that get searched.** `WP_User_Query` reads `search_columns` and
+	 * then runs `apply_filters( 'user_search_columns', … )` over the result
+	 * (`class-wp-user-query.php:741`), so any other plugin on the site can widen a
+	 * narrow search back to `user_email` — silently, because an address that matches
+	 * looks like a name that matched. Query\UserSearchQuery declares the list; this
+	 * pins it.
+	 *
+	 * **Intersect, not replace**, and for the same reason `Query\PendingVisibility`
+	 * widens rather than rewrites: a site is still allowed to take a column *away*, and
+	 * only the direction that publishes something is refused. The filter lives exactly
+	 * as long as the query — added, then removed in a `finally` so a thrown query
+	 * cannot leave it hooked over somebody else's user search.
+	 *
+	 * ⚠ **A caller naming no columns is left alone.** Pinning an empty list would
+	 * intersect every column away and turn the search into a silent no-match, which is
+	 * a worse failure than the one being guarded against.
+	 *
+	 * ⚠ **`fields` and `count_total` are set here, not read from the caller** — the same
+	 * arrangement, for the same reason, as `query()` above. `WP_User_Query::get_results()`
+	 * hands back `WP_User` objects under any `fields` but `ID`, so a caller that omitted
+	 * it would reach `intval` on an object and take down the request; and a caller that
+	 * turned the count off for speed would make every page claim to be the only one.
+	 * Neither is a decision an argument builder gets to make, because this method's
+	 * return type is the promise being kept.
+	 *
+	 * @since 0.6.1
+	 *
+	 * @param array<string,mixed> $args WP_User_Query arguments.
+	 * @return array{ids:int[],total:int,total_pages:int}
+	 */
+	public function user_query( array $args ): array {
+		$args['fields']      = 'ID';
+		$args['count_total'] = true;
+
+		$declared = isset( $args['search_columns'] ) && is_array( $args['search_columns'] )
+			? array_values( $args['search_columns'] )
+			: array();
+
+		$pin = static fn( $filtered ): array => array_values(
+			array_intersect( is_array( $filtered ) ? $filtered : array(), $declared )
+		);
+
+		if ( array() !== $declared ) {
+			add_filter( 'user_search_columns', $pin, PHP_INT_MAX );
+		}
+
+		try {
+			$query = new \WP_User_Query( $args );
+		} finally {
+			if ( array() !== $declared ) {
+				remove_filter( 'user_search_columns', $pin, PHP_INT_MAX );
+			}
+		}
+
+		$ids   = array_values( array_map( 'intval', (array) $query->get_results() ) );
+		$total = (int) $query->get_total();
+
+		// One query for every row's user object, rather than one per row as the
+		// serializer asks for them: WP_User_Query primes no cache under
+		// `fields => 'ID'`, so without this a page of 20 is 20 more queries.
+		if ( array() !== $ids ) {
+			cache_users( $ids );
+		}
+
+		$per_page = isset( $args['number'] ) ? max( 1, (int) $args['number'] ) : 1;
+
+		return array(
+			'ids'         => $ids,
+			'total'       => $total,
+			'total_pages' => (int) ceil( $total / $per_page ),
+		);
+	}
+
+	/**
 	 * How many rows the collection holds, and how many pages that is.
 	 *
 	 * ⚠ **WordPress does not count a page past the end.** `WP_Query::set_found_posts()`

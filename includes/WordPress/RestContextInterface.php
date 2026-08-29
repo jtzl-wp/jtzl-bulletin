@@ -74,6 +74,23 @@ interface RestContextInterface {
 	public function get_user( int $id ): ?\WP_User;
 
 	/**
+	 * Run a member query and report only what a collection needs.
+	 *
+	 * ⚠ **The columns the caller declared are the columns that get searched.**
+	 * `WP_User_Query` filters its own `search_columns` after reading the argument, so
+	 * naming them is a request rather than a guarantee; this method makes it one, for
+	 * the life of the single query and no longer. Query\UserSearchQuery carries the
+	 * reasoning, and it is the reason this is a seam method rather than a `WP_User_Query`
+	 * built at the call site.
+	 *
+	 * @since 0.6.1
+	 *
+	 * @param array<string,mixed> $args WP_User_Query arguments.
+	 * @return array{ids:int[],total:int,total_pages:int}
+	 */
+	public function user_query( array $args ): array;
+
+	/**
 	 * A topic's tags, as terms.
 	 *
 	 * @since 0.6.0

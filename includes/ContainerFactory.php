@@ -24,6 +24,7 @@ use JTZL\Bulletin\Rest\TopicRepliesController;
 use JTZL\Bulletin\Rest\TopicStateController;
 use JTZL\Bulletin\Rest\ProfileController;
 use JTZL\Bulletin\Rest\UserController;
+use JTZL\Bulletin\Rest\UserSearchController;
 use JTZL\Bulletin\Takeover\TemplateController;
 use JTZL\Bulletin\Unread\ReadCursor;
 use JTZL\Bulletin\WordPress\ContextInterface;
@@ -144,6 +145,7 @@ class ContainerFactory {
 						get( ReplyController::class ),
 						get( TagController::class ),
 						get( SearchController::class ),
+						get( UserSearchController::class ),
 						get( UserController::class ),
 						get( ProfileController::class ),
 						get( PersonalController::class ),

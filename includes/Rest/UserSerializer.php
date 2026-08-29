@@ -32,6 +32,20 @@ if ( ! defined( 'ABSPATH' ) ) {
  * a profile whose number disagrees with its own list is telling a visitor how much is
  * being kept from them.
  *
+ * ## Two shapes, and the cheap one is not a subset of the other
+ *
+ * `summary()` answers `GET /users?q=` with `id`, `name`, `avatar` and **`slug`** — four
+ * fields, one row, no queries beyond the user cache. The profile shape is not usable
+ * there: `topic_count` and `reply_count` are each a whole collection run for a single
+ * total, so a twenty-row page would be forty extra queries, and mention autocomplete
+ * asks for a page per keystroke.
+ *
+ * ⚠ **`slug` appears here and in no other response, deliberately.** bbPress resolves
+ * an `@mention` against `user_nicename` and nothing else, so a search result without it
+ * cannot compose a mention that bbPress will linkify — see Query\UserSearchQuery, which
+ * also records that on a default install the slug is the member's login name, and that
+ * the User entity's `link` has published it all along.
+ *
  * @since 0.6.0
  */
 class UserSerializer {
@@ -91,6 +105,60 @@ class UserSerializer {
 			'reply_count' => $reply_count,
 			'registered'  => $this->rest->registered_rfc3339( $user_id ),
 			'link'        => $this->wp->get_user_profile_url( $user_id ),
+		);
+	}
+
+	/**
+	 * A page of search results, dropping any row whose user has gone.
+	 *
+	 * ⚠ **Dropped rather than returned as null**, which makes the page shorter than the
+	 * `per_page` that produced it. The alternative is a null hole the app has to test
+	 * every row for, to describe a member deleted between the query and this loop — a
+	 * race narrow enough that no client should carry a branch for it. `X-WP-Total` is
+	 * the search's own count and is not adjusted, exactly as it is not adjusted for a
+	 * post that vanishes mid-page.
+	 *
+	 * @since 0.6.1
+	 *
+	 * @param int[] $user_ids    Members to serialize, in order.
+	 * @param int   $avatar_size Pixels.
+	 * @return array<int,array<string,mixed>>
+	 */
+	public function summaries( array $user_ids, int $avatar_size ): array {
+		$rows = array();
+
+		foreach ( $user_ids as $user_id ) {
+			$row = $this->summary( (int) $user_id, $avatar_size );
+
+			if ( null !== $row ) {
+				$rows[] = $row;
+			}
+		}
+
+		return $rows;
+	}
+
+	/**
+	 * One member as a search result, or null when there is no such person.
+	 *
+	 * @since 0.6.1
+	 *
+	 * @param int $user_id     User ID.
+	 * @param int $avatar_size Pixels.
+	 * @return array<string,mixed>|null
+	 */
+	public function summary( int $user_id, int $avatar_size ): ?array {
+		$user = $this->rest->get_user( $user_id );
+
+		if ( null === $user ) {
+			return null;
+		}
+
+		return array(
+			'id'     => $user_id,
+			'name'   => (string) $user->display_name,
+			'avatar' => $this->rest->user_avatar_url( $user_id, $avatar_size ),
+			'slug'   => (string) $user->user_nicename,
 		);
 	}
 }
