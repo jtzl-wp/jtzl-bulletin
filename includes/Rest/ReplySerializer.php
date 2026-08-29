@@ -28,6 +28,15 @@ if ( ! defined( 'ABSPATH' ) ) {
  * through the same access policy the singular route uses, and anything that fails
  * becomes null.
  *
+ * ⚠ **`position` is handed in, never computed here.** It is a reply's place in *this
+ * reader's* reading order of *one* thread, so it exists only where a thread is the
+ * context: the rows of `/topics/{id}/replies`, `/replies/{id}`, and the two reply write
+ * responses. A member's replies and a search result are lists of replies from arbitrary
+ * threads, and a serializer that resolved a position per row would build one reading
+ * order per row — an unbounded query each, for a field neither route has a use for. So
+ * the field is absent there, and its cost stays a decision the controller makes with
+ * Rest\ReplyPositions rather than one this class takes on everybody's behalf.
+ *
  * @since 0.6.0
  */
 class ReplySerializer {
@@ -90,18 +99,20 @@ class ReplySerializer {
 	 * A page of replies.
 	 *
 	 * @since 0.6.0
+	 * @since 0.6.1 Optional positions, for a thread-scoped route.
 	 *
-	 * @param int[] $reply_ids   Replies, in reading order.
-	 * @param int   $avatar_size Pixels.
+	 * @param int[]               $reply_ids   Replies, in reading order.
+	 * @param int                 $avatar_size Pixels.
+	 * @param array<int,int|null> $positions   Reply ID => position, for a thread-scoped route.
 	 * @return array<int,array<string,mixed>>
 	 */
-	public function replies( array $reply_ids, int $avatar_size ): array {
+	public function replies( array $reply_ids, int $avatar_size, array $positions = array() ): array {
 		$reply_ids = array_values( array_map( 'intval', $reply_ids ) );
 		$authors   = $this->authors->authors( $reply_ids, $avatar_size );
 
 		$rows = array();
 		foreach ( $reply_ids as $reply_id ) {
-			$rows[] = $this->reply_data( $reply_id, $authors[ $reply_id ] ?? null );
+			$rows[] = $this->reply_data( $reply_id, $authors[ $reply_id ] ?? null, $positions );
 		}
 
 		return $rows;
@@ -111,13 +122,15 @@ class ReplySerializer {
 	 * One reply.
 	 *
 	 * @since 0.6.0
+	 * @since 0.6.1 Optional positions, for a thread-scoped route.
 	 *
-	 * @param int $reply_id    Reply ID.
-	 * @param int $avatar_size Pixels.
+	 * @param int                 $reply_id    Reply ID.
+	 * @param int                 $avatar_size Pixels.
+	 * @param array<int,int|null> $positions   Reply ID => position, for a thread-scoped route.
 	 * @return array<string,mixed>
 	 */
-	public function reply( int $reply_id, int $avatar_size ): array {
-		$rows = $this->replies( array( $reply_id ), $avatar_size );
+	public function reply( int $reply_id, int $avatar_size, array $positions = array() ): array {
+		$rows = $this->replies( array( $reply_id ), $avatar_size, $positions );
 
 		return $rows[0];
 	}
@@ -126,15 +139,17 @@ class ReplySerializer {
 	 * One reply's fields.
 	 *
 	 * @since 0.6.0
+	 * @since 0.6.1 Optional positions, for a thread-scoped route.
 	 *
-	 * @param int                      $reply_id Reply ID.
-	 * @param array<string,mixed>|null $author   Primed author.
+	 * @param int                      $reply_id  Reply ID.
+	 * @param array<string,mixed>|null $author    Primed author.
+	 * @param array<int,int|null>      $positions Reply ID => position, for a thread-scoped route.
 	 * @return array<string,mixed>
 	 */
-	private function reply_data( int $reply_id, ?array $author ): array {
+	private function reply_data( int $reply_id, ?array $author, array $positions ): array {
 		$topic_id = $this->wp->get_reply_topic_id( $reply_id );
 
-		return array(
+		$row = array(
 			'id'       => $reply_id,
 			'topic_id' => $topic_id,
 			'reply_to' => $this->reply_to( $reply_id, $topic_id ),
@@ -145,6 +160,15 @@ class ReplySerializer {
 			'link'     => $this->wp->get_reply_url( $reply_id ),
 			'can_edit' => $this->access->can_edit_reply( $reply_id ),
 		);
+
+		// ⚠ `array_key_exists`, not `isset` or `??`: a null position is an answer — "this
+		// route reports positions and could not place this reply" — and both of those
+		// spellings would drop the key instead, turning it into the other answer.
+		if ( array_key_exists( $reply_id, $positions ) ) {
+			$row['position'] = $positions[ $reply_id ];
+		}
+
+		return $row;
 	}
 
 	/**

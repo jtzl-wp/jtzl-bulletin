@@ -50,12 +50,12 @@ class ReplyController implements ControllerInterface {
 	private AccessPolicy $access;
 
 	/**
-	 * Reply rows.
+	 * Reply rows, and where each one sits in the thread.
 	 *
-	 * @var ReplySerializer
-	 * @since 0.6.0
+	 * @var ReplyPresenter
+	 * @since 0.6.1
 	 */
-	private ReplySerializer $replies;
+	private ReplyPresenter $replies;
 
 	/**
 	 * What a request may ask for.
@@ -95,7 +95,7 @@ class ReplyController implements ControllerInterface {
 	 * @since 0.6.0
 	 *
 	 * @param AccessPolicy     $access      Who may read what.
-	 * @param ReplySerializer  $replies     Reply rows.
+	 * @param ReplyPresenter   $replies     Reply rows, and where each one sits.
 	 * @param RequestBounds    $bounds      What a request may ask for.
 	 * @param ResponseFactory  $responses   What comes back.
 	 * @param WriteFields      $fields      What a write carries.
@@ -103,7 +103,7 @@ class ReplyController implements ControllerInterface {
 	 */
 	public function __construct(
 		AccessPolicy $access,
-		ReplySerializer $replies,
+		ReplyPresenter $replies,
 		RequestBounds $bounds,
 		ResponseFactory $responses,
 		WriteFields $fields,
@@ -156,6 +156,12 @@ class ReplyController implements ControllerInterface {
 	 * the `link` it was handed on a row. Rest\AccessPolicy::reply() asks the thread
 	 * first and returns its answer unchanged, so a deep link into a locked thread is
 	 * refused in the same words as the thread itself.
+	 *
+	 * ⚠ **This is the one read route where `position` is worth its cost.** Resolving a
+	 * permalink is precisely the case that used to make an app walk a thread page by page
+	 * until the reply appeared, so the row says where it is — and the app can then ask
+	 * for that page directly, or pass the same ID back as `?around=`. It costs one
+	 * reading-order build; see Rest\ReplyPositions.
 	 *
 	 * @since 0.6.0
 	 *

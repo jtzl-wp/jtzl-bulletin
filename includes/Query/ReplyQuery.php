@@ -249,6 +249,45 @@ class ReplyQuery {
 	}
 
 	/**
+	 * The whole of an **unthreaded** thread, as one unpaged query.
+	 *
+	 * ⚠ **Unthreaded only, and the caller must have branched already.** With threading
+	 * on, `args()` returns a `post__in` holding one page of the order, and lifting the
+	 * paging off *that* gives page 1 unpaged rather than the thread — a plausible-looking
+	 * list that silently ends after fifteen rows. The threaded answer is
+	 * `ordered_ids()`, which is the order the page was sliced out of; this is its
+	 * unthreaded counterpart. Rest\ReplyPositions branches on
+	 * `is_thread_replies_active()` exactly as `args()` does, and is the only caller.
+	 *
+	 * ⚠ **It is `args()` plus paging, never a second set of arguments.** Only the
+	 * paging keys are overridden — every visibility marker `args()` armed rides through
+	 * untouched. That is the whole point: a locally assembled "all the replies" query
+	 * would drop Query\PendingVisibility's marker, and the author's own held reply
+	 * would be counted by the collection's `X-WP-Total` and missing from the order a
+	 * position is read out of. The two would then disagree about that author alone,
+	 * which is CLAUDE.md trap #4 wearing a moderation queue.
+	 *
+	 * The website never calls this: it has no use for a position, and threading-off
+	 * requests keep paying for the plain paged query and nothing else (issue #105).
+	 *
+	 * @since 0.6.1
+	 *
+	 * @param int $topic_id Thread to enumerate.
+	 * @return array<string,mixed>
+	 */
+	public function flat_order_args( int $topic_id ): array {
+		// Overrides on the LEFT: `+` keeps the left operand for a duplicate key, so this
+		// replaces the paging `args()` set rather than losing to it — the mistake
+		// `args()`'s own comment records making with `orderby`.
+		return array(
+			'posts_per_page' => -1,
+			'nopaging'       => true,
+			'paged'          => 1,
+			'offset'         => 0,
+		) + $this->args( $topic_id, 1 );
+	}
+
+	/**
 	 * The page size this call runs with.
 	 *
 	 * @since 0.6.0
