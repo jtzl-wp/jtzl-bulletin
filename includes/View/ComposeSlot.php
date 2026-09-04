@@ -11,86 +11,17 @@ namespace JTZL\Bulletin\View;
 use JTZL\Bulletin\WordPress\ContextInterface;
 
 /**
- * One slot at the foot of a thread, in one of five states.
- *
- * ## Why it is here and not in the bottom bar
- *
- * The fixed bottom bar is thread Prev/Next, and it was **JT's own proposal**. A
- * compose bar in that slot is arguing with the client's own idea rather than with an
- * implementation detail, so the composer sits inline in the content flow — the same
- * resolution "load more replies" took, and for the same reason.
- *
- * ## Why it rests collapsed
- *
- * The reading view is a Read surface first. On a Read surface an empty input is
- * louder than a button — a button says "you may", an empty field says "you should" —
- * and an always-open field would also grow under the finger on focus, shifting layout
- * directly above a fixed bar. bbPress's own default is ~500px of form on every
- * thread, including the ones nobody answers.
- *
- * ⚠ **The collapse is applied by the script, never by this class.** What renders here
- * is the whole form; `reading.ts` adds `is-collapsed` to the wrapper and CSS folds it
- * behind the trigger. So a reader with no JavaScript gets *more* than intended rather
- * than less, which is the only safe direction — issue #62's scar was a control hidden
- * by a signal the script did not control.
- *
- * ## The five states, and why two of them are silent in different ways
- *
- * | State | The slot shows |
- * |---|---|
- * | Can reply | the composer |
- * | Closed forum | "This forum is closed to new posts." |
- * | Closed topic | "This thread is closed to new replies." |
- * | Logged out | "Sign in to reply", carrying this URL back |
- * | No capability | nothing at all |
- *
- * **Closed speaks and no-capability does not**, and the asymmetry is the point.
- * *Closed is a fact about this thread*, and the foot is exactly where a reader needs
- * it — the header chip was forty replies ago. *No-capability is a fact about the
- * reader*, true on every thread forever; saying it twelve times in a session is
- * nagging with no action attached. A fact that changes per screen is stated per
- * screen; a fact that never changes is not stated at all.
- *
- * The closed line is quiet sans on `--bltn-ink-3` — no box, no tint, and emphatically
- * not `--bltn-caution`. DESIGN.md is explicit that a closed thread is not a negative
- * ("often the one most worth reading: resolved, archived, canonical"), so severity is
- * the wrong channel. bbPress's own `.bbp-template-notice` band was declined for the
- * same reason.
- *
- * @since 0.5.0
+ * Renders the thread's reply form or the applicable closed/sign-in state.
+ * JavaScript collapses the complete server-rendered form, preserving no-JS access.
  */
 class ComposeSlot {
 
-	/**
-	 * WordPress/bbPress seam.
-	 *
-	 * @var ContextInterface
-	 */
 	private ContextInterface $wp;
 
-	/**
-	 * Renders bbPress's own form templates, corrected for this tier.
-	 *
-	 * @var BbPressForm
-	 */
 	private BbPressForm $form;
 
-	/**
-	 * The acknowledgement a held reply gets on the redirect.
-	 *
-	 * @var HeldNotice
-	 */
 	private HeldNotice $held;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.5.0
-	 *
-	 * @param ContextInterface $wp   WordPress/bbPress seam.
-	 * @param BbPressForm      $form Renders bbPress's own form templates.
-	 * @param HeldNotice       $held Acknowledgement for a reply held for moderation.
-	 */
 	public function __construct( ContextInterface $wp, BbPressForm $form, HeldNotice $held ) {
 		$this->wp   = $wp;
 		$this->form = $form;
@@ -99,36 +30,6 @@ class ComposeSlot {
 
 	/**
 	 * Echo the slot for a topic.
-	 *
-	 * ⚠ **Closed is asked first, and it is asked with `moderate`.** The rule this
-	 * has to match is the *write path's*, not the form-access helper's, because
-	 * bbPress does not use the same one for both. `bbp_new_reply_handler()` refuses a
-	 * closed topic unless `current_user_can( 'moderate', $topic_id )`
-	 * (`replies/functions.php:347`), while
-	 * `bbp_current_user_can_access_create_reply_form()` — having found the topic
-	 * closed — falls through to `elseif ( bbp_get_topic_id() ) → current_user_can(
-	 * 'edit_topic', … )` (`users/template.php`). That fallback exists so the **edit**
-	 * form can render on an edit request; on a reading view it answers a different
-	 * question, and it is true for a thread's own author forever, since the edit lock
-	 * lives in bbPress's link getters rather than in the capability.
-	 *
-	 * So upstream offers the form to a strictly wider set than it will accept from,
-	 * and the gap is exactly *an author on their own closed thread*. Measured on the
-	 * fixture 2026-08-15: they get a composer, type into it, and are answered with
-	 * "Error: Topic is closed." Their text survives, so nothing is lost — but a
-	 * control that cannot do what it offers is the thing DESIGN.md rules out, and it
-	 * is worse than the keymaster exception rather than a variant of it, because the
-	 * keymaster's reply actually posts.
-	 *
-	 * Asking `moderate` restores the agreement: whoever bbPress will accept a reply
-	 * from is whoever is offered somewhere to write it. That widens the documented
-	 * keymaster exception to moderators, which is correct — they can genuinely post
-	 * there — and closes it for everyone else.
-	 *
-	 * ⚠ **And closed is asked before logged-out.** On a closed thread nobody may
-	 * reply, so "Sign in to reply" would be an invitation to do something signing in
-	 * cannot enable. The forum's own closure is named before the topic's because it
-	 * explains more: it is why every thread in that forum is closed, not just this one.
 	 *
 	 * @since 0.5.0
 	 *
@@ -166,23 +67,6 @@ class ComposeSlot {
 	/**
 	 * The reply form itself — bbPress's — wrapped so the script can collapse it.
 	 *
-	 * The form itself is bbPress's, rendered through View\BbPressForm — which applies
-	 * the two corrections this tier needs (the legend's unescaped title, the
-	 * allowed-tags list) and is shared with the forum screen's composer so neither has
-	 * to remember them. What is ours here is the wrapper, the trigger, and the
-	 * stylesheet.
-	 *
-	 * `data-bltn-compose` carries the resting state rather than the script deriving
-	 * it: a deep link (`?bbp_reply_to={id}#new-post`) names a post the reader has
-	 * already chosen to answer, so the composer opens focused instead of asking them
-	 * to ask again. The server knows that; the script should not have to re-read the
-	 * query string to find out.
-	 *
-	 * ⚠ **Asked of the request, not of `bbp_get_form_reply_to()`** — see
-	 * `ContextInterface::get_requested_reply_to()`. That helper falls back to the
-	 * current loop reply's stored parent, and this renders directly after a replies
-	 * loop, so it would have been answering a question about bbPress's loop state.
-	 *
 	 * @since 0.5.0
 	 */
 	private function composer(): void {
@@ -214,24 +98,6 @@ class ComposeSlot {
 	/**
 	 * Whether the composer must arrive open rather than at rest.
 	 *
-	 * Two reasons, and the second is a bug report rather than a design decision.
-	 *
-	 * **A deep link** (`?bbp_reply_to={id}#new-post`) names a post the reader has
-	 * already chosen to answer. Asking them to press "Write a reply" after they pressed
-	 * "Reply To" asks the same question twice.
-	 *
-	 * ⚠ **A rejected reply, and this one is not optional.** bbPress prints validation
-	 * failures INSIDE the form (`bbp_template_notices()` in `form-reply.php`), and it
-	 * puts the reader's own typed content back in the field with them. Collapsing that
-	 * hides both: the reader submits, the page reloads, and **nothing appears to have
-	 * happened** — the exact silent failure this phase set out to fix, reintroduced one
-	 * layer further down by the collapse that came after the fix. Reported from the
-	 * fixture, reproduced with `errorInDom: true, errorVisible: false`.
-	 *
-	 * Asked here rather than left to the script, for the same reason the deep-link
-	 * state is: the server knows, and a script that had to discover it would be reading
-	 * markup bbPress owns.
-	 *
 	 * @since 0.5.0
 	 *
 	 * @return bool
@@ -256,21 +122,6 @@ class ComposeSlot {
 
 	/**
 	 * The sign-in control, carrying this URL — query string included — back.
-	 *
-	 * ⚠ **The query string is the load-bearing part.** `?bbp_reply_to={id}` names the
-	 * post the reader meant to answer; a redirect built from the topic permalink alone
-	 * loses it across the login round-trip, and they come back to a composer aimed at
-	 * the thread instead of at the post. bbPress's own form gets this right by
-	 * defaulting `bbp_redirect_to_field()` to `REQUEST_URI`, and substituting our own
-	 * control for that form must not regress it.
-	 *
-	 * This is a substitution and it cuts against issue #18's precedent, which chose to
-	 * render WordPress's own password form inside our shell rather than replace it.
-	 * Different situation: #18's prompt IS the screen's entire content, with nothing
-	 * else to show. bbPress's login form here would be an appendage under a fully
-	 * readable thread — and it hardcodes `autocomplete="off"` on both credential
-	 * fields, which fights iOS Keychain and every password manager, unfixably without
-	 * owning a template copy.
 	 *
 	 * @since 0.5.0
 	 */

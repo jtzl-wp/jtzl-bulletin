@@ -1,18 +1,9 @@
 <?php
 /**
- * Shared <head> contents for Bulletin's documents (takeover app.php + reskin.php).
+ * Shared head markup for Bulletin's takeover and reskin documents.
  *
- * The explicit <meta charset> is the first thing emitted on purpose: a server
- * without a declared charset makes browsers fall back to Latin-1 and mojibake
- * every dash and glyph (see CLAUDE.md trap #2).
- *
- * wp_head() then prints the <title>, enqueued assets, and core/plugin head output.
- * It also lets the active theme (and core, for block themes) inject a second
- * viewport meta that would clobber ours — GeneratePress and block themes both do
- * this — so we buffer the output and strip any viewport meta, leaving ours (with
- * viewport-fit=cover for safe-area insets) the only one. And we guarantee exactly
- * one <title>: modern themes emit one through wp_head; if the active theme doesn't,
- * we add ours so the tab is labelled.
+ * Emit charset first. Buffer `wp_head()` to remove competing viewport tags and
+ * guarantee one viewport and one title across classic and block themes.
  *
  * @package JTZL\Bulletin
  */

@@ -1,14 +1,3 @@
-/**
- * ESBuild configuration for Bulletin for bbPress.
- *
- * Bundles the reading-view front-end behaviour into a single content-hashed IIFE
- * and records the hashed filename in build/asset-manifest.json, which the PHP
- * Asset\AssetManager reads to enqueue the correct URL.
- *
- * @package JTZL\Bulletin
- * @license GPL-2.0-or-later
- */
-
 /* eslint-disable no-console */
 
 const fs = require('fs');
@@ -81,9 +70,7 @@ function cleanOldHashedFiles(manifest) {
 	const hashedPattern = /^(.+?)\.[A-Za-z0-9]{8,}\.js$/;
 
 	for (const file of fs.readdirSync(buildDir)) {
-		// A sourcemap is pruneable with its JS: strip the trailing ".map" and
-		// judge it by whether that JS entry is still active. (Dev builds only —
-		// production emits no sourcemaps.)
+		// Sourcemaps follow the lifecycle of their hashed JS file.
 		const base = file.endsWith('.map') ? file.slice(0, -4) : file;
 		if (!hashedPattern.test(base)) {
 			continue;
@@ -123,9 +110,7 @@ function writeManifest(manifest) {
 }
 
 /**
- * Shared build configuration. The reading view ships as a single classic
- * (IIFE) script — it reads a `window.BLTN` global that PHP prints inline before
- * the tag, so no module semantics are needed.
+ * Shared IIFE configuration for the reading view's `window.BLTN` global.
  */
 const baseConfig = {
 	entryPoints: {

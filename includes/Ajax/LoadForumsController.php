@@ -13,17 +13,10 @@ use JTZL\Bulletin\View\ForumList;
 use JTZL\Bulletin\WordPress\ContextInterface;
 
 /**
- * The third of the load-more endpoints, alongside LoadRepliesController and
- * LoadTopicsController: same bbPress AJAX router (bbp_get_ajax_url() dispatches to
- * `bbp_ajax_{action}`), same paging contract — page 1 ships with the document, so
- * load-more starts at page 2 — and the same rows, here rendered through
- * View\ForumList.
+ * Continues a forum list through bbPress's front-end AJAX router.
  *
- * The subject is a parent forum, and 0 is a legitimate value rather than a missing
- * one: it is the root list the forums index shows. That is the one difference from
- * the sibling endpoints, and it is why the guards below key off "is this zero" before
- * "is this a forum" — asking bbPress whether the reader may view forum 0 would be a
- * question about nothing.
+ * Page 1 ships with the document. Parent 0 denotes the public root list; named
+ * parents require forum visibility and password checks.
  *
  * @since 0.3.0
  */
@@ -57,16 +50,6 @@ class LoadForumsController {
 	 */
 	private RequestedPage $paging;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.3.0
-	 *
-	 * @param ContextInterface $wp     WordPress/bbPress seam.
-	 * @param ForumQuery       $query  Shared forum-query builder.
-	 * @param ForumList        $forums Forum list renderer.
-	 * @param RequestedPage    $paging Shared reader and bound for `paged`.
-	 */
 	public function __construct( ContextInterface $wp, ForumQuery $query, ForumList $forums, RequestedPage $paging ) {
 		$this->wp     = $wp;
 		$this->query  = $query;
@@ -88,9 +71,7 @@ class LoadForumsController {
 			$this->guard_parent( $parent_id );
 		}
 
-		// Then the page, after access and never before it: a reader who may not see
-		// the named parent is told that, whatever page they asked for. The root list
-		// has no access check to come after, so this is its only refusal.
+		// Check access before paging so an inaccessible parent does not disclose range.
 		$this->paging->guard( $page );
 
 		$html = $this->forums->capture( $this->query->args( $parent_id, $page ) );
@@ -109,25 +90,16 @@ class LoadForumsController {
 	/**
 	 * Refuse a continuation the reader could not have been served on the page.
 	 *
-	 * The root list needs none of this — the forums index is public, and which forums
-	 * appear in it is bbPress's own visibility pass either way (see Query\ForumQuery).
-	 * A named parent does, and for the reasons LoadTopicsController spells out: the
-	 * capability check covers a public forum nested under a restricted ancestor, and
-	 * the password check refuses what the screen itself withholds behind WordPress's
-	 * password form until the password is supplied (issue #18).
+	 * The root index is public and ForumQuery applies bbPress visibility. Named
+	 * parents need both capability and password checks, including public forums under
+	 * restricted ancestors.
 	 *
 	 * @since 0.3.0
 	 *
 	 * @param int $parent_id Parent forum the request names.
 	 */
 	private function guard_parent( int $parent_id ): void {
-		// send_json_error() ends the request, so there is nothing to return to. A
-		// parent the caller may not view answers exactly like one that doesn't
-		// exist — bbPress's own singular views present inaccessible private/hidden
-		// resources as not found, and this route must not let an anonymous caller
-		// distinguish "no such forum" from "a forum you can't see" (issue #78). A
-		// negative id lands here too: it has no post type, so it fails the same way
-		// rather than reaching the query.
+		// Match bbPress by making missing and inaccessible forums indistinguishable.
 		if ( ! $this->forum_is_readable( $parent_id ) ) {
 			$this->wp->send_json_error( array( 'message' => 'bad_forum' ), 400 );
 		}
@@ -141,7 +113,7 @@ class LoadForumsController {
 	 * Whether the request names a real forum the caller may view.
 	 *
 	 * Deliberately answers a nonexistent ID and an existing-but-inaccessible one
-	 * the same way, so the caller learns nothing about which it was (issue #78).
+	 * the same way, so the caller learns nothing about which it was.
 	 *
 	 * @since 0.3.0
 	 *

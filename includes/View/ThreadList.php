@@ -12,50 +12,20 @@ use JTZL\Bulletin\Unread\ReadState;
 use JTZL\Bulletin\WordPress\ContextInterface;
 
 /**
- * Runs a topics query and renders its rows, so the forum screen and the
- * load-more endpoint produce identical markup from identical args — an appended
- * thread is indistinguishable from one that arrived with the document.
+ * Renders identical topic rows for the initial forum and load-more endpoint.
  *
- * Rows are captured to a string rather than echoed. The forum screen has to know
- * whether a section is empty before it can decide whether to print that
- * section's label at all, and re-running the query to find out would risk the
- * two runs disagreeing.
+ * Capturing lets the forum omit empty section labels without running the query twice.
  *
  * @since 0.1.0
  */
 class ThreadList {
 
-	/**
-	 * WordPress/bbPress seam.
-	 *
-	 * @var ContextInterface
-	 */
 	private ContextInterface $wp;
 
-	/**
-	 * Thread row renderer.
-	 *
-	 * @var ThreadRow
-	 */
 	private ThreadRow $row;
 
-	/**
-	 * Read state, for the unread accent.
-	 *
-	 * @var ReadState
-	 * @since 0.5.0
-	 */
 	private ReadState $reads;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.1.0
-	 *
-	 * @param ContextInterface $wp    WordPress/bbPress seam.
-	 * @param ThreadRow        $row   Thread row renderer.
-	 * @param ReadState        $reads Read state, for the unread accent.
-	 */
 	public function __construct( ContextInterface $wp, ThreadRow $row, ReadState $reads ) {
 		$this->wp    = $wp;
 		$this->row   = $row;
@@ -65,11 +35,7 @@ class ThreadList {
 	/**
 	 * Render a topics query's rows and return them as markup.
 	 *
-	 * The loop gathers every row before any of them is rendered, which is the shape
-	 * unread forced (#102): the accent is resolved for the whole page in one query
-	 * rather than one per row, and that is only possible once the full set of IDs is
-	 * known. Rendering inside the loop would have meant a lookup per row — fifteen
-	 * queries a page where the SoW promises the plugin "adds no theme weight".
+	 * Gather IDs before rendering so unread state is resolved once for the page.
 	 *
 	 * @since 0.1.0
 	 *

@@ -13,9 +13,7 @@ use JTZL\Bulletin\Screen\ScreenTier;
 use JTZL\Bulletin\WordPress\ContextInterface;
 
 /**
- * Enqueues Bulletin's own built CSS/JS on the screens we own, and — the
- * load-bearing half of the takeover — suppresses the styles that would otherwise
- * bleed into our chrome. The suppression differs by tier:
+ * Enqueues Bulletin assets and suppresses styles that bleed into its chrome:
  *
  * - Takeover renders our own document, so every non-allowlisted stylesheet is
  *   dequeued (the theme's cascade AND bbPress's own CSS — neither is wanted).
@@ -23,9 +21,7 @@ use JTZL\Bulletin\WordPress\ContextInterface;
  *   legible, so only the active theme's stylesheets are suppressed; bbPress's
  *   bbp-default and ours survive.
  *
- * The `bltn_style_allowlist` filter names handles that always survive suppression
- * (either tier), so the integration pass on the real stack can protect a plugin
- * handle that matters.
+ * The `bltn_style_allowlist` filter preserves named handles on either tier.
  *
  * @since 0.1.0
  */
@@ -59,16 +55,6 @@ class AssetManager {
 	 */
 	private string $version;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.1.0
-	 *
-	 * @param ContextInterface $wp      WordPress/bbPress seam.
-	 * @param ScreenClassifier $screen  Screen-tier classifier.
-	 * @param BuiltAssets      $assets  Where the built files are.
-	 * @param string           $version Asset version.
-	 */
 	public function __construct(
 		ContextInterface $wp,
 		ScreenClassifier $screen,
@@ -84,14 +70,9 @@ class AssetManager {
 	/**
 	 * Enqueue Bulletin's CSS/JS on the screens we own.
 	 *
-	 * Our stylesheet loads on both takeover and reskin screens — it styles the
-	 * chrome (app bar) common to both. The script goes wherever a load-more control
-	 * is: the three takeover screens, and one reskin screen — a profile's
-	 * Subscriptions tab, whose Subscribed Forums list is the one bbPress loop with no
-	 * way past its first page (issue #50, View\SubscribedForumsMore). Whether that tab
-	 * renders a control turns on a page count nothing knows until the loop runs, long
-	 * after assets are enqueued, so the screen is the finest scope here — as it is on
-	 * a single-page takeover screen, where the script also wires nothing.
+	 * CSS supports both tiers. JS supports takeover load-more controls and the reskin
+	 * Subscriptions tab. Its page count is unavailable when assets are enqueued, so
+	 * the tab is the narrowest practical scope.
 	 *
 	 * @since 0.1.0
 	 */
@@ -114,16 +95,10 @@ class AssetManager {
 		if ( '' !== $script ) {
 			$this->wp->enqueue_script( 'jtzl-bulletin', $script, array(), $this->version, true );
 
-			// No nonce: every one of these endpoints is read-only, so there is no
-			// CSRF surface — and a per-page nonce would break under full-page
-			// caching (a cached page would ship an already-expired nonce). What a
-			// request may see is gated server-side instead: forum visibility and
-			// password on the three public lists, and on the subscription list,
-			// which is not public, the profile's owner or an editor of that user.
+			// No nonce: these endpoints are read-only, and page-cached nonces expire.
+			// Server-side visibility, password, and profile authorization gate results.
 			//
-			// Only the two transient labels are localised here. Which endpoint to
-			// call, and the idle label naming what it loads, belong to the control
-			// the screen rendered (see View\LoadMore).
+			// The rendered control supplies its endpoint and idle label.
 			$this->wp->localize_script(
 				'jtzl-bulletin',
 				'BLTN',
@@ -132,12 +107,7 @@ class AssetManager {
 					'i18n'    => array(
 						'loading'    => __( 'Loading…', 'jtzl-bulletin' ),
 						'error'      => __( 'Could not load more. Tap to retry.', 'jtzl-bulletin' ),
-						// Written into the control's live region so a reader who cannot
-						// see the rows arrive is told that they did. Both plural forms
-						// are shipped because `_n()` cannot be resolved in the browser:
-						// the script picks on `n === 1`, which is correct for the
-						// languages this ships in and degrades to the plural form
-						// elsewhere rather than to nothing.
+						// The browser selects singular or plural for the live region.
 						'loadedOne'  => __( '1 more loaded.', 'jtzl-bulletin' ),
 						/* translators: %d: number of items just loaded. */
 						'loadedMany' => __( '%d more loaded.', 'jtzl-bulletin' ),
@@ -190,16 +160,6 @@ class AssetManager {
 	 * Reskin suppression: dequeue only the active theme's stylesheets, so
 	 * bbPress's own bbp-default CSS (and ours) survive to style the markup it
 	 * renders inside our chrome.
-	 *
-	 * A stylesheet is the theme's when its source path sits under the parent or
-	 * child theme directory; block themes additionally print their theme.json
-	 * styling inline under the `global-styles` handle, which has no URL to test,
-	 * so it is named explicitly. Allowlisted handles always survive.
-	 *
-	 * Residual gap: a CDN or URL-rewrite plugin that rewrites theme assets onto a
-	 * different *path* (not merely a different host) moves them out from under the
-	 * theme directory, so the path test misses and that theme stylesheet survives —
-	 * a real-host condition wp-env can't reproduce, to check during integration.
 	 *
 	 * @since 0.3.0
 	 */

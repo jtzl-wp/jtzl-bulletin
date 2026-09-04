@@ -1,20 +1,9 @@
 <?php
 /**
- * The reskin (shell-wrap) document.
+ * Renders bbPress theme-compat output inside Bulletin's shell.
  *
- * For every reader-reachable bbPress screen we don't take over (profiles, tags,
- * views, search, …) we render bbPress's OWN markup inside Bulletin's chrome rather
- * than the active theme's. bbPress's theme-compat — which, unlike on takeover
- * screens, we deliberately leave in place — has already buffered the screen's
- * content-*.php part into the post and filtered the_content, so the standard loop
- * below prints bbPress's own output. There is no per-screen template to author or
- * keep in parity with bbPress.
- *
- * The active theme's stylesheets are suppressed (Asset\AssetManager) but bbPress's
- * own bbp-default CSS survives, so the content stays legible; the .bbp-* reskin
- * stylesheet layers on top per screen family (issue #32+). This template ships
- * unstyled by us on purpose — it proves the shell-wrap mechanism in isolation
- * (issue #31).
+ * The screen markup remains owned by bbPress; Bulletin suppresses theme styles and layers its
+ * reskin styles over bbPress defaults.
  *
  * @package JTZL\Bulletin
  */
@@ -36,17 +25,8 @@ $bltn_heading   = $bltn_container->get( \JTZL\Bulletin\View\ScreenHeading::class
 <div class="bltn-app">
 	<?php
 	/*
-	 * Chrome only: a back control and the account button. The title stays the site
-	 * name and is not a heading — the screen's h1 is rendered below, in the content
-	 * region, exactly as the four takeover templates do it.
-	 *
-	 * ⚠ **The destination used to be the forums index for every screen in this tier,
-	 * and on an edit form that was the whole defect** (Yoren, 2026-08-16). It was a
-	 * fair default when the tier held archives and profiles, whose parent really is
-	 * the index; topic and reply edit joined in 0.5.0 and inherited it, so a member
-	 * who opened Edit forty replies deep and changed their mind was dropped at the top
-	 * of the site. Chrome\EditExit answers per screen now and still says "the forums
-	 * index" for everything that is not an edit form.
+	 * The content region owns the screen heading. Edit screens return to the edited
+	 * object; other reskin screens return to the forums index.
 	 */
 	$bltn_exit = $bltn_container->get( \JTZL\Bulletin\Chrome\EditExit::class )->destination();
 	$bltn_appbar->render(
@@ -60,11 +40,8 @@ $bltn_heading   = $bltn_container->get( \JTZL\Bulletin\View\ScreenHeading::class
 	<main class="bltn-reskin__body bltn-scroll">
 		<?php
 		/*
-		 * The screen's heading, announced and not shown. This template used to leave it
-		 * out on the grounds that bbPress's own content carries an h1 — measured across
-		 * eight reskin routes, not one of them does (see View\ScreenHeading). Before the
-		 * loop deliberately: it is the document's first heading, and CLAUDE.md trap #5
-		 * is a `the_title` re-entrancy hang reachable from inside a running loop.
+		 * Render the accessible heading before the loop. Calling the title seam inside
+		 * a running loop can re-enter `the_title`.
 		 */
 		$bltn_heading->render();
 

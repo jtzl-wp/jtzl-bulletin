@@ -16,24 +16,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * Normalizes tag names under the stricter REST contract.
- *
- * @since 0.6.0
  */
 class TopicTagValidator {
 
-	/**
-	 * The width of WordPress's term-name column.
-	 *
-	 * @var int
-	 */
 	private const MAX_NAME_LENGTH = 200;
 
 	/**
-	 * Normalize tag names, or explain why they cannot be used.
-	 *
-	 * Names are trimmed and case-insensitive duplicates collapse to the first spelling.
-	 * A blank name is refused rather than silently dropped because the request meant to
-	 * assign a tag. An absent or empty list remains valid.
+	 * Data contract.
 	 *
 	 * @param string[] $names Names as the request carried them.
 	 * @return string[]|\WP_Error

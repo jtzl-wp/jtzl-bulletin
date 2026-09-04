@@ -37,13 +37,8 @@ use JTZL\Bulletin\WordPress\ContextInterface;
  * Resolves services from the container and binds them to WordPress/bbPress
  * hooks through the context seam. This is the only place hooks are registered.
  *
- * Coupling is exempted deliberately, the same way ContainerFactory is excluded in
- * phpmd.xml: this is the composition root — deptrac's Root layer grants it every
- * internal layer on purpose — so its coupling counts the services the plugin has,
- * which is the thing it exists to wire. Honouring the cap would mean either moving
- * hook registration out of the one place that does it, or declining to add a
- * service. The size and complexity rules still apply, so register_hooks() cannot
- * quietly grow into something unreadable behind this.
+ * Coupling is exempted because this is the composition root and must know the
+ * services it wires. Size and complexity rules still apply.
  *
  * @SuppressWarnings("PHPMD.CouplingBetweenObjects")
  *
@@ -58,13 +53,6 @@ class Bootstrap {
 	 */
 	private Container $container;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.1.0
-	 *
-	 * @param Container $container The DI container.
-	 */
 	public function __construct( Container $container ) {
 		$this->container = $container;
 	}
@@ -72,10 +60,7 @@ class Bootstrap {
 	/**
 	 * Register every runtime hook.
 	 *
-	 * Grouped by what each set of hooks is for rather than kept in one run: the list
-	 * grows with every feature, and one method that registers all of it eventually
-	 * says nothing about which hooks belong together. The groups are private and
-	 * called from here alone, so this is still the one place hooks are registered.
+	 * Private methods group related hooks while keeping registration in one place.
 	 *
 	 * @since 0.1.0
 	 */
@@ -94,9 +79,7 @@ class Bootstrap {
 	/**
 	 * Resolve one service from the container.
 	 *
-	 * Replaces a get-then-assert pair repeated thirty times. The assertion is not
-	 * decoration — php-di is typed by convention, so PHPStan has to be told what came
-	 * back — and one template says it for every caller.
+	 * The assertion supplies PHPStan with the type PHP-DI provides by convention.
 	 *
 	 * @since 0.5.0
 	 *
@@ -114,7 +97,7 @@ class Bootstrap {
 
 	/**
 	 * Unread: keep the schema current, record what a member reads, mark what they
-	 * have not, and forget rows about things that no longer exist (issue #102).
+	 * have not, and forget rows about things that no longer exist.
 	 *
 	 * The schema check runs on every request rather than on activation alone, because
 	 * a plugin can reach a new version without its activation hook ever firing — see
@@ -192,7 +175,7 @@ class Bootstrap {
 	 * threads inside a forum, forums inside the index or a parent forum — and the
 	 * first continuation on a reskin screen, the Subscribed Forums list on a member
 	 * profile, which bbPress renders in its own markup and truncates at the same
-	 * 50-forum ceiling (issue #50) — and results inside a search (issue #35), the
+	 * forum ceiling — and results inside a search, the
 	 * only one of the five whose subject is a set of terms rather than a post.
 	 *
 	 * @since 0.3.0
@@ -241,10 +224,10 @@ class Bootstrap {
 
 		// Keep WordPress's password form out of the description slot of a loop row,
 		// where bbPress's own row templates would otherwise print it as though it were
-		// what the forum is about (issue #54). Armed by the four actions bbPress fires
+		// what the forum is about. Armed by the four actions bbPress fires
 		// around those two slots and by nothing else, so the forms Bulletin renders on
-		// purpose — the in-shell prompt (#18), and a protected reply's own prompt in the
-		// reading view — cannot be reached by it. See View\ProtectedRowContent.
+		// purpose, including in-shell and protected-reply prompts.
+		// See View\ProtectedRowContent.
 		$wp->add_action( 'bbp_theme_before_forum_description', array( $protected, 'open_row_slot' ) );
 		$wp->add_action( 'bbp_theme_after_forum_description', array( $protected, 'close_row_slot' ) );
 		$wp->add_action( 'bbp_theme_before_reply_content', array( $protected, 'open_row_slot' ) );
@@ -252,8 +235,8 @@ class Bootstrap {
 		$wp->add_filter( 'the_password_form', array( $protected, 'filter_password_form' ) );
 
 		/*
-		 * A way out of an edit form, beside the Submit it sits next to (Yoren,
-		 * 2026-08-16). Two hooks because bbPress fires a different one per template,
+		 * A way out of an edit form, beside its Submit. Two hooks are needed because
+		 * bbPress fires a different one per template,
 		 * and only two of the five forms in this tier fire anything at all — the three
 		 * moderation templates carry no do_action, so Chrome\EditExit reaches them
 		 * through the app bar's destination instead. Its own gate is what keeps this
@@ -267,16 +250,8 @@ class Bootstrap {
 
 	/**
 	 * Search visibility: give a search query back the post statuses bbPress
-	 * computed for the reader running it and then overwrote (issue #68) — which
+	 * computed for the reader running it and then overwrote, which
 	 * loses every `closed` topic and admits `private` and `hidden` ones.
-	 *
-	 * Its own group because it belongs to neither tier. The captured list rides
-	 * the query object, so these fire on any query built by
-	 * `bbp_has_search_results()` and on nothing else — bbPress's own search
-	 * template included, the defect being upstream of our takeover.
-	 *
-	 * `pre_get_posts` at 5 lands immediately after bbPress's normalizer at 4, the
-	 * narrowest way to undo one substitution. See Query\SearchVisibility.
 	 *
 	 * @since 0.3.0
 	 */
@@ -294,12 +269,9 @@ class Bootstrap {
 	}
 
 	/**
-	 * Moderation held a reply: withhold it from everyone, show it back to its author,
-	 * and acknowledge the two cases where no row comes back (§3 decision 6).
+	 * Register pending-reply visibility and acknowledgements.
 	 *
-	 * Nothing here arms either query rule — Query\ReplyQuery and Query\TopicQuery do,
-	 * at every one of their sites, which is what keeps those sites agreeing about a
-	 * held row rather than paging around one (CLAUDE.md trap #4).
+	 * Query builders arm the visibility rules so paging and rows use the same scope.
 	 *
 	 * @since 0.5.0
 	 */
@@ -308,26 +280,14 @@ class Bootstrap {
 		$pending = $this->service( PendingVisibility::class );
 		$guard   = $this->service( ProtectedStatusGuard::class );
 		$held    = $this->service( HeldNotice::class );
-		// ⚠ Guard early, widening last, and the order is load-bearing: the guard
-		// subtracts, the widening then wraps the whole clause and OR-s one row back
-		// in. Swapped, the subtraction lands outside the wrap and removes it again —
-		// see Query\ProtectedStatusGuard.
+		// Narrow first, then wrap the result to add the author's pending row back.
 		$wp->add_filter( 'posts_where', array( $guard, 'restrict' ), 10, 2 );
 		$wp->add_filter( 'posts_where', array( $pending, 'widen' ), PHP_INT_MAX, 2 );
 		$wp->add_filter( 'bbp_new_reply_redirect_to', array( $held, 'filter_redirect' ), 10, 3 );
 	}
 
 	/**
-	 * Chrome: the furniture the shell paints around a screen, and the names bbPress
-	 * leaves off its own controls.
-	 *
-	 * ⚠ **Two classes rather than the run of bindings that used to live here.** The
-	 * group was eight services deep and `Bootstrap` had spent three PRs a handful of
-	 * lines under PHPMD's class-length ceiling — close enough that the next hook would
-	 * have been paid for by deleting an explanation. It is split on a seam the
-	 * comments had already drawn: `Chrome\Namings` supplies a name where bbPress
-	 * supplies none, `Chrome\Furniture` changes or removes something it already
-	 * renders. Both keep the comments the bindings were written with.
+	 * Register shell furniture and missing accessible names.
 	 *
 	 * @since 0.3.0
 	 */
@@ -337,16 +297,9 @@ class Bootstrap {
 	}
 
 	/**
-	 * The app's API: the forum scope every collection is narrowed to, and the routes
-	 * themselves, declared on `rest_api_init` (P5).
+	 * Register REST routes and collection visibility.
 	 *
-	 * ⚠ **Registered last, and that is not an ordering claim.** Its `posts_where`
-	 * filter sits at priority 20, which nothing else on this hook uses, and WordPress
-	 * sorts by priority before registration order — so this group arriving after the
-	 * `PHP_INT_MAX` widening in `register_pending_visibility()` changes nothing about
-	 * the order they run in. The order that *is* load-bearing (narrow at 10, narrow
-	 * at 20, widen last) is written out in Rest\Endpoints, which is where a reader
-	 * looking for it will be.
+	 * Hook priorities, not registration order, define visibility-filter ordering.
 	 *
 	 * @since 0.6.0
 	 */

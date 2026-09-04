@@ -18,16 +18,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * Translates the first form-handler error without inferring meaning from its message.
- *
- * @since 0.6.0
  */
 final class BbpErrorTranslator {
 
-	/**
-	 * Native error codes and their stable REST code/status pairs.
-	 *
-	 * @var array<string,array{0:string,1:int}>
-	 */
 	private const MAPPING = array(
 		'bbp_topic_title'               => array( 'invalid_title', 400 ),
 		'bbp_reply_title'               => array( 'invalid_title', 400 ),
@@ -83,24 +76,14 @@ final class BbpErrorTranslator {
 		'bbp_edit_reply_nonce'          => array( 'write_failed', 500 ),
 	);
 
-	/**
-	 * WordPress/bbPress seam.
-	 *
-	 * @var RestContextInterface
-	 */
 	private RestContextInterface $rest;
 
-	/**
-	 * Constructor.
-	 *
-	 * @param RestContextInterface $rest WordPress/bbPress seam.
-	 */
 	public function __construct( RestContextInterface $rest ) {
 		$this->rest = $rest;
 	}
 
 	/**
-	 * Translate the first native error in a form-handler error bag.
+	 * Data contract.
 	 *
 	 * @param \WP_Error $errors Native errors.
 	 * @return \WP_Error|null

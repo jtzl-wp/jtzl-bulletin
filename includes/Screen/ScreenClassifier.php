@@ -11,11 +11,7 @@ namespace JTZL\Bulletin\Screen;
 use JTZL\Bulletin\WordPress\ContextInterface;
 
 /**
- * Decides, for the current request, whether Bulletin takes it over with our own
- * document, reskins bbPress's own markup inside our chrome, or leaves it to the
- * active theme. Replaces the earlier single is_reading_screen() boolean: both the
- * template swap (Takeover\TemplateController) and the style suppression
- * (Asset\AssetManager) now branch on the tier this returns.
+ * Classifies the current request as takeover, reskin, or theme-owned.
  *
  * @since 0.3.0
  */
@@ -28,13 +24,6 @@ class ScreenClassifier {
 	 */
 	private ContextInterface $wp;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.3.0
-	 *
-	 * @param ContextInterface $wp WordPress/bbPress seam.
-	 */
 	public function __construct( ContextInterface $wp ) {
 		$this->wp = $wp;
 	}
@@ -42,9 +31,8 @@ class ScreenClassifier {
 	/**
 	 * The treatment for the current request.
 	 *
-	 * Reskin is the catch-all for bbPress front-end screens precisely so that
-	 * nothing a reader can reach ever falls through to the site theme; only the
-	 * enumerated takeover screens and the phase-owned exclusions divert from it.
+	 * Reskin is the fallback for bbPress front-end screens. Only explicit takeover
+	 * screens and exclusions use another tier.
 	 *
 	 * @since 0.3.0
 	 *
@@ -93,7 +81,7 @@ class ScreenClassifier {
 	 *
 	 * The takeover proceeds on a password-protected forum too: the screen template
 	 * renders WordPress's own password form in place of the sub-forums and threads
-	 * until the password is supplied (issue #18), so the reader stays in Bulletin's
+	 * until the password is supplied, so the reader stays in Bulletin's
 	 * chrome rather than dropping into the theme.
 	 *
 	 * @since 0.3.0
@@ -107,19 +95,12 @@ class ScreenClassifier {
 	/**
 	 * Whether the current request is a single topic's reading view.
 	 *
-	 * Every single topic, with no exceptions left. P1 declined the takeover when
-	 * threaded replies were active, because bbp_has_replies() forces
-	 * posts_per_page to -1 for a hierarchical query and the thread would have
-	 * loaded unpaginated (issue #12). Query\ReplyQuery now asks for a flat query
-	 * outright, so there is nothing left to decline: the thread pages the way
-	 * every other thread does and its shape is rendered as reply context rather
-	 * than depth (issue #37). Removing the guard also retires the reskinned
-	 * threaded-topic screen (issue #64) — nothing routes a reader to bbPress's own
-	 * content-single-topic.php any more.
+	 * ReplyQuery requests a flat query because bbPress disables pagination for
+	 * hierarchical replies. Reply context preserves the relationship without depth.
 	 *
 	 * A password-protected topic still takes over: the screen template renders
 	 * WordPress's own password form in place of the opening post and replies until
-	 * the password is supplied (issue #18), keeping the reader in Bulletin's chrome.
+	 * the password is supplied, keeping the reader in Bulletin's chrome.
 	 *
 	 * @since 0.3.0
 	 *
@@ -132,20 +113,6 @@ class ScreenClassifier {
 	/**
 	 * Whether the current request is the search screen.
 	 *
-	 * The fourth and last takeover (issue #35). It was reskinned before this — the
-	 * catch-all reaches it, because is_bbpress() counts search among bbPress's own
-	 * screens — so what changes is the treatment, not whether a reader falls out of
-	 * the shell. What earns the takeover is bbPress rendering the *entire* content
-	 * of every hit, between a header and a footer row that each repeat "Author |
-	 * Search Results"; on a phone that is the clutter this product exists to remove,
-	 * and no stylesheet takes it back out.
-	 *
-	 * Both states of the screen are one screen: with terms, and the bare form at
-	 * /forums/search/. Only `is_search()` decides — see the seam's note on why
-	 * `bbp_is_search_results()` cannot be part of the test — and it already answers
-	 * false on a site that has turned search off, which leaves that site exactly
-	 * where it was.
-	 *
 	 * @since 0.3.0
 	 *
 	 * @return bool
@@ -155,32 +122,9 @@ class ScreenClassifier {
 	}
 
 	/**
-	 * Whether the request is a bbPress screen owned by another phase, and so left
-	 * to the theme rather than reskinned.
-	 *
-	 * Only forum create/edit is left. It is keymaster administration of the board's
-	 * structure rather than any part of a reader's forum flow, so it stays with the
-	 * theme (see docs/p2-screen-inventory.md, "True leave to the theme is reserved …").
-	 *
-	 * ⚠ **Topic and reply edit used to be excluded here too, and removing them also
-	 * removed a guard — deliberately.** bbPress builds its moderation forms *on* the
-	 * edit conditionals: `bbp_is_topic_merge()` and `bbp_is_topic_split()` are
-	 * `bbp_is_topic_edit()` plus an `action` parameter, and `bbp_is_reply_move()` is
-	 * `bbp_is_reply_edit()` plus one (`common/template.php:317`, `:338`, `:505`). So
-	 * excluding every edit request excluded merge, split and move as well, and dropped
-	 * a moderator out of Bulletin into the site theme mid-task — against issue #36's
-	 * "merge/split/move reachable and legible in-shell". An `is_moderation_form()`
-	 * short-circuit used to run ahead of this method to rescue them.
-	 *
-	 * That short-circuit is **gone**, because with the two conditionals removed there
-	 * is nothing left for it to rescue: `bbp_is_forum_edit()` is set independently
-	 * (`common/template.php:188`) and bbPress builds no moderation form on top of it.
-	 * Keeping it would have preserved a guard against a condition that can no longer
-	 * arise. ⚠ If forum edit is ever un-excluded in turn, re-derive that from bbPress
-	 * rather than trusting this note.
+	 * Whether the active theme owns this bbPress screen.
 	 *
 	 * @since 0.3.0
-	 * @since 0.5.0 Topic and reply edit reskin rather than exclude — P4 renders them.
 	 *
 	 * @return bool
 	 */

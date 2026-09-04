@@ -22,94 +22,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * Turns a page request into a query, once, for every collection the API serves.
- *
- * ## Why the controllers do not build their own arguments
- *
- * Because the reader's forum scope is the kind of thing that can be left off. It
- * rides the query variables as a marker (Rest\CollectionVisibility), so a collection
- * that forgets to arm it is not refused and does not warn — it returns the site's
- * content in place of this reader's, with an `X-WP-Total` that matches the rows and
- * makes the answer look deliberate. Routing every collection through one class turns
- * "did this controller remember" into a property one test can hold.
- *
- * ## Ordering is borrowed, never restated
- *
- * The `Query\*` builders are the website's own, and the API reuses them rather than
- * writing a second copy of each order. That matters most where an order is a bug fix:
- * `Query\ForumQuery`'s `(menu_order, title, ID)` exists because forums tie on the
- * first two and MySQL returns tied rows in an undefined order, which pages a list by
- * serving one row twice and dropping another. A second implementation would inherit
- * the defect the first one fixed.
- *
- * The page size is the one argument the API overrides. `Query\ForumQuery` carries
- * bbPress's `_bbp_forums_per_page` because the website's forum list has no second
- * page and that number is a ceiling; the API pages, so the request's size replaces
- * it — bounded by Rest\RequestBounds before it ever arrives here.
- *
- * @since 0.6.0
  */
 class CollectionRepository {
 
-	/**
-	 * REST seam.
-	 *
-	 * @var RestContextInterface
-	 * @since 0.6.0
-	 */
 	private RestContextInterface $rest;
 
-	/**
-	 * The forum scope every collection is narrowed to.
-	 *
-	 * @var CollectionVisibility
-	 * @since 0.6.0
-	 */
 	private CollectionVisibility $visibility;
 
-	/**
-	 * WordPress/bbPress seam.
-	 *
-	 * @var ContextInterface
-	 * @since 0.6.0
-	 */
 	private ContextInterface $wp;
 
-	/**
-	 * Shared forum-query builder.
-	 *
-	 * @var ForumQuery
-	 * @since 0.6.0
-	 */
 	private ForumQuery $forums;
 
-	/**
-	 * Shared topic-query builder.
-	 *
-	 * @var TopicQuery
-	 * @since 0.6.0
-	 */
 	private TopicQuery $topics;
 
-	/**
-	 * Shared reply-query builder.
-	 *
-	 * @var ReplyQuery
-	 * @since 0.6.0
-	 */
 	private ReplyQuery $replies;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.6.0
-	 *
-	 * @param ContextInterface     $wp         WordPress/bbPress seam.
-	 * @param RestContextInterface $rest       REST seam.
-	 * @param CollectionVisibility $visibility Collection scope.
-	 * @param ForumQuery           $forums     Shared forum-query builder.
-	 * @param TopicQuery           $topics     Shared topic-query builder.
-	 * @param ReplyQuery           $replies    Shared reply-query builder.
-	 */
 	public function __construct(
 		ContextInterface $wp,
 		RestContextInterface $rest,
@@ -127,9 +54,7 @@ class CollectionRepository {
 	}
 
 	/**
-	 * One page of one level of the forum hierarchy.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param int $parent_id Parent forum, or 0 for the top-level index.
 	 * @param int $page      1-based page number.
@@ -144,29 +69,7 @@ class CollectionRepository {
 	}
 
 	/**
-	 * One page of a forum's thread list: pinned topics first, then freshness.
-	 *
-	 * ## One sequence, not a prefix beside a collection
-	 *
-	 * The pinned topics are part of the pagination rather than exempt from it. Handing
-	 * back every sticky and then starting to count would make page 1 an unbounded
-	 * response on a forum with forty of them, and would put the same rows above every
-	 * later page — the app has no way to ask for "the rest of page 1".
-	 *
-	 * So the visible pinned IDs form a prefix, the requested slice is taken out of it,
-	 * and whatever is still owed comes from the ordinary query at an offset reduced by
-	 * the prefix's length. `Query\TopicQuery::args()` already excludes every sticky
-	 * from that query, so no row can arrive twice.
-	 *
-	 * ⚠ **The ordinary query runs even when the page is entirely pinned.** Its rows are
-	 * discarded then, but its `found_posts` is the other half of the collection's
-	 * total, and a page that skipped it would report a thread list two rows long.
-	 *
-	 * ⚠ **And its page count is not the collection's.** It is asked for `$needed` rows,
-	 * not `$per_page`, so `total_pages` from that query counts pages in the wrong unit.
-	 * The number below is derived from the combined total.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param int $forum_id Forum whose topics are wanted.
 	 * @param int $page     1-based page number.
@@ -194,42 +97,7 @@ class CollectionRepository {
 	}
 
 	/**
-	 * One page of a thread's replies, flat, in the website's own reading order.
-	 *
-	 * ## Both queries are the website's, and that is a rule rather than a preference
-	 *
-	 * The page comes from `Query\ReplyQuery::args()` and a threaded total from
-	 * `Query\ReplyQuery::ordered_ids()`, always. Neither is reconstructed here: both
-	 * carry `Query\PendingVisibility`'s marker and `Query\ProtectedStatusGuard`'s, so
-	 * arguments assembled locally would either hand a stranger somebody's held reply
-	 * or drop the author's own from a page the total still counted — CLAUDE.md trap #4
-	 * with a moderation queue in place of a tied timestamp.
-	 *
-	 * ## Where the total comes from, and why it is not one answer
-	 *
-	 * | Threading | Page | Total |
-	 * |---|---|---|
-	 * | off | a `LIMIT` over the thread | that query's `found_posts` |
-	 * | on | a slice fetched by `post__in` | the length of the order it was sliced from |
-	 *
-	 * ⚠ **A threaded page cannot report its own total.** It is handed one page of IDs,
-	 * so `found_posts` is the size of the page however long the thread is — and a page
-	 * past the end is `post__in => array( 0 )` at `paged => 1`, which looks like a
-	 * first page that found nothing, so not even WordPress\RestContext's recount would
-	 * catch it. The app would be told the thread ends where it is standing.
-	 *
-	 * ## The forum scope is armed, and it is not what refuses a locked thread
-	 *
-	 * `Rest\AccessPolicy::topic()` has already ruled on this exact parent — including
-	 * a password anywhere in its forum chain, and including an author's own held
-	 * thread, which is why `scope_replies()` is deliberately not used here. The scope
-	 * added below therefore admits every reply under a topic that got this far, so the
-	 * page and the threaded total agree by construction. It stays armed all the same:
-	 * it costs one call, and it is what makes an imported reply whose `post_parent`
-	 * disagrees with its `_bbp_forum_id` fail closed — a short page, never a
-	 * disclosure.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param int $topic_id Thread whose replies are wanted.
 	 * @param int $page     1-based page number.
@@ -255,9 +123,7 @@ class CollectionRepository {
 	}
 
 	/**
-	 * One page of the topics carrying a tag, across every forum the reader may see.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param int $term_id  Tag to filter by.
 	 * @param int $page     1-based page number.
@@ -272,15 +138,7 @@ class CollectionRepository {
 	}
 
 	/**
-	 * One page of the tag vocabulary, with the counts that describe it.
-	 *
-	 * ⚠ Not routed through `Rest\CollectionVisibility`, and that is not an omission:
-	 * the scope arrives inside the seam's own query instead. `posts_where` narrows a
-	 * `WP_Query` over posts, and this is a grouped query over the taxonomy tables — a
-	 * marker on arguments no `WP_Query` will ever see would be a scope that silently
-	 * did nothing, which is the exact failure this repository exists to prevent.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param int $page     1-based page number.
 	 * @param int $per_page Terms per page, already bounded.
@@ -297,18 +155,7 @@ class CollectionRepository {
 	}
 
 	/**
-	 * The pinned topics a reader may actually see, supers first.
-	 *
-	 * ⚠ **Both queries are skipped when their `post__in` is empty.** `WP_Query` ignores
-	 * an empty `post__in` rather than matching nothing, so running either one on a
-	 * forum with no stickies would return *every topic on the site* as the pinned
-	 * prefix — and it would look like an ordering bug rather than a visibility one.
-	 *
-	 * ⚠ **And they are scoped like any other collection.** A super sticky is pinned
-	 * into every forum from wherever it lives, so an unscoped pinned query is a way to
-	 * read the title of a thread in a forum that is closed to you.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param int $forum_id Forum whose pinned topics are wanted.
 	 * @return int[]
@@ -323,9 +170,7 @@ class CollectionRepository {
 	}
 
 	/**
-	 * One pinned query's visible IDs, or none when it names no topics.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param array<string,mixed> $args Pinned query arguments.
 	 * @return int[]

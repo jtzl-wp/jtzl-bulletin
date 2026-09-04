@@ -11,108 +11,28 @@ namespace JTZL\Bulletin\View;
 use JTZL\Bulletin\WordPress\ContextInterface;
 
 /**
- * Tells the author their reply went somewhere, once, on the screen bbPress sends
- * them back to.
+ * Owns the one-time acknowledgement for held replies that are not visible.
  *
- * ## It speaks only where there is no row to speak
- *
- * `Query\PendingVisibility` puts a `pending` reply back in the thread for its author,
- * wearing an "Awaiting review" chip. That answers "where did it go" better than a
- * sentence does, and it answers it where the reader is already looking — bbPress
- * redirects them to `#post-{id}`, which is the row itself. So for that case this
- * renders **nothing**.
- *
- * ⚠ **Measured, not assumed** (2026-08-15, on the fixture). Built to fire in every held
- * case — the literal reading of §3 decision 6 — the sentence and the chip land about
- * 40px apart saying the same two words, because a held reply is always the newest post
- * in the thread and the composer sits directly under it. Two things saying "awaiting
- * review" inside one screen-height is the clutter this product exists to remove.
- * Narrowed on Yoren's call, 2026-08-15; decision 6's requirement that *one* message
- * covers pending and spam alike is untouched.
- *
- * What is left for it are the two cases where nothing is visible at all:
- *
- * - **Spam.** Never shown back, deliberately — a spammed reply reappearing is a free
- *   tuning oracle for whoever wrote it.
- * - **Anonymous.** `post_author = 0` and the identity in post meta, so there is no
- *   author for the widening to match; the documented carve-out (§3 decision 6).
- *
- * In both, bbPress redirects to an anchor for a post no query will return, and the
- * thread visibly does not contain what was just written.
- *
- * ## One message for both, and it says the true, useless-to-a-spammer thing
- *
- * Settled by Yoren, 2026-08-14. Naming spam is the one message with a negative
- * expected return: a real member cannot act on it, and a spammer gets a tuning
- * signal. "Awaiting review" is true of both — a held reply *is* awaiting review.
- *
- * ## A query argument, not a transient
- *
- * Stateless, so it cannot be delivered to the wrong reader, survive a page they did
- * not ask for, or need cleaning up. Read as a **presence flag only** — the value is
- * never echoed and never distinguishes the two states — and stripped from the address
- * bar by `reading.ts` after the render, so a reload or a shared link does not
- * re-announce it.
- *
- * @since 0.5.0
+ * Pending replies already visible to their author need no duplicate notice. Spam
+ * and anonymous replies share neutral wording to avoid exposing spam decisions.
  */
 class HeldNotice {
 
-	/**
-	 * The query argument carrying the acknowledgement.
-	 *
-	 * @var string
-	 */
 	public const FLAG = 'bltn_held';
 
-	/**
-	 * The id of the acknowledgement, and the fragment the redirect aims at.
-	 *
-	 * @since 0.5.2
-	 *
-	 * @var string
-	 */
 	public const ANCHOR = 'bltn-held';
 
-	/**
-	 * WordPress/bbPress seam.
-	 *
-	 * @var ContextInterface
-	 */
 	private ContextInterface $wp;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.5.0
-	 *
-	 * @param ContextInterface $wp WordPress/bbPress seam.
-	 */
 	public function __construct( ContextInterface $wp ) {
 		$this->wp = $wp;
 	}
 
 	/**
-	 * Flag the redirect when the reply just written will be nowhere on the screen it
-	 * lands on. Hooked on `bbp_new_reply_redirect_to`.
+	 * Mark redirects only when the submitted reply will not be visible.
 	 *
-	 * ⚠ **The decision is made here and only here, because this is the one moment
-	 * that holds all three facts**: the reply's status, its author, and who is asking.
-	 * The alternative — letting the renderer notice whether a held row was printed —
-	 * would carry state from the replies loop to the compose slot to answer a
-	 * question that was already answerable at the redirect.
-	 *
-	 * The public-status test asks bbPress's list rather than naming `pending` and
-	 * `spam`, for the same reason `View\AuthorEdit` asks it: the question is "may
-	 * anyone else see this", and a site that adds a status to bbPress's moderation
-	 * vocabulary gets the acknowledgement without editing this class.
-	 *
-	 * @since 0.5.0
-	 *
-	 * @param mixed $url         Where bbPress is about to send the author.
-	 * @param mixed $redirect_to The reader's own requested destination, unused here.
-	 * @param mixed $reply_id    The reply just written.
-	 * @return mixed
+	 * The redirect hook is the only point with the reply status, author, and current
+	 * user. Public statuses come from bbPress so custom moderation states still work.
 	 */
 	public function filter_redirect( $url, $redirect_to = null, $reply_id = null ) {
 		unset( $redirect_to );
@@ -123,33 +43,18 @@ class HeldNotice {
 
 		$reply = (int) $reply_id;
 
-		// Published: nothing happened that is worth saying.
 		if ( in_array( $this->wp->get_post_status( $reply ), $this->wp->get_public_reply_statuses(), true ) ) {
 			return $url;
 		}
 
-		// Held, and its author will meet the row itself — chip and all — at the anchor
-		// bbPress is sending them to. The row is the better message.
+		// The visible held row already explains its state to its author.
 		if ( $this->shown_back( $reply ) ) {
 			return $url;
 		}
 
 		/*
-		 * ⚠ **bbPress's anchor is replaced, not kept, and this is the whole of #119.**
-		 * It points at `#post-{id}` — and reaching this line has already established
-		 * that no query will return that post, because that is what the two tests
-		 * above decided. So the fragment names a row nobody can see, the browser
-		 * finds nothing to scroll to, and the reader lands at the TOP of the thread
-		 * with the one sentence written for them at the foot. Measured on the fixture
-		 * at 390x844: `scrollTop 0` of 2217, and 0 visible pixels of the note.
-		 *
-		 * Dropping the fragment does not fix that — it only stops the URL lying. The
-		 * reader still lands at the top, because the top is where a fragmentless URL
-		 * lands. So it is re-aimed at the acknowledgement itself, which `render()`
-		 * gives the matching id. Measured after: `scrollTop 1445`, the whole note on
-		 * screen, moved by ordinary fragment navigation with no script involved —
-		 * which is the point. Every client-side alternative fails toward "the
-		 * acknowledgement is invisible", and that is the bug.
+		 * The bbPress post fragment points to a reply excluded from the query. Target
+		 * the acknowledgement instead so normal browser fragment navigation reveals it.
 		 */
 		$flagged = $this->wp->add_query_arg( self::FLAG, '1', $this->without_fragment( $url ) );
 
@@ -159,11 +64,7 @@ class HeldNotice {
 	/**
 	 * The URL up to its fragment.
 	 *
-	 * Done here rather than by letting `add_query_arg()` juggle it. Core does handle a
-	 * fragment correctly — it splits one off, appends to the query and puts it back,
-	 * and `HeldNoticeRedirectTest` still asserts that because it is core behaviour this
-	 * file sits on. But this method wants the fragment **gone**, not preserved, so
-	 * removing it first means the result never depends on that behaviour at all.
+	 * Remove the fragment before add_query_arg(), which otherwise preserves it.
 	 *
 	 * @since 0.5.2
 	 *
@@ -177,19 +78,10 @@ class HeldNotice {
 	}
 
 	/**
-	 * Whether Query\PendingVisibility will put this reply back in the thread for the
-	 * reader who wrote it.
+	 * Whether pending visibility will show this reply to its author.
 	 *
-	 * The same three conditions that class widens on, in the same order: the status it
-	 * admits, an author to match, and that author being the one reading. Stated twice
-	 * rather than shared, and that is the safer duplication — this copy only decides
-	 * whether a sentence appears, so if the two ever drift the cost is a message that
-	 * is redundant or missing, never a row that is disclosed.
-	 *
-	 * @since 0.5.0
-	 *
-	 * @param int $reply_id Reply just written.
-	 * @return bool
+	 * Keep this duplicate check local: drift can only affect the notice, not disclose
+	 * a reply.
 	 */
 	private function shown_back( int $reply_id ): bool {
 		$author = $this->wp->get_post_author( $reply_id );
@@ -210,17 +102,8 @@ class HeldNotice {
 		}
 
 		/*
-		 * The id is load-bearing: `filter_redirect()` aims the redirect's fragment at
-		 * it, so a rename here without a rename there returns the reader to the top of
-		 * the thread with nothing to see — the exact defect #119 closed. The constant
-		 * is why they cannot drift.
-		 *
-		 * `tabindex="-1"` so the fragment target can take focus rather than only being
-		 * scrolled to. A browser focuses a fragment target when it is focusable, which
-		 * puts a screen reader on the sentence instead of leaving it to notice a
-		 * `role="status"` region that was already present at load and therefore never
-		 * "changed". bbPress marks its own notices the same way
-		 * (`form-topic-split.php:100`).
+		 * The redirect targets this ID. A focusable fragment moves assistive technology
+		 * to a status region that was already present when the page loaded.
 		 */
 		printf(
 			'<p id="%1$s" class="bltn-compose__note bltn-compose__note--held" role="status" tabindex="-1">%2$s</p>',

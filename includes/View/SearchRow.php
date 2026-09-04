@@ -12,61 +12,13 @@ namespace JTZL\Bulletin\View;
  * Renders one result, whatever kind of thing it is. bbPress uses three templates
  * here — loop-search-forum, loop-search-topic, loop-search-reply — and they differ
  * enough that a forum result, a thread and a reply read as three unrelated screens
- * spliced together. One row, filled differently, is what makes a result list
- * scannable: the reader's eye learns the shape once.
- *
- * ## The kind is part of the meta line, not a label above the title
- *
- * A result list is the one place two rows can carry the *same* title honestly: a
- * thread matches, and so do three replies inside it, and all four are titled with
- * that thread. Unlabelled they read as a duplication bug. So a kind is not
- * decoration here — it is the only thing telling those rows apart.
- *
- * It goes where View\ThreadRow already puts a qualifier, at the head of the meta
- * line, for the reason written there: every row starts its meta at the same x, so
- * a leading word is found by scanning a column without reading any of it. That
- * costs no extra line and no new idiom, where a label above the title would have
- * cost both.
- *
- * ## Three lines, and the third one earns its place differently each time
- *
- * A thread list is browsed, and a title plus freshness is the whole decision — so
- * it has no third line. A result list is triaged against terms the reader just
- * typed, and every kind of result has one more thing worth knowing before the tap:
- * a thread and a forum have words the reader has not seen, and a reply has a thread
- * it belongs to (View\SearchList picks which). One class holds it, because it is one
- * position in one shape.
- *
- * It sits below the meta rather than above it, unlike View\ForumRow's description.
- * The kind qualifies the headline and belongs against it; the third line is what
- * remains once both have been read.
- *
- * ## The terms are marked, in both text slots
- *
- * The headline and the supporting line each go through View\TermHighlighter, which
- * escapes them and wraps what matched. The two are marked together on purpose: which
- * of them holds the match is not a fact about the result, it is a fact about the kind
- * — a reply's words are its headline while a thread's are its supporting line — so
- * marking one and not the other would leave half the list looking unmatched.
  *
  * @since 0.3.0
  */
 class SearchRow {
 
-	/**
-	 * Search-term marker (also the escaper for the two text slots).
-	 *
-	 * @var TermHighlighter
-	 */
 	private TermHighlighter $marks;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.3.0
-	 *
-	 * @param TermHighlighter $marks Search-term marker.
-	 */
 	public function __construct( TermHighlighter $marks ) {
 		$this->marks = $marks;
 	}
@@ -102,14 +54,6 @@ class SearchRow {
 
 	/**
 	 * Echo the row's meta line: kind, then closed, then author, then date.
-	 *
-	 * Closed sits second here, where View\ThreadRow and View\ForumRow lead with it.
-	 * Both want the same slot for the same reason — a word at the head of the meta
-	 * column is found by scanning without reading — and the kind has the stronger
-	 * claim on a result list, being the only thing that tells two rows with the
-	 * same title apart. Second is close enough to still be found beside it, and it
-	 * keeps closed away from the date, the one field it contradicts, which is what
-	 * issue #38 actually asked for.
 	 *
 	 * @since 0.3.0
 	 *

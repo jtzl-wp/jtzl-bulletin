@@ -11,9 +11,7 @@ namespace JTZL\Bulletin;
 use DI\Container;
 
 /**
- * Lazy singleton holder for the DI container, with setters that let tests inject
- * or reset it. Holds no business logic — the wiring lives in ContainerFactory
- * and the hook registration in Bootstrap.
+ * Lazy singleton holder for the DI container. Tests can replace or reset it.
  *
  * @since 0.1.0
  */

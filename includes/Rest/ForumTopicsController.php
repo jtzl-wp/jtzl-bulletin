@@ -16,101 +16,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * `GET|POST /forums/{id}/topics` — what is in a forum, and putting something in it.
- *
- * ## One path, two handlers
- *
- * This is one of the two routes in the API whose value is a numerically keyed *list* of
- * handler groups rather than a single one: reading a forum's threads and starting one
- * are the same resource seen from either side, and WordPress dispatches between them by
- * verb. (The state routes look different — `PUT`/`DELETE` on a subscription share one
- * callback, so they are a single group naming both verbs.)
- *
- * ⚠ **The forum is ruled on before its threads are queried**, and its refusal is
- * returned unchanged, so this collection inherits the singular forum route's 404 and its
- * 403 behind a password. A thread list under a forum the reader may not know about is a
- * table of contents for it, and the titles are most of what its privacy was protecting.
- *
- * ## Its own controller, not Rest\ForumController's fourth route
- *
- * A forum's own record — the hierarchy, the singular route, the subscription — is one
- * thing; its contents are another, and the write half makes that plain: creating a
- * thread is a *topic* lifecycle that happens to be addressed through a forum. Keeping
- * both halves of the path together is what matters, because a path answered by one class
- * on GET and another on POST is worse than either arrangement.
- *
- * @since 0.6.0
  */
 class ForumTopicsController implements ControllerInterface {
 
-	/**
-	 * Who may have this forum.
-	 *
-	 * @var AccessPolicy
-	 * @since 0.6.0
-	 */
 	private AccessPolicy $access;
 
-	/**
-	 * Collection arguments.
-	 *
-	 * @var CollectionRepository
-	 * @since 0.6.0
-	 */
 	private CollectionRepository $collections;
 
-	/**
-	 * Topic rows.
-	 *
-	 * @var TopicSerializer
-	 * @since 0.6.0
-	 */
 	private TopicSerializer $topics;
 
-	/**
-	 * What a request may ask for.
-	 *
-	 * @var RequestBounds
-	 * @since 0.6.0
-	 */
 	private RequestBounds $bounds;
 
-	/**
-	 * What a write carries.
-	 *
-	 * @var WriteFields
-	 * @since 0.6.0
-	 */
 	private WriteFields $fields;
 
-	/**
-	 * What comes back.
-	 *
-	 * @var ResponseFactory
-	 * @since 0.6.0
-	 */
 	private ResponseFactory $responses;
 
-	/**
-	 * Starting a thread.
-	 *
-	 * @var TopicMutationService
-	 * @since 0.6.0
-	 */
 	private TopicMutationService $mutations;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.6.0
-	 *
-	 * @param AccessPolicy         $access      Who may have this forum.
-	 * @param CollectionRepository $collections Collection arguments.
-	 * @param TopicSerializer      $topics      Topic rows.
-	 * @param RequestBounds        $bounds      What a request may ask for.
-	 * @param WriteFields          $fields      What a write carries.
-	 * @param ResponseFactory      $responses   What comes back.
-	 * @param TopicMutationService $mutations   Starting a thread.
-	 */
 	public function __construct(
 		AccessPolicy $access,
 		CollectionRepository $collections,
@@ -130,9 +52,7 @@ class ForumTopicsController implements ControllerInterface {
 	}
 
 	/**
-	 * The routes this controller answers.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @return array<string,array<mixed>>
 	 */
@@ -161,9 +81,7 @@ class ForumTopicsController implements ControllerInterface {
 	}
 
 	/**
-	 * One page of a forum's thread list.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param \WP_REST_Request $request Request.
 	 * @return \WP_REST_Response|\WP_Error
@@ -190,18 +108,7 @@ class ForumTopicsController implements ControllerInterface {
 	}
 
 	/**
-	 * Start a thread in this forum.
-	 *
-	 * ⚠ **The ID comes off the path, never off `get_param()`.** WordPress resolves the
-	 * query string *ahead* of the path, so a write reading the parameter would create the
-	 * thread in whichever forum `?id=` named. `Rest\RequestBounds::id()` is the only
-	 * reader that cannot be steered that way.
-	 *
-	 * Every gate — capability, category, closed, private, hidden, password — is
-	 * Rest\TopicMutationService's, because they are the *write* handler's gates and the
-	 * point of this route is that it refuses exactly what bbPress would refuse.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param \WP_REST_Request $request Request.
 	 * @return \WP_REST_Response|\WP_Error

@@ -13,10 +13,8 @@ use JTZL\Bulletin\View\ThreadList;
 use JTZL\Bulletin\WordPress\ContextInterface;
 
 /**
- * The forum screen's half of load-more, sibling to LoadRepliesController: same
- * bbPress AJAX router (bbp_get_ajax_url() dispatches to `bbp_ajax_{action}`),
- * same paging contract — page 1 ships with the document, so load-more starts at
- * page 2 — and the same rows, rendered through View\ThreadList.
+ * Continues a forum's threads through bbPress's front-end AJAX router.
+ * Page 1 ships with the document; later pages use the same ThreadList rows.
  *
  * @since 0.1.0
  */
@@ -50,16 +48,6 @@ class LoadTopicsController {
 	 */
 	private RequestedPage $paging;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.1.0
-	 *
-	 * @param ContextInterface $wp      WordPress/bbPress seam.
-	 * @param TopicQuery       $query   Shared topic-query builder.
-	 * @param ThreadList       $threads Thread list renderer.
-	 * @param RequestedPage    $paging  Shared reader and bound for `paged`.
-	 */
 	public function __construct( ContextInterface $wp, TopicQuery $query, ThreadList $threads, RequestedPage $paging ) {
 		$this->wp      = $wp;
 		$this->query   = $query;
@@ -77,29 +65,18 @@ class LoadTopicsController {
 		$forum_id = isset( $_POST['forum'] ) ? (int) $_POST['forum'] : 0;
 		$page     = $this->paging->requested();
 
-		// send_json_error() ends the request, so there is nothing to return to. A
-		// forum the caller may not view answers exactly like one that doesn't exist
-		// — bbPress's own singular views present inaccessible private/hidden
-		// resources as not found, and this route must not let an anonymous caller
-		// distinguish "no such forum" from "a forum you can't see" (issue #78).
-		// Gating on capability rather than the forum's status label also means a
-		// keymaster, moderator, or member of a private forum still gets their
-		// threads, while an unauthorised visitor is refused — including for a
-		// public forum nested under a restricted ancestor.
+		// Match bbPress by making missing and inaccessible forums indistinguishable.
+		// Capability checks retain access for authorized private-forum readers.
 		if ( ! $this->forum_is_readable( $forum_id ) ) {
 			$this->wp->send_json_error( array( 'message' => 'bad_forum' ), 400 );
 		}
 
-		// A password-protected forum masks its listing behind the password form on
-		// bbPress's own view, so the forum screen declines takeover there (see
-		// ReadingScreen). This continuation must refuse the same way rather than
-		// stream the threads bbPress withholds until the password is supplied.
+		// Do not expose threads hidden by the singular view's password form.
 		if ( $this->wp->is_password_required( $forum_id ) ) {
 			$this->wp->send_json_error( array( 'message' => 'protected' ), 403 );
 		}
 
-		// Then the page, after access and never before it: a reader who may not see
-		// this forum is told that, whatever page they asked for.
+		// Check access before paging so an inaccessible forum does not disclose range.
 		$this->paging->guard( $page );
 
 		$html = $this->threads->capture( $this->query->args( $forum_id, $page ) );
@@ -119,7 +96,7 @@ class LoadTopicsController {
 	 * Whether the request names a real forum the caller may view.
 	 *
 	 * Deliberately answers a nonexistent ID and an existing-but-inaccessible one
-	 * the same way, so the caller learns nothing about which it was (issue #78).
+	 * the same way, so the caller learns nothing about which it was.
 	 *
 	 * @since 0.3.0
 	 *

@@ -11,29 +11,6 @@ namespace JTZL\Bulletin\View;
 /**
  * Wraps the terms a reader searched for in `<mark>`, and escapes everything else.
  *
- * A result list is read differently from every other list in the product. A thread
- * list is browsed — the reader is choosing — but a result list is *triaged against
- * words the reader typed a second ago*, and until now nothing on the row said which
- * words those were. On a fixture search for "grind", fifteen rows came back with
- * the term unmarked in all of them, so confirming a row matched meant reading it.
- *
- * ## Escaping is this class's job, not the caller's
- *
- * The two cannot be separated: highlighting means inserting markup into text, so
- * whoever inserts it has to be the one that escapes around it. The text is split on
- * the terms **first**, then every piece is escaped individually and only the
- * delimiters are wrapped — so the sole HTML in the output is the two literal tags
- * this file writes. A result's own words never reach the page unescaped, and a term
- * cannot smuggle markup in through the pattern either, because `preg_quote()` is
- * what builds it.
- *
- * ## Substring, not whole word
- *
- * Deliberate, and it is not a style choice: WordPress's search is `LIKE %term%`, so
- * a search for "grind" is *why* "grinders" and "grinding" are in the result set.
- * Marking only whole words would leave the rows that matched looking unmatched,
- * which is worse than not marking at all — it would read as a bug in the search.
- *
  * @since 0.3.0
  */
 class TermHighlighter {

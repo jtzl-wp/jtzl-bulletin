@@ -23,86 +23,22 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Marks an unread row on the reskin tier by adding a class to the markup bbPress
  * prints, so the dot is drawn in CSS.
  *
- * This is what makes the SoW's "unread accent shown **throughout the interface**"
- * affordable. Favourites, subscriptions, a member's topics and replies, tag archives
- * and registered views are all bbPress's own loops; rebuilding their markup to insert
- * a dot would be six screens of bespoke HTML, against one filter and one CSS rule
- * here — and it keeps the standing preference for native markup styled with CSS.
- *
- * **Scope is the reason this class exists rather than a closure in Bootstrap.**
- * `bbp_get_topic_class()` runs wherever bbPress prints a topic's classes, which
- * includes screens that are not lists at all, and `bbp_get_forum_class()` the same
- * for forums. Unscoped, the accent would land on the single-topic wrapper of a
- * takeover screen — where our own markup already carries it — and on any theme or
- * plugin that calls those functions outside our shell. So the tier is the scope,
- * exactly as Query\StableOrder draws it: reskin only.
- *
- * **Both loops are primed in one query each.** bbPress hands over the finished query
- * on `bbp_has_topics` / `bbp_has_forums`, before a single row has rendered, so the
- * whole page's read state is resolved there and every per-row call is a lookup in an
- * array. Answering per row would be one query per row.
- *
  * @since 0.5.0
  */
 class UnreadClasses {
 
-	/**
-	 * Class added to an unread row.
-	 *
-	 * @var string
-	 * @since 0.5.0
-	 */
 	public const UNREAD_CLASS = 'bltn-is-unread';
 
-	/**
-	 * WordPress/bbPress seam.
-	 *
-	 * @var ContextInterface
-	 * @since 0.5.0
-	 */
 	private ContextInterface $wp;
 
-	/**
-	 * Screen-tier classifier.
-	 *
-	 * @var ScreenClassifier
-	 * @since 0.5.0
-	 */
 	private ScreenClassifier $screen;
 
-	/**
-	 * Read state.
-	 *
-	 * @var ReadState
-	 * @since 0.5.0
-	 */
 	private ReadState $reads;
 
-	/**
-	 * Unread topics for this request, keyed by topic ID.
-	 *
-	 * @var array<int,bool>
-	 * @since 0.5.0
-	 */
 	private array $topics = array();
 
-	/**
-	 * Unread forums for this request, keyed by forum ID.
-	 *
-	 * @var array<int,bool>
-	 * @since 0.5.0
-	 */
 	private array $forums = array();
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.5.0
-	 *
-	 * @param ContextInterface $wp     WordPress/bbPress seam.
-	 * @param ScreenClassifier $screen Screen-tier classifier.
-	 * @param ReadState        $reads  Read state.
-	 */
 	public function __construct( ContextInterface $wp, ScreenClassifier $screen, ReadState $reads ) {
 		$this->wp     = $wp;
 		$this->screen = $screen;

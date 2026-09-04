@@ -16,97 +16,21 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * `GET|PATCH /topics/{id}` — one thread, and its author changing it.
- *
- * ## What used to be here
- *
- * A tag's threads and the three personal-state routes. Adding the edit put this class
- * at coupling 11 and 355 lines against gates of 10 and 350, and both moved: `GET
- * /topics?tag=` to Rest\TagController, whose collaborators it already shared and whose
- * resource it always was, and the state routes to Rest\TopicStateController. What is
- * left is one thread: the document, and the one person entitled to change it.
- *
- * ## The singular route carries the opening post; a collection does not
- *
- * A list of fifty threads that each carried their opening post would be a large response
- * to render a title. `content` is a property of reading one thread, which is this route.
- *
- * ## Public to read, author-only to write
- *
- * The read is declared through `Rest\RequestBounds::readable_route()`, which owns the
- * open permission callback and the reason for it; `Rest\AccessPolicy::topic()` answers
- * per-row instead. The edit is the only route on this class with a real permission
- * callback, and it is `Rest\AccessPolicy::can_edit_topic()` — **not**
- * `bbp_get_topic_edit_link()` alone, which a moderator also satisfies. v1 has no
- * moderation surface, so a moderator editing somebody else's thread has no route here.
- *
- * ⚠ **An author cannot edit their own *held* thread**, because that policy admits only a
- * post whose stored status is public. Releasing a pending post is a moderator's
- * decision, and an edit that could be used to make it is a way around one.
- *
- * @since 0.6.0
  */
 class TopicController implements ControllerInterface {
 
-	/**
-	 * Who may read what.
-	 *
-	 * @var AccessPolicy
-	 * @since 0.6.0
-	 */
 	private AccessPolicy $access;
 
-	/**
-	 * Topic rows.
-	 *
-	 * @var TopicSerializer
-	 * @since 0.6.0
-	 */
 	private TopicSerializer $topics;
 
-	/**
-	 * What a request may ask for.
-	 *
-	 * @var RequestBounds
-	 * @since 0.6.0
-	 */
 	private RequestBounds $bounds;
 
-	/**
-	 * What comes back.
-	 *
-	 * @var ResponseFactory
-	 * @since 0.6.0
-	 */
 	private ResponseFactory $responses;
 
-	/**
-	 * The fields an edit carries.
-	 *
-	 * @var WriteFields
-	 * @since 0.6.0
-	 */
 	private WriteFields $fields;
 
-	/**
-	 * Editing a thread, as its author.
-	 *
-	 * @var TopicEditService
-	 * @since 0.6.0
-	 */
 	private TopicEditService $edits;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.6.0
-	 *
-	 * @param AccessPolicy     $access      Who may read what.
-	 * @param TopicSerializer  $topics      Topic rows.
-	 * @param RequestBounds    $bounds      What a request may ask for.
-	 * @param ResponseFactory  $responses   What comes back.
-	 * @param WriteFields      $fields      The fields an edit carries.
-	 * @param TopicEditService $edits       Editing a thread, as its author.
-	 */
 	public function __construct(
 		AccessPolicy $access,
 		TopicSerializer $topics,
@@ -124,15 +48,13 @@ class TopicController implements ControllerInterface {
 	}
 
 	/**
-	 * The routes this controller answers.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @return array<string,array<mixed>>
 	 */
 	public function routes(): array {
 		return array(
-			// Two handlers, one path: reading a thread and its author editing it.
+
 			'/topics/(?P<id>[\d]+)' => array(
 				$this->bounds->readable_route(
 					array( $this, 'get_item' ),
@@ -156,9 +78,7 @@ class TopicController implements ControllerInterface {
 	}
 
 	/**
-	 * One thread.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param \WP_REST_Request $request Request.
 	 * @return \WP_REST_Response|\WP_Error
@@ -175,30 +95,7 @@ class TopicController implements ControllerInterface {
 	}
 
 	/**
-	 * Whether this reader may edit this thread.
-	 *
-	 * ⚠ **A thread that does not exist answers 403, where reading one answers 404**, and
-	 * the asymmetry is deliberate. `Rest\AccessPolicy::can_edit_topic()` gives a plain
-	 * yes or no, and every no this route can produce — not signed in, not the author, a
-	 * moderator, the edit window shut, a thread that was never there — comes back as the
-	 * same refusal. Telling those apart would let anybody enumerate which IDs exist and
-	 * which of them they wrote, by watching the status change.
-	 *
-	 * ⚠ **Readability is asked first, and it is the gate the website never needed.**
-	 * bbPress's own `edit_topic` capability asks about authorship and the edit window
-	 * and nothing else — it never looks at forum visibility or a password — because on
-	 * the website an edit form is reached *through* the thread, and a thread in a hidden
-	 * forum does not render, so the form cannot be asked for. A REST route is addressed
-	 * by ID, so that reachability step does not exist and the check has to be written
-	 * out: without it an author kept editing their own post in a forum that had since
-	 * been hidden or locked, and the 200 handed them back a live `reply_count` and
-	 * `last_active` from a forum they could no longer open.
-	 *
-	 * The refusal is collapsed into the same `forbidden` as every other one. A
-	 * `password_required` here would tell an author which of the two happened, and this
-	 * route has promised one answer.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param \WP_REST_Request $request Request.
 	 * @return true|\WP_Error
@@ -222,9 +119,7 @@ class TopicController implements ControllerInterface {
 	}
 
 	/**
-	 * Edit a thread, as its author.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param \WP_REST_Request $request Request.
 	 * @return \WP_REST_Response|\WP_Error

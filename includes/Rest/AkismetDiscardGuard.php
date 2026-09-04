@@ -19,45 +19,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * Stops only the exact strict-discard branch before bbPress redirects and exits.
- *
- * @since 0.6.0
  */
 final class AkismetDiscardGuard {
 
-	/**
-	 * Akismet's final spam-enforcement decision point.
-	 *
-	 * @var string
-	 */
 	private const BYPASS_HOOK = 'bbp_bypass_spam_enforcement';
 
-	/**
-	 * WordPress/bbPress seam.
-	 *
-	 * @var ContextInterface
-	 */
 	private ContextInterface $wp;
 
-	/**
-	 * REST-side WordPress/bbPress seam.
-	 *
-	 * @var RestContextInterface
-	 */
 	private RestContextInterface $rest;
 
-	/**
-	 * Constructor.
-	 *
-	 * @param ContextInterface     $wp   WordPress/bbPress seam.
-	 * @param RestContextInterface $rest REST-side WordPress/bbPress seam.
-	 */
 	public function __construct( ContextInterface $wp, RestContextInterface $rest ) {
 		$this->wp   = $wp;
 		$this->rest = $rest;
 	}
 
 	/**
-	 * Run a native handler and report whether Akismet discarded its write.
+	 * Data contract.
 	 *
 	 * @param callable():void $handler Native handler invocation.
 	 * @return bool
@@ -92,12 +69,6 @@ final class AkismetDiscardGuard {
 		return false;
 	}
 
-	/**
-	 * Whether the current value carries both strict-discard signals.
-	 *
-	 * @param mixed $filtered Post data after Akismet's filter.
-	 * @return bool
-	 */
 	private function discarding( $filtered ): bool {
 		if ( ! is_array( $filtered ) || ! $this->rest->is_akismet_strict() ) {
 			return false;

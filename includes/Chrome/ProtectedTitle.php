@@ -12,83 +12,21 @@ use JTZL\Bulletin\Screen\ScreenClassifier;
 use JTZL\Bulletin\Screen\ScreenTier;
 
 /**
- * Stops WordPress's `Protected: %s` prefix becoming part of a forum's name.
+ * Owns protected-title formatting on Bulletin screens.
  *
- * `get_the_title()` prepends it whenever a post carries a password — and Bulletin
- * renders `the_title`-filtered forum titles (`bbp_get_forum_title()`), so on a site
- * with one password-protected forum the string arrived as UI copy in the document
- * title, the app bar, the forum heading, a sub-forum row, the reading view's forum
- * kicker, and mid-sentence on every reskin card ("in: Protected: Espresso
- * Machines"). Measured on the fixture: 48 instances of that last one across three
- * archive routes.
- *
- * Two things make it worth removing rather than living with:
- *
- * 1. **It is permanently wrong for the people who have access.** Core keys the
- *    prefix on `post_password` being *set*, not on whether the visitor has
- *    *supplied* it — verified by unlocking the fixture forum and re-probing, where
- *    every screen beneath it still read "Protected:". So the members for whom the
- *    forum is simply a forum are the ones told otherwise, forever.
- * 2. **It is admin vocabulary on a reading screen.** The prefix exists for an
- *    editor scanning a post list. This design system already states a post's
- *    status the way it wants to — one word in a meta line that exists, which is
- *    what `Closed` does (see DESIGN.md, "Closed is a fact, not a demotion"). A
- *    prefix welded to the name says it in the one place that cannot be styled,
- *    truncated, or translated as a status.
- *
- * The protection itself is untouched: this changes a label, never a capability.
- * WordPress still gates the content, `post_password_required()` still answers the
- * same, and the in-shell password form (issue #18) still renders — the screen just
- * names the forum instead of narrating its configuration.
- *
- * Scoped to `ScreenTier::None` passing through, on the same principle as
- * Chrome\AdminBar: off our screens — every non-bbPress page, and forum create/edit —
- * WordPress's default is left alone.
- *
- * ⚠ **0.5.0 brought topic and reply edit onto the reskin tier, so the prefix is
- * stripped there now too.** Checked before allowing it rather than after: neither
- * `form-topic.php` nor `form-reply.php` carries a password field — both offer a
- * status dropdown and nothing else about visibility — so `post_password` is not
- * editable from these screens and the prefix was never an editing affordance on
- * them. It appeared only in the chrome around the form (the tab, the app bar, the
- * breadcrumb), which is the same place, and for the same reason, it was removed from
- * everywhere else.
- *
- * @since 0.3.0
- * @since 0.5.0 The topic and reply edit forms reskin, so the prefix goes there too.
+ * Filters are scoped to rendering because bbPress hooks can run during output;
+ * cleanup in `finally` prevents title filters leaking into the rest of the request.
  */
 class ProtectedTitle {
 
-	/**
-	 * Screen-tier classifier.
-	 *
-	 * @var ScreenClassifier
-	 */
 	private ScreenClassifier $screen;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.3.0
-	 *
-	 * @param ScreenClassifier $screen Screen-tier classifier.
-	 */
 	public function __construct( ScreenClassifier $screen ) {
 		$this->screen = $screen;
 	}
 
 	/**
 	 * Drop the prefix on screens Bulletin owns.
-	 *
-	 * Returns the bare `%s` placeholder rather than an empty string: this is a
-	 * `sprintf()` format that core applies to the title, so emptying it would erase
-	 * the title along with the prefix.
-	 *
-	 * The incoming value is untyped for the reason Chrome\AdminBar gives — a filter
-	 * chain guarantees nothing about what an earlier callback returned, and a
-	 * `string` parameter would turn somebody else's missing `return` into a fatal on
-	 * every forum page. A non-string is replaced rather than passed on, since the
-	 * only thing core can do with one is fail.
 	 *
 	 * @since 0.3.0
 	 *

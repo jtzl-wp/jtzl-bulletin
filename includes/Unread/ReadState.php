@@ -21,87 +21,20 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Answers "has this member read this?" for topics and forums, and records that they
  * have. Everything the unread accent knows comes from here.
  *
- * **A topic is unread when the member has no row for it, or when the topic has moved
- * since the row was written** — bbPress's `(_bbp_last_active_time, _bbp_last_active_id)`
- * past the stored `(read_time, read_id)`. The ID is the tiebreak, and it is not
- * decoration: last-active is stamped to the second, so without it a second reply
- * inside one second is "not newer than" what was read and the thread stays quietly
- * clear. A forum is unread when any topic inside it, or inside any forum beneath it,
- * is.
- *
- * Two properties are load-bearing and both are about the same thing — this runs on
- * every list a reader sees:
- *
- * - **Every lookup is batched.** `unread_topics()` and `unread_forums()` take the
- *   whole set of IDs a screen is about to render and answer in a fixed number of
- *   queries, never one per row. The SoW promises the plugin "adds no theme weight to
- *   forum pages"; a per-row lookup is how that promise gets broken quietly, fifteen
- *   rows at a time.
- * - **There is exactly one resolver.** The page render and the load-more endpoints
- *   both reach the accent through this class, because both render their rows through
- *   View\ThreadList and View\ForumList, which call it. CLAUDE.md's reply-pagination
- *   trap is what happens when a page and its continuation answer the same question
- *   through two code paths.
- *
- * No REST assumptions anywhere in here: P5 exposes this class, it does not
- * reimplement it. Both shapes the app team asked about fall out of per-topic rows —
- * we return a flag, or they send a timestamp and we upsert it.
- *
  * @since 0.5.0
  */
 class ReadState {
 
-	/**
-	 * WordPress database handle.
-	 *
-	 * @var \wpdb
-	 * @since 0.5.0
-	 */
 	private \wpdb $wpdb;
 
-	/**
-	 * Schema definition, for the table name.
-	 *
-	 * @var Schema
-	 * @since 0.5.0
-	 */
 	private Schema $schema;
 
-	/**
-	 * WordPress/bbPress seam, for bbPress's post types and statuses.
-	 *
-	 * @var ContextInterface
-	 * @since 0.5.0
-	 */
 	private ContextInterface $wp;
 
-	/**
-	 * The forum hierarchy, for the roll-up.
-	 *
-	 * @var ForumTree
-	 * @since 0.5.0
-	 */
 	private ForumTree $tree;
 
-	/**
-	 * The shared movement comparison.
-	 *
-	 * @var ActivityComparison
-	 * @since 0.6.0
-	 */
 	private ActivityComparison $comparison;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.5.0
-	 *
-	 * @param \wpdb              $wpdb   WordPress database handle.
-	 * @param Schema             $schema Schema definition.
-	 * @param ContextInterface   $wp     WordPress/bbPress seam.
-	 * @param ForumTree          $tree       The forum hierarchy.
-	 * @param ActivityComparison $comparison The shared movement comparison.
-	 */
 	public function __construct( \wpdb $wpdb, Schema $schema, ContextInterface $wp, ForumTree $tree, ActivityComparison $comparison ) {
 		$this->wpdb       = $wpdb;
 		$this->schema     = $schema;
@@ -158,27 +91,8 @@ class ReadState {
 	/**
 	 * Which of these forums hold something unread for this member.
 	 *
-	 * Answered over the forum and everything beneath it, because the count beside it
-	 * is: View\ForumList's row shows `bbp_get_forum_topic_count()`, which includes
-	 * sub-forum topics. A dot that ignored sub-forums would contradict the number it
-	 * sits next to on a category — and a category, which holds no topics of its own,
-	 * would never light up at all.
-	 *
-	 * @since 0.5.0
-	 *
-	 * ## The optional scope
-	 *
-	 * The website asks this question of forums it is already rendering, so the rows it
-	 * asks about are rows the reader can see. The API asks it of a whole branch at
-	 * once, and a branch can contain a forum the reader may not open — one behind a
-	 * password, or beneath a forum behind one. Rolling those up would light a parent
-	 * for activity the reader cannot reach, which is a small disclosure with a large
-	 * shape: the dot says *something happened in there*.
-	 *
-	 * So a caller may hand over the forums it considers readable, and the roll-up is
-	 * intersected with that set before anything is asked of the database. Passing null
-	 * — every website caller — keeps the previous behaviour exactly. The existing SQL
-	 * already excludes a topic's own password; this excludes a branch by its forum.
+	 * Intersect API branches with readable forums to avoid disclosing protected activity.
+	 * A null allowlist preserves the website callers' existing behavior.
 	 *
 	 * @since 0.5.0
 	 *
@@ -204,7 +118,7 @@ class ReadState {
 			$scope   = array_values( array_filter( $scope, static fn( int $id ): bool => isset( $allowed[ $id ] ) ) );
 		}
 
-		// ⚠ forums_holding_unread() states an unempty precondition and would build
+		// forums_holding_unread() states an unempty precondition and would build
 		// `IN ( )` without it. A scope filtered down to nothing is an ordinary answer
 		// — a reader who may open none of these forums — not a caller's mistake.
 		if ( array() === $scope ) {
@@ -230,23 +144,6 @@ class ReadState {
 	/**
 	 * Record that a member has read a topic as far as the topic had got.
 	 *
-	 * Stamped with the topic's own last-active position rather than "now", so a reply
-	 * that lands while the page is open is still unread on the next visit instead of
-	 * being swallowed by the act of having been on the screen when it arrived.
-	 *
-	 * **The position can only move forward, and the statement is what enforces it.**
-	 * Two requests can carry two positions and arrive in either order — a phone that
-	 * retried on a flaky connection sends the older one second — so the comparison
-	 * belongs where the write happens rather than in a check before it. A position
-	 * that is not ahead of the stored one performs a harmless no-op update.
-	 *
-	 * ⚠ There is deliberately no read-before-write. The version of this that skipped
-	 * the write when the stored timestamp matched could not survive the ID: a second
-	 * reply in the same second leaves the timestamp identical and the ID higher, which
-	 * is exactly the case the skip declined to write. One statement is also cheaper
-	 * than the lookup it replaced, which matters — this is the one place the plugin
-	 * writes during a GET.
-	 *
 	 * @since 0.5.0
 	 *
 	 * @param int    $topic_id  Topic ID.
@@ -267,7 +164,7 @@ class ReadState {
 		// can enforce it in one statement and two concurrent requests cannot race into
 		// a duplicate.
 		//
-		// ⚠ read_id is assigned before read_time. Assignments in ON DUPLICATE KEY
+		// read_id is assigned before read_time. Assignments in ON DUPLICATE KEY
 		// UPDATE run in order and see each other's results, so comparing against
 		// read_time after GREATEST() had already advanced it would compare the new
 		// value against itself and drop the tiebreak.
@@ -327,19 +224,8 @@ class ReadState {
 	/**
 	 * Which of these forums hold at least one unread topic of their own.
 	 *
-	 * Sub-forums are not rolled up here — that is unread_forums()' job, and doing it
-	 * in SQL would mean either a recursive CTE (MySQL 8 only; bbPress supports 5.6)
-	 * or one query per level.
-	 *
-	 * @since 0.5.0
-	 *
-	 * ⚠ **$forum_ids must not be empty.** unread_forums() is the only caller and
-	 * guarantees it — it returns before reaching here when the list is empty, and what
-	 * it passes always contains the forums it was asked about. The guard that used to
-	 * stand here could therefore never fire, and an unreachable branch is a worse
-	 * protection than a stated precondition: it reads as covering a case that has been
-	 * thought about. A second caller passing an empty array would build `IN ( )` and
-	 * fail loudly, which is the right outcome for a caller that ignored this.
+	 * `$forum_ids` must not be empty; `unread_forums()` enforces this before SQL builds
+	 * the `IN` clause.
 	 *
 	 * @param array<int,int> $forum_ids Forum IDs, already cleaned, never empty.
 	 * @param int            $user_id   Member ID.

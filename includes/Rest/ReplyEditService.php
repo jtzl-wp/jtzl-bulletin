@@ -19,39 +19,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * Applies REST-only PATCH policy, then delegates the write to bbPress.
- *
- * @since 0.6.0
  */
 class ReplyEditService {
 
-	/**
-	 * WordPress/bbPress seam.
-	 *
-	 * @var ContextInterface
-	 */
 	private ContextInterface $wp;
 
-	/**
-	 * REST-side WordPress/bbPress seam.
-	 *
-	 * @var RestContextInterface
-	 */
 	private RestContextInterface $rest;
 
-	/**
-	 * Scoped native form-handler bridge.
-	 *
-	 * @var BbpFormHandlerBridge
-	 */
 	private BbpFormHandlerBridge $bridge;
 
-	/**
-	 * Constructor.
-	 *
-	 * @param ContextInterface     $wp     WordPress/bbPress seam.
-	 * @param RestContextInterface $rest   REST-side WordPress/bbPress seam.
-	 * @param BbpFormHandlerBridge $bridge Native handler bridge.
-	 */
 	public function __construct(
 		ContextInterface $wp,
 		RestContextInterface $rest,
@@ -63,10 +39,7 @@ class ReplyEditService {
 	}
 
 	/**
-	 * Edit a reply as its author.
-	 *
-	 * The author ID remains part of the stable service contract. The native handler
-	 * obtains the authoritative author from the stored reply and current-user context.
+	 * Data contract.
 	 *
 	 * @param int                 $reply_id  Reply being edited.
 	 * @param int                 $author_id Authenticated author ID.

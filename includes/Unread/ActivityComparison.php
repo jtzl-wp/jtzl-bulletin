@@ -32,7 +32,7 @@ class ActivityComparison {
 	/**
 	 * Whether the topic at `$alias` has moved past the reader's stored position.
 	 *
-	 * ⚠ Assumes the caller's query joins last-active time as `m`, last-active ID as
+	 * Assumes the caller's query joins last-active time as `m`, last-active ID as
 	 * `i`, and the reads table as `r`. Both callers are in this namespace and build
 	 * those joins immediately above the call.
 	 *

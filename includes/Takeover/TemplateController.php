@@ -13,11 +13,9 @@ use JTZL\Bulletin\Screen\ScreenTier;
 use JTZL\Bulletin\WordPress\ContextInterface;
 
 /**
- * Swaps the template on bbPress screens through bbPress's own `bbp_template_include`
- * filter (which sits on WordPress core's `template_include`): a takeover screen gets
- * our own minimal document (app.php), a reskin screen gets a chrome wrapper around
- * bbPress's own markup (reskin.php). Either way wp_head()/wp_footer() still fire, so
- * core plus other plugins keep working. Screens we don't own are returned untouched.
+ * Swaps templates through `bbp_template_include`. Takeover screens use app.php;
+ * reskin screens wrap bbPress markup with reskin.php. Both retain wp_head() and
+ * wp_footer(); unowned screens remain untouched.
  *
  * @since 0.1.0
  */
@@ -44,15 +42,6 @@ class TemplateController {
 	 */
 	private string $templates_dir;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.1.0
-	 *
-	 * @param ContextInterface $wp            WordPress/bbPress seam.
-	 * @param ScreenClassifier $screen        Screen-tier classifier.
-	 * @param string           $templates_dir Absolute templates directory (trailing slash).
-	 */
 	public function __construct( ContextInterface $wp, ScreenClassifier $screen, string $templates_dir ) {
 		$this->wp            = $wp;
 		$this->screen        = $screen;
@@ -84,15 +73,10 @@ class TemplateController {
 	/**
 	 * Prime the takeover before the template is chosen.
 	 *
-	 * Because bbPress attaches its theme-compat wrapper to `bbp_template_include`
-	 * at priority 4 — before our priority-20 override — removing it from inside
-	 * our override would be too late. We strip it here on template_redirect, which
-	 * runs before the template_include chain. (bbPress's own code sanctions this.)
+	 * Theme compatibility attaches at priority 4, before our priority-20
+	 * override. Remove it on template_redirect, before the filter chain starts.
 	 *
-	 * Only takeover screens strip theme-compat: they build their content from our
-	 * own loops, so bbPress's content injection is redundant. Reskin screens rely
-	 * on it — it is what buffers bbPress's own content-*.php part into the post
-	 * that reskin.php then prints — so it must stay.
+	 * Reskin screens retain theme compatibility because it supplies their content.
 	 *
 	 * @since 0.1.0
 	 */

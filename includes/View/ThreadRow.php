@@ -37,19 +37,7 @@ class ThreadRow {
 	}
 
 	/**
-	 * Echo the unread dot, or nothing.
-	 *
-	 * On its own line above the title, at the row's trailing edge — which is where the
-	 * approved prototype puts it, and not the same choice View\ForumRow makes. A forum
-	 * row leads with a heading and can hold the dot at the end of that line; a thread
-	 * row's title wraps to two or three lines, so a dot riding the end of the first one
-	 * would sit at a different height on every row. Given its own line it shares the
-	 * trailing edge with the forum rows' dots, so a column of them is scannable without
-	 * reading any of it. The empty flex box is what puts it there: `.bltn-row__dot`
-	 * carries `margin-inline-start: auto`, so with no title beside it the dot is pushed
-	 * the full width of the row.
-	 *
-	 * @since 0.5.0
+	 * The hidden text exposes unread state without relying on colour.
 	 *
 	 * @param bool $unread Whether the thread has posts this member has not read.
 	 */
@@ -65,16 +53,7 @@ class ThreadRow {
 	}
 
 	/**
-	 * Echo the row's meta line: closed, author, freshness, reply count.
-	 *
-	 * Closed leads it rather than trailing it. Every row starts its meta at the
-	 * same x, so a leading word is found by scanning a column without reading any
-	 * of it; trailing, it would sit beside freshness, the one field it
-	 * contradicts. The row is not dimmed — bbPress greys a closed row to #ccc,
-	 * which fails contrast and reads as disabled, when a closed thread is often
-	 * the most worth reading (issue #38).
-	 *
-	 * @since 0.3.0
+	 * Closed threads remain readable, so the state is labelled without dimming the row.
 	 *
 	 * @param array<string,mixed> $row Row data.
 	 */

@@ -28,30 +28,10 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class ForumTree {
 
-	/**
-	 * WordPress database handle.
-	 *
-	 * @var \wpdb
-	 * @since 0.5.0
-	 */
 	private \wpdb $wpdb;
 
-	/**
-	 * WordPress/bbPress seam.
-	 *
-	 * @var ContextInterface
-	 * @since 0.5.0
-	 */
 	private ContextInterface $wp;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.5.0
-	 *
-	 * @param \wpdb            $wpdb WordPress database handle.
-	 * @param ContextInterface $wp   WordPress/bbPress seam.
-	 */
 	public function __construct( \wpdb $wpdb, ContextInterface $wp ) {
 		$this->wpdb = $wpdb;
 		$this->wp   = $wp;
@@ -85,7 +65,7 @@ class ForumTree {
 		// in forums_holding_unread() — lights its parent's dot, and the reader cannot
 		// clear it because they cannot reach the topic. A permanently stuck mark is
 		// worse than a missing one, and this is the same visibility question
-		// Query\SearchVisibility answers for #68/#72 and #78 answered for the AJAX
+		// Query\SearchVisibility answers for search and AJAX
 		// endpoints. bbPress computes the set per reader and per capability, so it is
 		// asked here rather than cached anywhere.
 		$excluded = array_flip( $this->wp->get_excluded_forum_ids() );
@@ -110,11 +90,6 @@ class ForumTree {
 
 	/**
 	 * Collect every forum beneath one forum.
-	 *
-	 * `$seen` is not defensive tidying: bbPress stores a forum's parent in
-	 * `post_parent`, which nothing stops a plugin or a bad import from pointing at a
-	 * forum's own descendant. Without the guard that cycle is an infinite walk, and
-	 * this runs on the forums index.
 	 *
 	 * @since 0.5.0
 	 *

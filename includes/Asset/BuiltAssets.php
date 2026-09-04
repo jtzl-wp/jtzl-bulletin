@@ -9,14 +9,10 @@
 namespace JTZL\Bulletin\Asset;
 
 /**
- * Resolves the URL of a built asset from what the build wrote to disk: the hashed
- * filenames in `build/asset-manifest.json` for the script, and the hashed-or-plain
- * stylesheet beside it. An unbuilt plugin answers '' rather than a 404.
+ * Resolves built asset URLs from the manifest and build directory.
  *
- * Split out of AssetManager, which decides *whether* an asset loads on a given
- * screen and which stylesheets have to be dequeued to keep our chrome ours. Where a
- * file is is a separate question from who gets it, it is the only part of the class
- * that touched the filesystem, and it is what made the class outgrow its size guard.
+ * Hashed and plain stylesheets are supported. An unbuilt plugin returns an empty URL
+ * instead of producing a 404.
  *
  * @since 0.3.0
  */
@@ -36,14 +32,6 @@ class BuiltAssets {
 	 */
 	private string $plugin_url;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.3.0
-	 *
-	 * @param string $plugin_dir Absolute plugin directory (trailing slash).
-	 * @param string $plugin_url Plugin base URL (trailing slash).
-	 */
 	public function __construct( string $plugin_dir, string $plugin_url ) {
 		$this->plugin_dir = $plugin_dir;
 		$this->plugin_url = $plugin_url;
@@ -94,8 +82,7 @@ class BuiltAssets {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- local build artifact, not a remote request.
 		$json = file_get_contents( $path );
 
-		// A read failure ((string) false === '') or malformed JSON both decode to a
-		// non-array, so one guard covers both.
+		// Read failures and malformed JSON both decode to a non-array.
 		$data = json_decode( (string) $json, true );
 		if ( ! is_array( $data ) ) {
 			return array();

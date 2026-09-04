@@ -18,47 +18,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * A tag is `id`, `slug`, `name` and `count` — and the count is the interesting field.
- *
- * ⚠ **A forum with tagging switched off serializes `tags: []`, and asking the setting
- * is the only way to know.** bbPress leaves the taxonomy registered when the option is
- * cleared — it stops offering the field and revokes `assign_topic_tags`, but every term
- * already attached to a topic stays in the database and `get_the_terms()` keeps
- * answering with them. So both entry points here ask first.
- *
- * ⚠ **`count` is what this reader may see, not what the site holds.** WordPress's own
- * `WP_Term::$count` counts every topic carrying the tag, including ones in a forum
- * this reader cannot open. Handing that number to the app puts a number beside a list
- * it does not match, and the difference between them says *there is more here than you
- * are being shown*. So counts arrive from a visibility-scoped query, primed once for
- * the whole page and passed in.
- *
- * @since 0.6.0
  */
 class TagSerializer {
 
-	/**
-	 * REST seam.
-	 *
-	 * @var RestContextInterface
-	 * @since 0.6.0
-	 */
 	private RestContextInterface $rest;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.6.0
-	 *
-	 * @param RestContextInterface $rest REST seam.
-	 */
 	public function __construct( RestContextInterface $rest ) {
 		$this->rest = $rest;
 	}
 
 	/**
-	 * The term IDs carried by a set of topics, for one batched count.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param int[] $topic_ids Topics.
 	 * @return int[]
@@ -80,9 +50,7 @@ class TagSerializer {
 	}
 
 	/**
-	 * One topic's tags.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param int            $topic_id Topic ID.
 	 * @param array<int,int> $counts   Visible counts, keyed by term ID.
@@ -97,9 +65,7 @@ class TagSerializer {
 	}
 
 	/**
-	 * A list of terms.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param \WP_Term[]     $terms  Terms.
 	 * @param array<int,int> $counts Visible counts, keyed by term ID.

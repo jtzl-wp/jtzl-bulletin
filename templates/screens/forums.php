@@ -5,10 +5,7 @@
  * A flat list of root forums. Each row is an ordinary link to the forum's URL — no
  * client-side routing; tapping is a normal navigation.
  *
- * The list pages beyond the first `_bbp_forums_per_page` (50) through an inline
- * "load more forums", because bbPress caps a forum list at that number and ships no
- * pagination for one — so without this, forum 51 and everything after it is
- * unreachable (issue #38; see Query\ForumQuery for the upstream detail).
+ * The inline continuation exposes forums beyond bbPress's first query page.
  *
  * @package JTZL\Bulletin
  */

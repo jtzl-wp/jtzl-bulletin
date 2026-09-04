@@ -14,68 +14,20 @@ use JTZL\Bulletin\WordPress\ContextInterface;
  * Renders bbPress's own moderation links for a topic or a reply, inside a wrapper the
  * reading view can hide as one.
  *
- * Moderation on this screen is a **mode, not furniture** (issue #36). bbPress puts a
- * seven-item control row under the opening post and a five-item row under every reply;
- * on a 23-reply thread that is 24 control rows a moderator did not ask for, on the one
- * screen whose entire job is the post. So the default state of the reading view adds
- * exactly one word for a moderator — "Moderate", beside Subscribe in the thread header
- * — and the rows appear only when it is tapped.
- *
- * The asymmetry is the design: one thread, N replies. Thread actions are few and are
- * about the thing being read; reply actions multiply by every "+1" in the thread. This
- * is the only arrangement where the cost of moderation chrome does not scale with
- * thread length.
- *
- * Two properties worth not "fixing" later:
- *
- * - **The rows are rendered server-side and hidden in CSS, not injected by JS.** A
- *   thread past its first page appends replies through the load-more endpoint, and
- *   those replies arrive already carrying their row: the mode is a class on the
- *   enclosing article, so appended content inherits it with no JavaScript
- *   coordination and no re-application step to forget.
- * - **The gate is `moderate` on the whole mode, not bbPress's per-link tests.** Those
- *   run too, inside — which is how a Moderator ends up with a narrower set than a
- *   Keymaster without us enumerating either — but bbPress alone would also give a
- *   *participant* an "Edit" link on their own post inside the edit window, and the
- *   mode has to stay free of controls for a reader who is not moderating (issue #36).
- *
- *   ⚠ **The gate survives 0.5.0; its justification does not.** Until P4 that clause
- *   read "that is a posting affordance, and this release has no composer to edit in",
- *   which is no longer true — an author's in-window Edit is now legitimate, and it is
- *   what the SoW sold. It did not move into this tray, because that would either hand
- *   a participant a "Moderate" toggle for an ordinary act or give them a tray with no
- *   toggle. `View\AuthorEdit` renders it in the byline instead, and declines to render
- *   for anyone this class would answer `true` for — so the two are exclusive by
- *   construction and this mode is unchanged (§3 decision 10).
- *
  * @since 0.3.0
  */
 class ModerationActions {
 
-	/**
-	 * WordPress/bbPress seam.
-	 *
-	 * @var ContextInterface
-	 */
 	private ContextInterface $wp;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.3.0
-	 *
-	 * @param ContextInterface $wp WordPress/bbPress seam.
-	 */
 	public function __construct( ContextInterface $wp ) {
 		$this->wp = $wp;
 	}
 
 	/**
-	 * Whether this reader moderates the thread — the one test the screen branches on.
+	 * Whether this reader moderates the thread.
 	 *
-	 * Asked of the topic even for the reply rows: moderation is a property of the
-	 * thread being read, and a per-reply answer would let the rows appear under some
-	 * posts and not others, which reads as a rendering fault rather than a permission.
+	 * Topic-level capability keeps moderation mode consistent across reply rows.
 	 *
 	 * @since 0.3.0
 	 *
@@ -115,13 +67,10 @@ class ModerationActions {
 	}
 
 	/**
-	 * The toggle that turns the mode on, in the thread header beside Subscribe.
+	 * Render the moderation-mode toggle.
 	 *
-	 * Rendered only where it can work: the label names the next action ("Moderate",
-	 * then "Done" once JavaScript has swapped it), and `aria-expanded` carries the
-	 * state the label no longer does. No `aria-controls` — the mode reveals the thread
-	 * group *and* a row under every post, so naming one region would describe less
-	 * than the button does.
+	 * `aria-expanded` carries state. `aria-controls` is omitted because the toggle
+	 * controls the thread group and every post's action row.
 	 *
 	 * @since 0.3.0
 	 */
@@ -135,15 +84,6 @@ class ModerationActions {
 
 	/**
 	 * One group of links, or nothing at all.
-	 *
-	 * The empty case is real rather than defensive: a Moderator on a *trashed* topic
-	 * has had close, spam and trash unset by bbPress itself, and a role may hold
-	 * `moderate` while every individual link declines. An empty bordered box under a
-	 * post would read as a broken control, so there is no box.
-	 *
-	 * The heading is for screen readers only. Sighted users get the grouping from the
-	 * box and its position; a visible "Reply actions" label on every reply would be
-	 * the clutter this whole mode exists to avoid.
 	 *
 	 * @since 0.3.0
 	 *

@@ -1,14 +1,9 @@
 <?php
 /**
- * The document shell.
+ * Minimal document shell for reading screens.
  *
- * A deliberately minimal HTML document that replaces the theme's on the three
- * reading screens. It still calls wp_head()/wp_footer() so WordPress core, the
- * admin bar, and other plugins keep working — the theme's *chrome and styles*
- * are what we leave out (styles are dequeued in Asset\AssetManager).
- *
- * The document <head> — charset, viewport, and the buffered wp_head() — is shared
- * with the reskin document; see templates/partials/head.php.
+ * Calls `wp_head()` and `wp_footer()` for core and plugin integration while
+ * excluding the theme's chrome and styles. Head markup is shared with the reskin.
  *
  * @package JTZL\Bulletin
  */
@@ -26,12 +21,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 <div class="bltn-app">
 <?php
 /*
- * Search is asked last, and deliberately. bbPress registers `bbp_search` as a
- * public query var, so any of the three screens above can be requested with one
- * riding along in the URL — and on such a request `bbp_is_search()` is true
- * alongside them. Asking it last means the screen the reader actually navigated to
- * is the screen they get; asking it first would have a stray query string replace
- * a thread with a search.
+ * Check search last because its public query variable may coexist with the other
+ * screen flags. This preserves the screen the reader navigated to.
  */
 if ( bbp_is_forum_archive() ) {
 	require JTZL_BLTN_DIR . 'templates/screens/forums.php';

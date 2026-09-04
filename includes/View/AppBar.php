@@ -19,20 +19,8 @@ use JTZL\Bulletin\WordPress\ContextInterface;
  */
 class AppBar {
 
-	/**
-	 * WordPress/bbPress seam.
-	 *
-	 * @var ContextInterface
-	 */
 	private ContextInterface $wp;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.1.0
-	 *
-	 * @param ContextInterface $wp WordPress/bbPress seam.
-	 */
 	public function __construct( ContextInterface $wp ) {
 		$this->wp = $wp;
 	}
@@ -69,27 +57,16 @@ class AppBar {
 		$trailing = $this->trailing();
 
 		/*
-		 * The title is centred on the SCREEN, not in the space the controls leave over,
-		 * so it is taken out of the flex row and positioned against the bar itself. The
-		 * row then holds two things — the leading control and the trailing group — and
-		 * pushes them apart.
-		 *
-		 * Which means the title has to be told how much room to leave, or it would run
-		 * under the buttons: centred, its half-width is bounded by the WIDER side, and
-		 * that is the trailing group. Its width travels as a custom property because the
-		 * group is not the same on every screen — search carries no search button. Forty
-		 * per button, which they are, plus one gap to keep off the title.
+		 * The title is centered against the bar, not between unequal controls. Pass the
+		 * trailing group's width so it cannot overlap the centered title.
 		 */
 		printf(
 			'<header class="bltn-appbar" style="--bltn-appbar-side:%dpx">',
 			(int) ( count( $trailing ) * 40 + 8 )
 		);
 
-		// Leading: the way out of this screen — one level up — or a spacer holding its
-		// place on the index, which has no level above it.
 		echo $this->leading( $back_url, $back_label ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- assembled from escaped parts.
 
-		// Title (+ optional subtitle). The title doubles as the screen's focus target.
 		$tag        = $heading ? 'h1' : 'span';
 		$focus_attr = $heading ? ' data-bltn-heading tabindex="-1"' : '';
 		printf( '<%1$s class="bltn-appbar__title"%2$s>%3$s', $tag, $focus_attr, esc_html( $title ) ); // phpcs:ignore WordPress.Security.EscapeOutput -- tag + attr are internal literals.
@@ -98,8 +75,6 @@ class AppBar {
 		}
 		printf( '</%s>', $tag ); // phpcs:ignore WordPress.Security.EscapeOutput -- internal literal.
 
-		// Wrapped, so the flex row has exactly two items to push apart and the group
-		// keeps its own spacing whatever the title does.
 		printf( '<div class="bltn-appbar__actions">%s</div>', implode( '', $trailing ) ); // phpcs:ignore WordPress.Security.EscapeOutput -- each part assembled from escaped values.
 
 		echo '</header>';
@@ -108,12 +83,7 @@ class AppBar {
 	/**
 	 * The trailing group, in reading order: home, search, account.
 	 *
-	 * Home is a separate journey from the back control beside the title, which goes one
-	 * level up — from a thread in a nested forum that was three taps to the index, and
-	 * no control named where it went (issue #86). It leads the group because it is the
-	 * only one that leaves the reading path; search and account both open something.
-	 *
-	 * Omitted on the index itself, where it would point at the page it is on.
+	 * Home is omitted on the index; elsewhere it differs from the one-level back control.
 	 *
 	 * @since 0.3.0
 	 *
@@ -149,10 +119,6 @@ class AppBar {
 	/**
 	 * The leading control: one level up, or a spacer holding its place.
 	 *
-	 * Its destination is the screen's own — a thread's forum, a sub-forum's parent —
-	 * so it is the way back along the path a reader walked. Leaving the forums
-	 * entirely is the home button's job, in the trailing group.
-	 *
 	 * @since 0.3.0
 	 *
 	 * @param string $url   Destination, or '' for no control.
@@ -185,23 +151,6 @@ class AppBar {
 
 	/**
 	 * The search entry point, or '' when there is nowhere for it to go.
-	 *
-	 * Search had no entry point on any screen a reader could reach. bbPress's inline
-	 * field appears on the topic archive and the profile tabs, and nothing in bbPress
-	 * links the topic archive at all — so search existed on screens nobody navigates
-	 * to (issue #35). One control in the bar reaches it from every screen instead,
-	 * on both tiers, at no vertical cost.
-	 *
-	 * A link, not a field. The bar is three items wide on a phone and a text input
-	 * cannot live there without taking the title's place; putting the input on the
-	 * screen it belongs to means the bar gains an icon rather than a control, which
-	 * is the version of this that survives "everything here is subtraction".
-	 *
-	 * Two conditions hide it, and both are the same thought: never offer a door to a
-	 * room the reader is in or that does not exist. It is absent on the search screen
-	 * itself — where the same glyph is the submit control, and one glyph must not
-	 * mean two things at once — and absent on a site with `_bbp_allow_search` off,
-	 * where bbPress answers that URL with nothing.
 	 *
 	 * @since 0.3.0
 	 *
@@ -239,15 +188,8 @@ class AppBar {
 		}
 
 		/*
-		 * Back to where they were, not to the forums index. Until 0.5.0 this sent a
-		 * logged-out reader to `get_forums_url()`, which was harmless while it was the
-		 * only sign-in route on the screen. P4 put a second one at the foot of every
-		 * thread — "Sign in to reply", carrying this URL — and two controls one above
-		 * the other going to different places is the kind of thing a reader notices
-		 * exactly once, when the first one loses their place.
-		 *
-		 * The index is still the fallback: a request that cannot name itself has to
-		 * land somewhere, and the forums are where the app begins.
+		 * Return signed-in readers to the current screen; fall back to the forum index
+		 * when the request cannot identify itself.
 		 */
 		$here = $this->wp->get_current_url();
 

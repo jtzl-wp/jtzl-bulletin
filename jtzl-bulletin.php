@@ -2,26 +2,7 @@
 /**
  * Plugin Name:       Bulletin for bbPress
  * Plugin URI:        https://github.com/jtzl-wp/jtzl-bulletin
- * Description:       A mobile-first, decluttered reading layer for bbPress. The post is the hero; navigation is deliberately secondary. Renders its own minimal document on the reading screens, wraps every other bbPress screen in the same chrome, and leaves the rest of the site on its own theme.
- * Version:           0.6.1
- * Requires at least: 6.0
- * Requires PHP:      8.2
- * Requires Plugins:  bbpress
- * Author:            JTZL
- * Author URI:        https://github.com/jtzl-wp
- * Text Domain:       jtzl-bulletin
- * Domain Path:       /languages
- * License:           GPL-2.0-or-later
- * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
- *
- * Bulletin is a companion plugin — it never edits bbPress core. On the four
- * reading screens (forums index, a single forum, a single topic, search) it takes
- * over the `bbp_template_include` filter and renders its own minimal document,
- * while still firing wp_head()/wp_footer() so WordPress core and other plugins
- * keep working. Every other reader-reachable bbPress screen keeps bbPress's own
- * markup and renders inside the same chrome; the only ones left on the active
- * theme are bbPress's topic, reply and forum edit forms, which
- * Screen\ScreenClassifier excludes by name. Non-bbPress pages are untouched.
+ * Description:       A mobile-first reading layer for bbPress.
  *
  * @package JTZL\Bulletin
  * @since 0.1.0

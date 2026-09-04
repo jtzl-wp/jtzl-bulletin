@@ -1,21 +1,9 @@
 <?php
 /**
- * Uninstall routine.
+ * Removes Bulletin's read-state table and schema-version option.
  *
- * Bulletin was a stateless reading layer until unread arrived (issue #102), and this
- * file said so. It now owns exactly two persistent things, and removes both:
- *
- * - `{prefix}jtzl_bltn_topic_reads` — which member has read which thread.
- * - `jtzl_bltn_db_version` — the schema version that table was built at.
- *
- * Still not removed, and still deliberately: the short-lived thread-order caches
- * (transients keyed `bltn_nav_*`), which expire on their own within the hour. Finding
- * them means an unbounded LIKE scan of the options table to delete rows the database
- * is about to drop anyway.
- *
- * Single-site only. Multisite is an explicit exclusion in the SoW, so a network
- * uninstall is not walked here — doing it half-correctly (this site's tables, nobody
- * else's) would be worse than not claiming the support at all.
+ * Navigation transients expire naturally; deleting them requires an unbounded
+ * options scan. Multisite cleanup is outside the plugin's supported scope.
  *
  * @package JTZL\Bulletin
  * @since 0.1.0

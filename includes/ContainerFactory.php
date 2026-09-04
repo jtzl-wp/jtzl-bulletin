@@ -123,16 +123,7 @@ class ContainerFactory {
 			TemplateController::class   => autowire()
 				->constructorParameter( 'templates_dir', $templates_dir ),
 
-			// Every controller the REST API answers through. This list is the composition
-			// decision `Rest\Routes` used to hold as nine named dependencies — see that
-			// class for why it moved. Order is what Rest\EndpointsTest asserts against:
-			// the hierarchy first, then the three ways in that begin nowhere in it.
-			//
-			// ⚠ Rest\PersonalController was withheld from this list for two tasks while
-			// confirmation 3 in docs/rest-api-plan.md was open, and joins it here — the
-			// whole of what registering those three paths cost. What it publishes is the
-			// shape the plan recommended rather than one the app team chose; if they ask
-			// for a different one, this line is where the answer lands.
+			// REST controllers are ordered by hierarchy, followed by unanchored routes.
 			Routes::class               => autowire()
 				->constructorParameter(
 					'controllers',

@@ -17,54 +17,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Turns a read position into a token a client may hold, and back again.
  *
- * The website never needs this: it marks a thread read on the server, during the
- * request that rendered it, from data it already has. The API cannot — a client
- * displays a thread and tells us later how far it got, so the position makes a round
- * trip through a device we do not control.
- *
- * **That is the whole reason for the signature.** A position the client could compose
- * itself is a position it could invent: a time in the far future silences a thread
- * permanently, and a position with no topic inside it could be replayed against a
- * different thread than the one it was issued for. So the topic ID travels inside the
- * signed payload rather than being taken from the request path, and every field is
- * checked on the way back in.
- *
- * The payload is not secret and is not encrypted — it says what the client's own
- * screen already showed. It is only proof that the server issued it.
- *
- * ⚠ **Rotating WordPress's auth salt invalidates every outstanding cursor.** That is
- * the correct behaviour rather than a limitation: a rotated salt means every other
- * signed thing on the site has been invalidated too. The client's recovery is to fetch
- * the topic again, which returns a fresh cursor.
- *
  * @since 0.6.0
  */
 class ReadCursor {
 
-	/**
-	 * Payload version, so a future shape can be told from this one rather than
-	 * guessed at. An unrecognised version is refused, not best-guessed.
-	 *
-	 * @var int
-	 * @since 0.6.0
-	 */
 	private const VERSION = 1;
 
-	/**
-	 * Secret the payload is signed with.
-	 *
-	 * @var string
-	 * @since 0.6.0
-	 */
 	private string $auth_salt;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.6.0
-	 *
-	 * @param string $auth_salt Secret to sign with; WordPress's auth salt in production.
-	 */
 	public function __construct( string $auth_salt ) {
 		$this->auth_salt = $auth_salt;
 	}
@@ -100,17 +60,6 @@ class ReadCursor {
 
 	/**
 	 * The position inside a token, when the token is one of ours and names this topic.
-	 *
-	 * Returns null for everything else — a bad signature, a payload edited under an
-	 * old one, another topic's cursor, a version we do not know, a field of the wrong
-	 * type, a time that is not a MySQL datetime, or an ID that identifies no post.
-	 * The caller cannot tell those apart, and does not need to: all of them mean the
-	 * same thing, which is that this did not come from us.
-	 *
-	 * ⚠ `strtotime()` is not validation. It accepts "yesterday", "next tuesday" and a
-	 * date that does not exist, all of which would let a client describe a position in
-	 * its own words. The check is that the string round-trips through the exact stored
-	 * format, because that format is what the position is compared against in SQL.
 	 *
 	 * @since 0.6.0
 	 *

@@ -12,7 +12,7 @@ namespace JTZL\Bulletin\Support;
  * Static, self-contained SVG glyphs used by the reading chrome.
  *
  * These use `stroke="currentColor"` — never `stroke="var(--x)"`, which iOS
- * Safari silently drops inside SVG presentation attributes (see CLAUDE.md).
+ * Safari silently drops inside SVG presentation attributes.
  *
  * @since 0.1.0
  */
@@ -65,10 +65,7 @@ class Icons {
 	/**
 	 * Magnifier.
 	 *
-	 * Used twice, and never at once: as the app bar's entry point into the search
-	 * screen, and as that screen's own submit control. The bar's copy is suppressed
-	 * on the search screen precisely so one glyph never means two things at the same
-	 * time (issue #35).
+	 * Used by the app bar or search submit control, never both at once.
 	 *
 	 * @since 0.3.0
 	 *
@@ -81,11 +78,8 @@ class Icons {
 	/**
 	 * Home — the forums index.
 	 *
-	 * A house, not a chevron: the back control beside it already owns the arrow, and
-	 * it means "one level up", which is a different journey from "all the way out"
-	 * (issue #86). Drawn at 18px to sit with search rather than 20px like the back
-	 * chevron, because the three trailing glyphs are one group and should read as one
-	 * weight.
+	 * A house distinguishes "forums index" from the adjacent "one level up" control.
+	 * Its size matches the other trailing app-bar icons.
 	 *
 	 * @since 0.3.0
 	 *
@@ -98,9 +92,7 @@ class Icons {
 	/**
 	 * Reply-context arrow — turns up and back to the left.
 	 *
-	 * Points the way the link goes. The parent of a reply is always older, and the
-	 * reading view renders oldest-first, so the post it names is always further up
-	 * the screen (issue #37).
+	 * Points upward because a reply's parent is earlier in the oldest-first view.
 	 *
 	 * @since 0.3.0
 	 *

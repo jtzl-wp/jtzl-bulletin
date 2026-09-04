@@ -11,105 +11,30 @@ namespace JTZL\Bulletin\Query;
 use JTZL\Bulletin\WordPress\ContextInterface;
 
 /**
- * Builds the bbp_has_replies() args used by BOTH the initial reading-view render
- * and the load-more AJAX handler, so the two paths paginate identically.
- *
- * Four deliberate choices (the first two are CLAUDE.md trap #4):
- *  - An explicit reply-only post type, rather than leaning on
- *    bbp_show_lead_topic() — that helper only excludes the topic when
- *    bbp_is_single_topic() is also true, which is false in an AJAX request, so
- *    relying on it pulls the topic into the replies loop off-page and shifts
- *    every page boundary by one.
- *  - A (date, ID) order. Ordering by date ALONE is unstable when replies share a
- *    timestamp (coarse-dated imports, two posts in the same second): MySQL
- *    returns tied rows in an undefined order, so LIMIT/OFFSET paging shuffles
- *    rows across page boundaries — duplicating some replies and dropping others.
- *    The ID tiebreak makes paging deterministic.
- *  - An explicit flat query, always. bbp_has_replies() defaults `hierarchical` to
- *    true whenever threading is active on a single topic, and a hierarchical reply
- *    query is not pageable: it forces posts_per_page to -1 and counts its pages
- *    from the number of ROOT replies, loading every descendant of every root in one
- *    request. That is what made the reading view decline a threaded topic in P1
- *    (issue #12). Asking for a flat query is what makes a threaded thread pageable
- *    at all.
- *  - The READING order is ours, and on a threaded forum it is the tree: a reply
- *    belongs under the one it answers (Yoren, 2026-07-28). bbPress cannot give us
- *    that and pagination together, so Query\ReplyOrder computes the order and a
- *    page becomes a slice of it, fetched by post__in. See issue #37.
- *
- * A fifth, added in 0.5.0: both queries carry Query\PendingVisibility's marker, so
- * a reader's own reply held for moderation is in the page AND in the order. Armed
- * from one object precisely because the two must agree — a held reply counted by one
- * and dropped by the other is trap #4 again, with a moderation queue in place of a
- * tied timestamp.
- *
- * On a forum with threading off — bbPress's default, and JT's — none of the last
- * point applies: `parents()` is never called, no unbounded query runs, and the args
- * are the plain paged query they have always been.
+ * Owns reply paging for both initial and continuation queries.
+ * Explicit reply type and `(date, ID)` order keep boundaries deterministic. Threaded
+ * pages slice one shared tree order; both page and order queries carry visibility
+ * markers so held replies cannot change totals independently of rendered rows.
  *
  * @since 0.1.0
  */
 class ReplyQuery {
 
-	/**
-	 * WordPress/bbPress seam.
-	 *
-	 * @var ContextInterface
-	 */
 	private ContextInterface $wp;
 
-	/**
-	 * Reply-tree flattener.
-	 *
-	 * @var ReplyOrder
-	 */
 	private ReplyOrder $order;
 
 	/**
 	 * Reading order per topic and reader, for this request.
 	 *
-	 * Both args() and max_pages() need it, and the reading view calls them on the
-	 * same topic in the same request — so without this the one unbounded query
-	 * would run twice per screen.
-	 *
-	 * ⚠ **Keyed by reader as well as topic, not by topic alone.** The order is not the
-	 * same for everybody: Query\PendingVisibility puts one author's own held reply
-	 * into it, so a memo keyed by topic answers the second reader with the first
-	 * reader's order. A request has one reader, so a topic-only key is correct in
-	 * production and quietly wrong anywhere the current user changes — a test walking
-	 * a matrix of roles, or any future code answering for somebody other than the
-	 * caller. The answer depends on who is asking, so the cache does too. (The same
-	 * reasoning keys WordPress\RestContext's forum scope; found here by a REST test
-	 * that read one thread as two members and was handed the first one's page count.)
-	 *
 	 * @var array<string,int[]>
 	 */
 	private array $ordered = array();
 
-	/**
-	 * The reader's own held replies, armed onto both queries.
-	 *
-	 * @var PendingVisibility
-	 */
 	private PendingVisibility $pending;
 
-	/**
-	 * Keeps WordPress's admin status list out of both queries.
-	 *
-	 * @var ProtectedStatusGuard
-	 */
 	private ProtectedStatusGuard $guard;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.1.0
-	 *
-	 * @param ContextInterface     $wp      WordPress/bbPress seam.
-	 * @param ReplyOrder           $order   Reply-tree flattener.
-	 * @param PendingVisibility    $pending The reader's own held replies.
-	 * @param ProtectedStatusGuard $guard   Admin-only statuses, kept out.
-	 */
 	public function __construct( ContextInterface $wp, ReplyOrder $order, PendingVisibility $pending, ProtectedStatusGuard $guard ) {
 		$this->wp      = $wp;
 		$this->order   = $order;
@@ -119,12 +44,6 @@ class ReplyQuery {
 
 	/**
 	 * Reply-query args for a topic and 1-based page.
-	 *
-	 * The page size is the one thing a caller may override, and only the API does:
-	 * the website has a single page size — bbPress's `_bbp_replies_per_page` — while
-	 * a REST collection is paged by the request, bounded by Rest\RequestBounds long
-	 * before it arrives here. Omitting the argument is the website's call and is
-	 * byte-identical to what it has always built.
 	 *
 	 * @since 0.1.0
 	 * @since 0.6.0 Optional page size, for the API.
@@ -218,13 +137,6 @@ class ReplyQuery {
 	/**
 	 * The topic's replies in reading order, computed once per request.
 	 *
-	 * ⚠ **Public since 0.6.0, and it is the only source of a threaded total.** A
-	 * threaded page is a slice fetched by `post__in`, so the query that returns it
-	 * reports a `found_posts` of one page however long the thread is — and a REST
-	 * collection reading its `X-WP-Total` off that query would tell the app the thread
-	 * ends at the page it is holding. The count has to come from the order, which is
-	 * also what the page was sliced out of, so the two cannot disagree.
-	 *
 	 * @since 0.3.0
 	 * @since 0.6.0 Public, for REST totals.
 	 *
@@ -249,26 +161,7 @@ class ReplyQuery {
 	}
 
 	/**
-	 * The whole of an **unthreaded** thread, as one unpaged query.
-	 *
-	 * ⚠ **Unthreaded only, and the caller must have branched already.** With threading
-	 * on, `args()` returns a `post__in` holding one page of the order, and lifting the
-	 * paging off *that* gives page 1 unpaged rather than the thread — a plausible-looking
-	 * list that silently ends after fifteen rows. The threaded answer is
-	 * `ordered_ids()`, which is the order the page was sliced out of; this is its
-	 * unthreaded counterpart. Rest\ReplyPositions branches on
-	 * `is_thread_replies_active()` exactly as `args()` does, and is the only caller.
-	 *
-	 * ⚠ **It is `args()` plus paging, never a second set of arguments.** Only the
-	 * paging keys are overridden — every visibility marker `args()` armed rides through
-	 * untouched. That is the whole point: a locally assembled "all the replies" query
-	 * would drop Query\PendingVisibility's marker, and the author's own held reply
-	 * would be counted by the collection's `X-WP-Total` and missing from the order a
-	 * position is read out of. The two would then disagree about that author alone,
-	 * which is CLAUDE.md trap #4 wearing a moderation queue.
-	 *
-	 * The website never calls this: it has no use for a position, and threading-off
-	 * requests keep paying for the plain paged query and nothing else (issue #105).
+	 * The whole unthreaded thread, as one unpaged query.
 	 *
 	 * @since 0.6.1
 	 *

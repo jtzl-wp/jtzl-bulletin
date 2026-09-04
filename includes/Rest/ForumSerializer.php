@@ -20,56 +20,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * One forum's row, and the batching that keeps a page of them cheap.
- *
- * Two properties are load-bearing and both are about a whole page at once:
- *
- * - **Counts are reader-visible.** Not bbPress's stored counters, which count the
- *   site's content rather than this reader's — see RestContextInterface::forum_counts.
- * - **Unread is scoped to the same forums.** `ReadState` already refuses a topic with
- *   a password of its own; the scope handed to it here additionally removes a branch
- *   hidden behind a password on a forum. Without it a visible parent lights up for
- *   activity in a branch the reader cannot reach, and the dot is the disclosure.
- *
- * Both are primed once per page. A per-row count or a per-row unread lookup is how a
- * forum index with fifty rows becomes a hundred queries.
- *
- * @since 0.6.0
  */
 class ForumSerializer {
 
-	/**
-	 * WordPress/bbPress seam.
-	 *
-	 * @var ContextInterface
-	 * @since 0.6.0
-	 */
 	private ContextInterface $wp;
 
-	/**
-	 * REST seam.
-	 *
-	 * @var RestContextInterface
-	 * @since 0.6.0
-	 */
 	private RestContextInterface $rest;
 
-	/**
-	 * Per-reader read state.
-	 *
-	 * @var ReadState
-	 * @since 0.6.0
-	 */
 	private ReadState $reads;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.6.0
-	 *
-	 * @param ContextInterface     $wp    WordPress/bbPress seam.
-	 * @param RestContextInterface $rest  REST seam.
-	 * @param ReadState            $reads Per-reader read state.
-	 */
 	public function __construct( ContextInterface $wp, RestContextInterface $rest, ReadState $reads ) {
 		$this->wp    = $wp;
 		$this->rest  = $rest;
@@ -77,9 +36,7 @@ class ForumSerializer {
 	}
 
 	/**
-	 * A page of forums.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param int[] $forum_ids Forums, in the order they should appear.
 	 * @return array<int,array<string,mixed>>
@@ -98,9 +55,7 @@ class ForumSerializer {
 	}
 
 	/**
-	 * One forum.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param int $forum_id Forum ID.
 	 * @return array<string,mixed>
@@ -112,9 +67,7 @@ class ForumSerializer {
 	}
 
 	/**
-	 * The row itself.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param int               $forum_id Forum ID.
 	 * @param array<string,int> $counts   Reader-visible counts.
@@ -138,9 +91,7 @@ class ForumSerializer {
 	}
 
 	/**
-	 * Unread state for the page, or nulls for a reader with none.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param int[] $forum_ids Forums.
 	 * @return array<int,bool|null>
@@ -149,8 +100,7 @@ class ForumSerializer {
 		$user_id = $this->wp->get_current_user_id();
 
 		if ( $user_id < 1 ) {
-			// null, not false: the field's contract is "unknown for a stranger", and
-			// false would tell the app there is nothing new when nobody has asked.
+
 			return array_fill_keys( $forum_ids, null );
 		}
 

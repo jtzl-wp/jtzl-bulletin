@@ -19,16 +19,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * Runs one native handler inside isolated browser-compatible process state.
- *
- * @since 0.6.0
  */
 final class BbpFormHandlerBridge {
 
-	/**
-	 * Closed operation definitions owned by the bridge.
-	 *
-	 * @var array<string,array{handler:string,lifecycle:string,nonce:string,create:bool,id_field:string|null,fields:string[]}>
-	 */
 	private const OPERATIONS = array(
 		'bbp-new-topic'  => array(
 			'handler'   => 'bbp-new-topic',
@@ -64,42 +57,14 @@ final class BbpFormHandlerBridge {
 		),
 	);
 
-	/**
-	 * WordPress/bbPress seam.
-	 *
-	 * @var ContextInterface
-	 */
 	private ContextInterface $wp;
 
-	/**
-	 * REST-side WordPress/bbPress seam.
-	 *
-	 * @var RestContextInterface
-	 */
 	private RestContextInterface $rest;
 
-	/**
-	 * Native error translator.
-	 *
-	 * @var BbpErrorTranslator
-	 */
 	private BbpErrorTranslator $translator;
 
-	/**
-	 * Strict Akismet discard guard.
-	 *
-	 * @var AkismetDiscardGuard
-	 */
 	private AkismetDiscardGuard $akismet;
 
-	/**
-	 * Constructor.
-	 *
-	 * @param ContextInterface     $wp         WordPress/bbPress seam.
-	 * @param RestContextInterface $rest       REST-side WordPress/bbPress seam.
-	 * @param BbpErrorTranslator   $translator Native error translator.
-	 * @param AkismetDiscardGuard  $akismet    Strict discard guard.
-	 */
 	public function __construct(
 		ContextInterface $wp,
 		RestContextInterface $rest,
@@ -113,7 +78,7 @@ final class BbpFormHandlerBridge {
 	}
 
 	/**
-	 * Run one closed-list native form operation.
+	 * REST mutations must execute the native bbPress form-handler lifecycle and restore request-global state afterward.
 	 *
 	 * @param string              $action      Native form action.
 	 * @param int                 $object_id   Zero for creates; stored ID for edits.
@@ -135,7 +100,7 @@ final class BbpFormHandlerBridge {
 	}
 
 	/**
-	 * Validate before generating a nonce or changing process state.
+	 * Data contract.
 	 *
 	 * @param string              $action      Requested operation.
 	 * @param int                 $object_id   Stored object ID.
@@ -164,7 +129,7 @@ final class BbpFormHandlerBridge {
 	}
 
 	/**
-	 * Reject fields outside the operation's closed allowlist.
+	 * Data contract.
 	 *
 	 * @param string[]            $allowed Allowed form field names.
 	 * @param array<string,mixed> $values Submitted form values.
@@ -179,7 +144,7 @@ final class BbpFormHandlerBridge {
 	}
 
 	/**
-	 * Install the compatibility scope, invoke the handler, then classify its outcome.
+	 * Data contract.
 	 *
 	 * @param array{handler:string,lifecycle:string,nonce:string,create:bool,id_field:string|null,fields:string[]} $operation Operation definition.
 	 * @param array<string,mixed>                                                                                  $values    Complete form values.
@@ -230,7 +195,7 @@ final class BbpFormHandlerBridge {
 	}
 
 	/**
-	 * Classify the restored handler scope's captured outcome.
+	 * Data contract.
 	 *
 	 * @param bool      $discarded  Whether Akismet discarded before insertion.
 	 * @param bool      $redirected Whether the native success redirect was trapped.
@@ -259,11 +224,6 @@ final class BbpFormHandlerBridge {
 		return $translated ?? $this->failed();
 	}
 
-	/**
-	 * Return the bridge fault used when no native outcome completed.
-	 *
-	 * @return \WP_Error
-	 */
 	private function failed(): \WP_Error {
 		return new \WP_Error(
 			'write_failed',

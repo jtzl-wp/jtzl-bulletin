@@ -12,46 +12,16 @@ use JTZL\Bulletin\Screen\ScreenClassifier;
 use JTZL\Bulletin\Screen\ScreenTier;
 
 /**
- * Appends an ID tiebreak to the topic and reply queries bbPress builds for a reskin
- * screen, so paging them is deterministic.
- *
- * Upstream orders topics by `_bbp_last_active_time` and replies by post date, each
- * with nothing to break a tie. Rows that share the sort key therefore come back in
- * whatever order the database chooses, and it need not choose the same order twice:
- * `LIMIT`/`OFFSET` then draws page 1 and page 2 from two independently ordered
- * result sets, so some rows appear on both pages while others become unreachable.
- * It is not hypothetical — an import with coarse dates, or two posts inside one
- * second, is enough, and on the dev fixture (every topic sharing one timestamp)
- * roughly a third of the forum was unreachable from the topic archive (issue #45).
- *
- * Bulletin's own queries have always been tiebroken — see TopicQuery and ReplyQuery,
- * which order by `(last-active, ID)` and `(date, ID)`. The three takeover screens
- * were therefore never affected. This carries the same guarantee to the screens
- * where bbPress builds the query and we only restyle the result.
- *
- * Scope is deliberately narrow. Only `ScreenTier::Reskin` is touched: on a takeover
- * screen bbPress's loops aren't what we render, and everywhere else the query
- * belongs to the theme or another plugin, so appending to it would be meddling in
- * someone else's results.
+ * Adds an ID tiebreak to bbPress topic and reply queries on reskin screens.
+ * LIMIT/OFFSET over tied dates is otherwise nondeterministic, duplicating or omitting
+ * rows across pages. Other screens retain their owners' ordering.
  *
  * @since 0.3.0
  */
 class StableOrder {
 
-	/**
-	 * Screen-tier classifier.
-	 *
-	 * @var ScreenClassifier
-	 */
 	private ScreenClassifier $screen;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.3.0
-	 *
-	 * @param ScreenClassifier $screen Screen-tier classifier.
-	 */
 	public function __construct( ScreenClassifier $screen ) {
 		$this->screen = $screen;
 	}
@@ -82,11 +52,7 @@ class StableOrder {
 	}
 
 	/**
-	 * Append `ID` as the last sort key, preserving whatever bbPress asked for.
-	 *
-	 * The existing key and direction are kept rather than replaced: this settles
-	 * ties, it does not impose an order. So a caller that asked for oldest-first
-	 * replies still gets them oldest-first, with ID ascending inside each tie.
+	 * Append `ID` without replacing the caller's sort key or direction.
 	 *
 	 * @since 0.3.0
 	 *
@@ -101,23 +67,13 @@ class StableOrder {
 		$orderby = $args['orderby'] ?? '';
 		$order   = $this->direction( $args['order'] ?? 'DESC' );
 
-		// An absent or empty-string orderby is not the absence of an order — to
-		// WP_Query it *is* an order, the default one, `post_date` in the requested
-		// direction (the `empty( $q['orderby'] )` branch of WP_Query::get_posts).
-		// Naming it is what lets the tiebreak be appended to it: left empty, the key
-		// would be dropped by WP_Query::parse_orderby() and the loop would come back
-		// sorted by ID alone — a reordered screen rather than a settled tie. bbPress
-		// registers its "Topics with no replies" view exactly this way (issue #34).
-		//
-		// `false` and an empty array are a different thing and stay untouched: those
-		// blank out ORDER BY on purpose, and are refused below.
+		// WP_Query treats an empty orderby as `post_date`, but drops that key when an
+		// ID tiebreak is appended. Name the default so ID does not replace it.
 		if ( '' === $orderby ) {
 			$orderby = 'date';
 		}
 
-		// A search ranks by relevance, and a random order is a deliberate absence
-		// of one: in neither case would appending a key break a tie, it would
-		// change which rows rank where. Leave both exactly as bbPress asked.
+		// Search relevance and random order cannot accept a deterministic tiebreak.
 		if ( ! empty( $args['s'] ) || ! $this->is_tiebreakable( $orderby ) ) {
 			return $args;
 		}
@@ -134,12 +90,6 @@ class StableOrder {
 
 	/**
 	 * Append `ID` to an orderby that is already keyed.
-	 *
-	 * The direction comes from the key ID will be breaking ties *within*, not from
-	 * the argument list's top-level `order` — that one describes the unkeyed form,
-	 * and WP_Query ignores it once each key carries its own direction. A caller who
-	 * already sorts on ID is left alone: they have settled their own ties, and
-	 * moving the key would reorder their loop rather than stabilise it.
 	 *
 	 * @since 0.3.0
 	 *
@@ -162,16 +112,6 @@ class StableOrder {
 	 * Whether appending a key to this `orderby` would settle ties rather than
 	 * change the result.
 	 *
-	 * A single key is safe. `rand` and `none` are not orders to break ties within.
-	 * A space-separated list ("date ID") is a form WP_Query accepts but cannot be
-	 * turned into the keyed array without re-parsing it, so it is left alone —
-	 * bbPress never emits one, and a caller who wrote it has said what they want.
-	 *
-	 * An empty *string* never arrives here: the caller resolves it to `date` first,
-	 * because that is what WP_Query would do with it. `false` and an empty array do
-	 * arrive, and are refused — those blank out ORDER BY deliberately, and appending
-	 * ID would impose an order the caller declined.
-	 *
 	 * @since 0.3.0
 	 *
 	 * @param mixed $orderby The `orderby` argument.
@@ -192,8 +132,7 @@ class StableOrder {
 	}
 
 	/**
-	 * Normalise a sort direction, defaulting anything unrecognised to DESC — which
-	 * is what WP_Query itself does with a direction it cannot read.
+	 * Normalise a sort direction using WP_Query's `DESC` fallback.
 	 *
 	 * @since 0.3.0
 	 *

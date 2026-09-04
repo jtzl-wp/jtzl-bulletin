@@ -19,55 +19,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * Applies REST-only PATCH and tag policy, then delegates the write to bbPress.
- *
- * @since 0.6.0
  */
 class TopicEditService {
 
-	/**
-	 * WordPress/bbPress seam.
-	 *
-	 * @var ContextInterface
-	 */
 	private ContextInterface $wp;
 
-	/**
-	 * REST-side WordPress/bbPress seam.
-	 *
-	 * @var RestContextInterface
-	 */
 	private RestContextInterface $rest;
 
-	/**
-	 * What the site has switched on.
-	 *
-	 * @var FeatureGate
-	 */
 	private FeatureGate $features;
 
-	/**
-	 * REST tag validation.
-	 *
-	 * @var TopicTagValidator
-	 */
 	private TopicTagValidator $tags;
 
-	/**
-	 * Scoped native form-handler bridge.
-	 *
-	 * @var BbpFormHandlerBridge
-	 */
 	private BbpFormHandlerBridge $bridge;
 
-	/**
-	 * Constructor.
-	 *
-	 * @param ContextInterface     $wp       WordPress/bbPress seam.
-	 * @param RestContextInterface $rest     REST-side WordPress/bbPress seam.
-	 * @param FeatureGate          $features What the site has switched on.
-	 * @param TopicTagValidator    $tags     REST tag validation.
-	 * @param BbpFormHandlerBridge $bridge   Native handler bridge.
-	 */
 	public function __construct(
 		ContextInterface $wp,
 		RestContextInterface $rest,
@@ -83,10 +47,7 @@ class TopicEditService {
 	}
 
 	/**
-	 * Edit a thread as its author.
-	 *
-	 * The author ID remains part of the stable service contract. The native handler
-	 * obtains the authoritative author from the stored topic and current-user context.
+	 * Data contract.
 	 *
 	 * @param int                 $topic_id  Thread being edited.
 	 * @param int                 $author_id Authenticated author ID.
@@ -124,9 +85,6 @@ class TopicEditService {
 			return $data;
 		};
 
-		// bbPress's edit form serializes tags through a comma-delimited field, including
-		// when it preserves existing terms. Restore the exact REST/stored names before
-		// extensions inspect the insertion data and WordPress assigns the taxonomy.
 		$this->wp->add_filter( 'bbp_edit_topic_pre_insert', $preserve_tag_names, PHP_INT_MIN );
 
 		try {
@@ -137,11 +95,7 @@ class TopicEditService {
 	}
 
 	/**
-	 * Enforce the two REST-only edit gates.
-	 *
-	 * The tag capability is asked on field presence, including for an empty list.
-	 * Native bbPress can clear tags without asking that capability; REST deliberately
-	 * treats clearing as assigning the empty set and refuses it consistently.
+	 * Data contract.
 	 *
 	 * @param int                 $topic_id Thread being edited.
 	 * @param array<string,mixed> $changes  Fields the request actually carried.
@@ -168,7 +122,7 @@ class TopicEditService {
 	}
 
 	/**
-	 * Exact slashed tag names the edit must leave on the topic.
+	 * Data contract.
 	 *
 	 * @param int                 $topic_id Thread being edited.
 	 * @param array<string,mixed> $changes  Fields the request actually carried.
@@ -188,7 +142,7 @@ class TopicEditService {
 	}
 
 	/**
-	 * A named PATCH field or its stored value, slashed once for the native handler.
+	 * Data contract.
 	 *
 	 * @param array<string,mixed> $changes Fields the request carried.
 	 * @param string              $key     Field name.
@@ -201,14 +155,6 @@ class TopicEditService {
 		return $this->rest->slash( is_scalar( $value ) ? (string) $value : '' );
 	}
 
-	/**
-	 * Build one stable REST refusal.
-	 *
-	 * @param string $code    Stable REST error code.
-	 * @param string $message Plain-text message.
-	 * @param int    $status  HTTP status.
-	 * @return \WP_Error
-	 */
 	private function refuse( string $code, string $message, int $status ): \WP_Error {
 		return new \WP_Error( $code, $message, array( 'status' => $status ) );
 	}

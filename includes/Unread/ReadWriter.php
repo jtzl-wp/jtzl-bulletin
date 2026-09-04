@@ -20,57 +20,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Marks a thread read when a member opens it.
  *
- * This is the only place Bulletin writes during a GET, so its scope is drawn as
- * tightly as the feature allows:
- *
- * - **The reading screen only.** Not the forums index, not a thread list — seeing a
- *   row is not reading the thread. And not the load-more endpoints either: paging
- *   further into a thread already open must not re-stamp it, or a reply that arrived
- *   while it was open is marked read by the act of scrolling past where it will
- *   appear. Hooking `template_redirect` gives that for free, since bbPress's AJAX
- *   router never reaches it.
- * - **Signed in only.** Read state is per member and there is nowhere to keep it for
- *   anyone else — logged-out readers get no accent at all (Yoren, 2026-08-11).
- * - **Not while the door is shut.** A password-protected thread renders WordPress's
- *   password form in place of its replies, so arriving at the URL is not reading it.
- *
  * @since 0.5.0
  */
 class ReadWriter {
 
-	/**
-	 * WordPress/bbPress seam.
-	 *
-	 * @var ContextInterface
-	 * @since 0.5.0
-	 */
 	private ContextInterface $wp;
 
-	/**
-	 * Screen-tier classifier.
-	 *
-	 * @var ScreenClassifier
-	 * @since 0.5.0
-	 */
 	private ScreenClassifier $screen;
 
-	/**
-	 * Read state.
-	 *
-	 * @var ReadState
-	 * @since 0.5.0
-	 */
 	private ReadState $reads;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.5.0
-	 *
-	 * @param ContextInterface $wp     WordPress/bbPress seam.
-	 * @param ScreenClassifier $screen Screen-tier classifier.
-	 * @param ReadState        $reads  Read state.
-	 */
 	public function __construct( ContextInterface $wp, ScreenClassifier $screen, ReadState $reads ) {
 		$this->wp     = $wp;
 		$this->screen = $screen;

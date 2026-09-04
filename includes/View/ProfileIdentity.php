@@ -27,20 +27,8 @@ use JTZL\Bulletin\WordPress\ContextInterface;
  */
 class ProfileIdentity {
 
-	/**
-	 * WordPress/bbPress seam.
-	 *
-	 * @var ContextInterface
-	 */
 	private ContextInterface $wp;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.3.0
-	 *
-	 * @param ContextInterface $wp WordPress/bbPress seam.
-	 */
 	public function __construct( ContextInterface $wp ) {
 		$this->wp = $wp;
 	}

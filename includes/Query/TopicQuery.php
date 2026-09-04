@@ -15,61 +15,14 @@ use JTZL\Bulletin\WordPress\ContextInterface;
  * load-more AJAX handler, so the two paths paginate identically — the same role
  * Query\ReplyQuery plays for the reading view.
  *
- * Three deliberate choices:
- *
- *  - An explicit post_parent. bbPress defaults it to bbp_get_forum_id(), which is
- *    the forum being viewed only while bbp_is_single_forum() holds. That is false
- *    in an AJAX request (the default becomes 'any', i.e. every forum on the site)
- *    and false again inside a sub-forum loop, so the forum is always passed in.
- *
- *  - Stickies excluded from the paginated set, and pinned separately. bbPress
- *    prepends stickies to page 1 only (bbp_add_sticky_topics bails when paged > 1)
- *    without removing them from the page they naturally fall on — so a sticky
- *    that belongs on page 3 renders pinned at the top AND again when page 3
- *    loads. Excluding them from every page instead keeps LIMIT/OFFSET boundaries
- *    consistent and makes the page count honest about what is left to load.
- *
- *  - Two pinned queries, not one. A site-wide super sticky outranks a forum's
- *    own: bbPress sorts the whole sticky set by freshness and only then splits it
- *    into supers and forum stickies, merging supers first
- *    (bbp_add_sticky_topics's $ordered_stickies). One query cannot express that —
- *    'orderby' => 'post__in' would give the ID array's order inside each group
- *    rather than freshness — so the section runs the two in turn, each ordered
- *    the same way as the list below it.
- *
- *  - A (last-active, ID) order. Topics sort by _bbp_last_active_time, which is a
- *    DATETIME with no sub-second resolution: an import, or a burst of activity in
- *    the same second, ties rows whose relative order MySQL may then return
- *    differently per query. LIMIT/OFFSET paging over an unstable sort duplicates
- *    some rows across page boundaries and drops others (see CLAUDE.md trap #4,
- *    where this bit the replies loop). The ID tiebreak makes paging deterministic.
- *
  * @since 0.1.0
  */
 class TopicQuery {
 
-	/**
-	 * WordPress/bbPress seam.
-	 *
-	 * @var ContextInterface
-	 */
 	private ContextInterface $wp;
 
-	/**
-	 * Keeps WordPress's admin status list out of the topics loop.
-	 *
-	 * @var ProtectedStatusGuard
-	 */
 	private ProtectedStatusGuard $guard;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.1.0
-	 *
-	 * @param ContextInterface     $wp    WordPress/bbPress seam.
-	 * @param ProtectedStatusGuard $guard Admin-only statuses, kept out.
-	 */
 	public function __construct( ContextInterface $wp, ProtectedStatusGuard $guard ) {
 		$this->wp    = $wp;
 		$this->guard = $guard;
@@ -96,19 +49,6 @@ class TopicQuery {
 	/**
 	 * Args for every topic carrying one tag, across the forums the reader may see.
 	 *
-	 * Built here rather than beside its caller so the API pages a tag exactly as the
-	 * website pages a forum: same `(last-active, ID)` order, same admin-status guard,
-	 * same reliance on bbPress's own forum-visibility normalizer. A second copy of that
-	 * order is how one surface comes to serve a tied row twice while the other does not.
-	 *
-	 * No `post_parent`: a tag crosses forums, and that is the whole point of the
-	 * screen it feeds. Stickies are neither hoisted nor excluded — `show_stickies` is
-	 * off in the shared base, and a pinned topic still carries its tags.
-	 *
-	 * The taxonomy is passed in rather than asked for: this class holds the browser's
-	 * seam, which has no reason to know bbPress's tag taxonomy, and the one caller
-	 * that needs this already holds the seam that does.
-	 *
 	 * @since 0.6.0
 	 *
 	 * @param string $taxonomy Topic-tag taxonomy.
@@ -132,23 +72,6 @@ class TopicQuery {
 
 	/**
 	 * Args for a named set of topics, in the same order a forum lists its threads.
-	 *
-	 * The personal collections — a member's favourites, the threads they subscribe to
-	 * — are a set of IDs and nothing else. What order to put them in is not a new
-	 * question, so it is not answered again here: this is `base()` with a `post__in`
-	 * and a page, which means `(last active, ID)` descending exactly as a forum's
-	 * thread list has since 0.1.0. A second implementation of that order is how one
-	 * surface comes to serve a tied row twice while the other does not.
-	 *
-	 * ⚠ **`post__in` is never empty when this is called.** WP_Query ignores an empty
-	 * `post__in` rather than matching nothing, so a member with no favourites would be
-	 * handed every topic on the site. The caller short-circuits; this is where the
-	 * reason is written down.
-	 *
-	 * ⚠ **And the caller names `post_status`.** `base()` leaves it unset because
-	 * bbPress fills it from the reader's capabilities on the website's own screens.
-	 * These lists cross forums, so they take the same explicit, capability-derived
-	 * list the profile collections take (Rest\UnanchoredRepository::user_topics()).
 	 *
 	 * @since 0.6.0
 	 *
@@ -231,14 +154,6 @@ class TopicQuery {
 
 	/**
 	 * The parts both queries share.
-	 *
-	 * Post_parent is not among them: the two queries scope differently, and PHP's
-	 * + operator keeps the left-hand value, so a shared default here would
-	 * silently win over the caller's.
-	 *
-	 * Post_status is absent for a different reason — bbPress fills it from the
-	 * reader's capabilities (or falls back to perm => readable), which is the same
-	 * visibility logic the forums index gets.
 	 *
 	 * @since 0.1.0
 	 *

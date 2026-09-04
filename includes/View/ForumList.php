@@ -15,63 +15,19 @@ use JTZL\Bulletin\WordPress\ContextInterface;
  * Runs a forums query and renders its rows, so the forums index, a forum's
  * sub-forum section and the load-forums endpoint all produce identical markup from
  * identical args — an appended forum is indistinguishable from one that arrived
- * with the document. Sibling to View\ThreadList, which does this for threads.
- *
- * It is also where the row data is gathered, which the two screen templates used to
- * do separately. They did it differently: the index read the ambient forum
- * (`bbp_get_forum_title()` with no argument), the sub-forum list passed an explicit
- * ID. Only the second form is safe — bbPress resolves the ambient forum from the
- * forums loop before the viewed forum, so the ambient reading is right by accident
- * on one screen and would be wrong on any screen that ran two forum loops. Every
- * getter here is called with the looped forum's ID.
- *
- * Rows are captured to a string rather than echoed, for the reason ThreadList does
- * the same: a screen has to know whether a section is empty before it can decide
- * whether to print that section's label, and re-running the query to find out would
- * risk the two runs disagreeing.
  *
  * @since 0.3.0
  */
 class ForumList {
 
-	/**
-	 * Words a forum description is trimmed to in a row.
-	 *
-	 * @var int
-	 */
 	private const DESCRIPTION_WORDS = 22;
 
-	/**
-	 * WordPress/bbPress seam.
-	 *
-	 * @var ContextInterface
-	 */
 	private ContextInterface $wp;
 
-	/**
-	 * Forum row renderer.
-	 *
-	 * @var ForumRow
-	 */
 	private ForumRow $row;
 
-	/**
-	 * Read state, for the unread accent.
-	 *
-	 * @var ReadState
-	 * @since 0.5.0
-	 */
 	private ReadState $reads;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.3.0
-	 *
-	 * @param ContextInterface $wp    WordPress/bbPress seam.
-	 * @param ForumRow         $row   Forum row renderer.
-	 * @param ReadState        $reads Read state, for the unread accent.
-	 */
 	public function __construct( ContextInterface $wp, ForumRow $row, ReadState $reads ) {
 		$this->wp    = $wp;
 		$this->row   = $row;
@@ -81,18 +37,6 @@ class ForumList {
 	/**
 	 * Render a forums query's rows and return them as markup, and leave the global
 	 * post as it was found.
-	 *
-	 * The reset is here rather than left to callers because this class is the only
-	 * thing that knows whether the loop ran. bbPress does reset it — bbp_forums()
-	 * calls wp_reset_postdata() the moment have_posts() comes back false — but only on
-	 * a drained loop, which makes the guarantee a property of how a caller happens to
-	 * iterate. Owning it here costs one call and stops every caller having to know.
-	 *
-	 * The loop gathers every row before any of them is rendered, which is the shape
-	 * unread forced (#102): the accent is resolved for the whole page in one query
-	 * rather than one per row, and that is only possible once the full set of IDs is
-	 * known. Rendering inside the loop would have meant a lookup per row — fifteen
-	 * queries a page where the SoW promises the plugin "adds no theme weight".
 	 *
 	 * @since 0.3.0
 	 *
@@ -126,20 +70,6 @@ class ForumList {
 
 	/**
 	 * The row fields for one forum.
-	 *
-	 * The description is resolved here rather than in ForumRow because bbPress hands
-	 * it over as filtered post HTML, which a row has no room for — so it is stripped
-	 * and trimmed to a line.
-	 *
-	 * A protected forum has no description at all, which is not the same as stripping
-	 * one. WordPress replaces protected content with its password FORM, so
-	 * bbp_get_forum_content() returns that markup, and stripping its tags leaves the
-	 * form's own prose behind: rows read "This content is password-protected. To view
-	 * it, please enter the password below. Password:" as though it were what the forum
-	 * is about. Withheld outright instead.
-	 *
-	 * The count and freshness are not withheld, matching bbPress's own forum loop: a
-	 * password gates what a forum *holds*, not that it exists and is active.
 	 *
 	 * @since 0.3.0
 	 *

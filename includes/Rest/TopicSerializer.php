@@ -21,94 +21,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * A topic row, with everything a reading screen needs and nothing a list does not.
- *
- * `content` is included only on a singular response. A thread list of fifty topics
- * that each carried their opening post would be a large response to render a title.
- *
- * ## Personal state is primed once, for the page
- *
- * Unread, favourite and subscription are one lookup each per *page*, never per row.
- * The website makes the same promise and keeps it the same way; the API is where it
- * would break silently, because a collection callback looks like an ordinary loop.
- *
- * ## Logged out, personal fields are null
- *
- * Not false. The contract the app was given says a user-specific boolean is `null`
- * for an unauthenticated request — false would claim an answer nobody asked for.
- *
- * @since 0.6.0
  */
 class TopicSerializer {
 
-	/**
-	 * WordPress/bbPress seam.
-	 *
-	 * @var ContextInterface
-	 * @since 0.6.0
-	 */
 	private ContextInterface $wp;
 
-	/**
-	 * REST seam.
-	 *
-	 * @var RestContextInterface
-	 * @since 0.6.0
-	 */
 	private RestContextInterface $rest;
 
-	/**
-	 * Per-reader read state.
-	 *
-	 * @var ReadState
-	 * @since 0.6.0
-	 */
 	private ReadState $reads;
 
-	/**
-	 * Signed read positions.
-	 *
-	 * @var ReadCursor
-	 * @since 0.6.0
-	 */
 	private ReadCursor $cursor;
 
-	/**
-	 * Authors.
-	 *
-	 * @var AuthorSerializer
-	 * @since 0.6.0
-	 */
 	private AuthorSerializer $authors;
 
-	/**
-	 * Tags.
-	 *
-	 * @var TagSerializer
-	 * @since 0.6.0
-	 */
 	private TagSerializer $tags;
 
-	/**
-	 * Edit policy.
-	 *
-	 * @var AccessPolicy
-	 * @since 0.6.0
-	 */
 	private AccessPolicy $access;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.6.0
-	 *
-	 * @param ContextInterface     $wp      WordPress/bbPress seam.
-	 * @param RestContextInterface $rest    REST seam.
-	 * @param ReadState            $reads   Per-reader read state.
-	 * @param ReadCursor           $cursor  Signed read positions.
-	 * @param AuthorSerializer     $authors Authors.
-	 * @param TagSerializer        $tags    Tags.
-	 * @param AccessPolicy         $access  Edit policy.
-	 */
 	public function __construct(
 		ContextInterface $wp,
 		RestContextInterface $rest,
@@ -128,9 +57,7 @@ class TopicSerializer {
 	}
 
 	/**
-	 * A page of topics.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param int[] $topic_ids       Topics, in the order they should appear.
 	 * @param int   $avatar_size     Pixels.
@@ -150,9 +77,7 @@ class TopicSerializer {
 	}
 
 	/**
-	 * One topic.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param int  $topic_id        Topic ID.
 	 * @param int  $avatar_size     Pixels.
@@ -166,9 +91,7 @@ class TopicSerializer {
 	}
 
 	/**
-	 * Everything the page needs, asked once.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param int[] $topic_ids   Topics.
 	 * @param int   $avatar_size Pixels.
@@ -190,9 +113,7 @@ class TopicSerializer {
 	}
 
 	/**
-	 * One topic's fields.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param int                 $topic_id        Topic ID.
 	 * @param array<string,mixed> $state           Primed page state.
@@ -207,9 +128,7 @@ class TopicSerializer {
 			'author'        => $state['authors'][ $topic_id ] ?? null,
 			'created'       => $this->rest->post_date_rfc3339( $topic_id ),
 			'last_active'   => $this->rest->last_active_rfc3339( $topic_id ),
-			// ⚠ The one count kept as bbPress reports it, by contract: the replies
-			// collection's own total is the reader-visible number, and can be one
-			// higher for an author who can see their own held reply.
+
 			'reply_count'   => $this->wp->get_topic_reply_count( $topic_id ),
 			'voice_count'   => $this->rest->topic_voice_count( $topic_id ),
 			'is_sticky'     => $this->rest->is_topic_sticky( $topic_id ),
@@ -236,9 +155,7 @@ class TopicSerializer {
 	}
 
 	/**
-	 * Membership of a relationship list, or nulls when there is nobody to ask about.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param int[]      $topic_ids Topics.
 	 * @param int[]|null $members   The reader's list, or null when logged out.

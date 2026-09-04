@@ -1,13 +1,4 @@
-/**
- * Bulletin for bbPress — reading layer.
- *
- * Ported from the approved prototype (prototype/index.html), namespaced .bltn-*,
- * and extended for the things a real forum throws at it: arbitrary post HTML,
- * the load-more control, empty states, the admin bar, and a responsive frame.
- *
- * Light theme only — the dark palette stays parked (see the commented tokens
- * below) until light is signed off.
- */
+/* Bulletin for bbPress reading layer. */
 
 :root {
 	--bltn-bg: #f1f3f0;
@@ -15,23 +6,13 @@
 	--bltn-wash: rgba(14, 124, 107, 0.06);
 	--bltn-ink: #191c1a;
 	--bltn-ink-2: #565f59;
-	--bltn-ink-3: #69716a; /* Deterministically set to clear 4.5:1 — do not "tidy". */
+	--bltn-ink-3: #69716a;
 	--bltn-line: #e6e8e3;
 	--bltn-line-soft: #eef0ec;
 	--bltn-accent: #0e7c6b;
 	--bltn-accent-ink: #0a5f52;
-	/* The searched term's tint. Its own token rather than a --bltn-wash reuse: this is
-	   the one tint that carries meaning, and 18% is a computed value (see .bltn-result
-	   mark) where wash's 6% is a button fill. */
 	--bltn-mark: rgba(14, 124, 107, 0.18);
-	--bltn-unread: #cf7726; /* Amber — unread only. */
-	/* Caution. Its own token because amber is spoken for: unread is a row-level mark and
-	   an error is a block-level one, and #32 puts both on the profile screens at once.
-	   L 0.44 in OKLCH — where --bltn-accent-ink sits (0.436), this palette's depth for
-	   colour that carries text — so it reads as a sibling of the teal, not an import.
-	   Separated from --bltn-unread by LIGHTNESS, not hue, which is the only separation a
-	   dichromat keeps: ΔE 0.223 under deuteranopia, where a stock red (#d63638) collapses
-	   to 0.065 against the same amber. 8.32:1 on surface, 7.45:1 on bg. See DESIGN.md. */
+	--bltn-unread: #cf7726;
 	--bltn-caution: #8a2f2d;
 
 	--bltn-sans:
@@ -44,30 +25,13 @@
 	color-scheme: light;
 }
 
-/* Dark palette parked until the light version is signed off. To re-enable, move
-   these under @media (prefers-color-scheme: dark) / :root[data-theme="dark"] and
-   drop the forced color-scheme above:
-     --bltn-bg:#0d100e; --bltn-surface:#171a18; --bltn-wash:rgba(60,194,169,.10);
-     --bltn-ink:#eceee9; --bltn-ink-2:#9ba39c; --bltn-ink-3:#6a726b;
-     --bltn-line:#262b27; --bltn-line-soft:#1f231f;
-     --bltn-accent:#3cc2a9; --bltn-accent-ink:#3cc2a9; --bltn-unread:#e0975a;
-     --bltn-mark:rgba(60,194,169,.26); --bltn-caution:#c06a64;
-   ⚠ The parked caution value is the one token here that does NOT carry the light theme's
-   guarantee, and it cannot: the parked accent and unread both sit at L 0.736, so a caution
-   at readable contrast on #171a18 has nowhere darker to stand — #c06a64 clears 4.58:1 but
-   separates from the parked amber by only ΔE 0.127 deutan, against 0.223 in light. Signing
-   off dark means moving the amber up or the caution down, not shipping this as-is. */
-
 .bltn *,
 .bltn *::before,
 .bltn *::after {
 	box-sizing: border-box;
 }
 
-/* Announced, not shown. WordPress's own .screen-reader-text comes from the active
-   theme's stylesheet, which the takeover dequeues, so the utility is ours. Kept
-   in the flow rather than positioned off-canvas: no scrollbar to provoke, and it
-   still reads in DOM order. */
+/* Screen-reader text remains in DOM order without provoking overflow. */
 .bltn-sr-only {
 	position: absolute;
 	inline-size: 1px;
@@ -91,62 +55,11 @@ body.bltn {
 	text-rendering: optimizeLegibility;
 }
 
-/* ---- app frame ---- */
-/* The two properties that make this box unscrollable are `position` and the
-   second `overflow`, and NEITHER works without the other (#66).
 
-   What was wrong: the root document was programmatically scrollable by up to
-   1.5k px on any screen whose content ran long — measured on the reading view,
-   the topic archive and the tag archive, logged out and as keymaster, at 390 and
-   at 900. `overflow: hidden` stops a *user* scrolling a box; it does nothing
-   about window.scrollTo(), scrollIntoView(), focus(), find-in-page or assistive
-   tech. When one of those moved the root, the whole frame slid up: the app bar
-   went above the top of the screen and a band of bare page appeared under the
-   nav bar.
-
-   Why a clipped 100dvh shell leaked at all: an absolutely positioned box with no
-   positioned ancestor is contained by the INITIAL containing block, and overflow
-   clipping only reaches descendants whose containing-block chain runs through the
-   clipping box. So `.bltn-sr-only` — the load-more live region, sitting at the
-   foot of a 2.3k px content flow — was outside every clip the shell had, and the
-   viewport's scrollable region grew to meet it. One 1px box: removing it took the
-   root overflow from 1542 to exactly 0, and putting it back brought all 1542
-   with it.
-
-   `position: relative` alone is therefore half a fix, and the dangerous half. It
-   gives those boxes a containing block inside the shell and the root does go to
-   0 — but their overflow lands in THIS box instead, and `overflow: hidden` makes
-   this box a scroll container too. Measured: `.bltn-app` went from 0 to 1542,
-   with `scrollTop = 500` reaching 500. Identical symptom, one level in.
-
-   `overflow: clip` closes it: same clipping as `hidden`, but not a scroll
-   container, so there is nothing to scroll. The `hidden` above it is a fallback
-   and not a leftover — Safari before 16 drops the `clip` declaration, and with no
-   `hidden` ahead of it the box would fall back to `visible` and stop clipping
-   altogether, which is worse than the bug.
-
-   ⚠ But that fallback keeps the *clipping*, not the fix: on a pre-16 Safari this
-   box renders as `position: relative` + `overflow: hidden`, which is exactly the
-   dangerous half above. Raised in review of #92, and answered one box down —
-   `.bltn-scroll` carries a `position: relative` of its own, so every escapee
-   measured is contained by the scroll region and never reaches this box at all.
-   That containment needs no feature and holds in every browser. Measured with
-   `clip` forced off across the routes that failed: this box scrolls 700px without
-   that line and 0 with it. Two independent containments, and only the outer one
-   depends on `clip`.
-
-   What does NOT fix it, all measured rather than reasoned: `min-block-size: 0` on
-   the `1fr` track, `minmax(0, 1fr)` in place of `1fr`, and `overflow: clip` on
-   `html`/`body` — the first two because the escaping box is out of flow and no
-   track ever sizes it, the third because a clip on a box that is not the
-   escapee's containing block does not reach it. Those three were the candidates
-   #66 proposed; none of them moved the number.
-
-   One knock-on, and it is the only visible one: bbPress's own
-   `.screen-reader-text` parks itself at `left: -999em`, and its containing block
-   changes from the viewport to this box. On a phone the two share an origin. At
-   ≥600px this box is centred, so the label moves with it — still ~13,000px off
-   canvas, and now clipped rather than merely off-screen. */
+/*
+ * Positioning contains off-flow descendants. `clip` prevents programmatic
+ * scrolling; `hidden` preserves clipping in browsers without `overflow: clip`.
+ */
 .bltn-app {
 	position: relative;
 	inline-size: 100%;
@@ -156,9 +69,7 @@ body.bltn {
 	overflow: clip;
 }
 
-/* Responsive: the phone-width lock is gone. On wider screens the frame settles
-   at a comfortable reading width and centres, so serif lines never run too long.
-   (Desktop is a new surface JT hasn't reviewed — see CLAUDE.md.) */
+
 @media (min-width: 600px) {
 	.bltn-app {
 		max-inline-size: 720px;
@@ -167,11 +78,7 @@ body.bltn {
 	}
 }
 
-/* Keep the app clear of the WordPress admin bar. Only an administrator still sees
-   it here — every other logged-in reader has it suppressed (JTZL\Bulletin\Chrome\
-   AdminBar), which drops the body class with it, so these rules simply stop
-   applying rather than needing a condition of their own. The two heights mirror
-   core's own bump (32px, 46px at ≤782px). */
+/* Match WordPress admin-bar offsets; the class is absent when Bulletin suppresses the bar. */
 body.admin-bar.bltn,
 body.admin-bar .bltn-app {
 	block-size: calc(100dvh - 46px);
@@ -186,37 +93,21 @@ body.admin-bar .bltn-app {
 .bltn-screen {
 	block-size: 100%;
 	display: grid;
-	grid-template-rows: auto 1fr auto; /* app bar · scroll · optional bottom bar */
-	/* The column has to be stated, and it has to carry a zero minimum.
-	   An implicit `auto` track is sized by its widest item's min-content, and the
-	   app bar's min-content is its nowrap title plus three 40px buttons — 412.7px
-	   inside a 390px phone. Every grid item then inherited that width and
-	   `overflow: hidden` clipped the excess, so the right 23px of the screen was
-	   cut and unreachable: the account button lost 15 of its 40px, `.bltn-row`'s
-	   disclosure chevron fell off the edge entirely, and the title's own
-	   `text-overflow: ellipsis` never engaged because the bar was never asked to
-	   shrink. `minmax(0, 1fr)` caps the track at the container and lets the
-	   ellipsis do its job. `min-inline-size: 0` on the title does NOT substitute:
-	   it bounds how far the flex item shrinks, not the flex container's intrinsic
-	   contribution to the track. Worst at 200% zoom, where a short title clipped
-	   63% of the width (WCAG 1.4.4, 1.4.10). */
+	grid-template-rows: auto 1fr auto;
+	/* A zero minimum prevents long descendants from widening the grid track. */
 	grid-template-columns: minmax(0, 1fr);
 	background: var(--bltn-surface);
-	/* Clipped, and not a scroll container — the same pair of declarations as
-	   .bltn-app, for the same reason (#66). This box has no scrollable overflow
-	   today, so `clip` changes nothing that can be seen; it means a future one
-	   cannot be scrolled into view by anything, rather than happening not to be. */
+
 	overflow: hidden;
 	overflow: clip;
 }
 
-/* ---- app bar (minimal top strip) ---- */
+
 .bltn-appbar {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	/* The title is centred against this box, not against the space the controls
-	   leave over — see .bltn-appbar__title. */
+
 	position: relative;
 	gap: 8px;
 	padding: calc(10px + env(safe-area-inset-top, 0px)) 8px 10px;
@@ -231,13 +122,7 @@ body.admin-bar .bltn-app {
 	text-decoration: none;
 	inline-size: 40px;
 	block-size: 40px;
-	/* Do not shrink. Once the app bar is correctly clamped to the viewport
-	   (`grid-template-columns` on .bltn-screen), a long title makes the bar's flex
-	   line overflow — and a flex item's default `flex-shrink: 1` meant the buttons
-	   paid for it, dropping to 37px on exactly the screens with the longest names.
-	   The title is the item built to absorb it: `min-inline-size: 0` plus an
-	   ellipsis. So the tap targets keep their size on every screen and the text
-	   truncates, which is the whole point of the ellipsis. */
+
 	flex: 0 0 auto;
 	border-radius: 10px;
 	display: grid;
@@ -257,37 +142,14 @@ body.admin-bar .bltn-app {
 	flex: 0 0 40px;
 	block-size: 40px;
 }
-/* The trailing group, kept as one flex item so the row has two things to push apart.
-   No gap between its buttons: they are 40px targets holding 18px glyphs, so they read
-   as spaced without being spaced, and the 16px saved goes to the title — which needs
-   every pixel, since a centred title can only be twice its clearance from this group.
-   At 390 that is the difference between "Troubleshooting" fitting and not. */
+/* Keep trailing controls grouped so absolute title centering has a stable clearance. */
 .bltn-appbar__actions {
 	display: flex;
 	align-items: center;
 	gap: 0;
 	flex: 0 0 auto;
 }
-/* Centred on the SCREEN. Taken out of the flex row and positioned against the bar,
-   because centring it *between* the controls put it left of the middle: the leading
-   side is one button and the trailing side is three.
-
-   `--bltn-appbar-side` is the trailing group's width, set per screen because the group
-   is not the same on all of them. Doubling it is what keeps the title symmetric: a
-   centred box can only be as wide as twice its clearance from the WIDER side, and the
-   leading control has room to spare.
-
-   The `100%` resolves against the bar's PADDING box, not its content box — this is an
-   absolutely positioned element, so the 8px gutters are already inside the figure and
-   must not be subtracted twice. Worth stating because doing that arithmetic wrong is
-   how the numbers below were first written.
-
-   ⚠ The room this leaves is real and it is tight. Measured, with the trailing group at
-   three buttons (`--bltn-appbar-side: 128px`, so `calc(100% - 272px)`): the title gets
-   **118px at 390** against the 107px "Troubleshooting" needs — eleven to spare — and
-   **48px at 320**, where it truncates. That is the price of true centring with three
-   trailing controls, and it is why the ellipsis below is load-bearing rather than
-   defensive. */
+/* Absolute positioning centers the title on the viewport rather than between unequal side controls. */
 .bltn-appbar__title {
 	margin: 0;
 	position: absolute;
@@ -312,18 +174,9 @@ body.admin-bar .bltn-app {
 	letter-spacing: 0.01em;
 }
 
-/* ---- scroll region ---- */
+
 .bltn-scroll {
-	/* The containing block for everything inside the scroll region, and the first
-	   line of the #66 defence rather than an afterthought. `.bltn-app` establishes
-	   one too, but only usefully where `overflow: clip` is supported; here the
-	   escaping boxes land in the box that is *supposed* to scroll, which needs no
-	   feature at all. Measured with `clip` forced off: `.bltn-app` is scrollable by
-	   700px without this line and by 0 with it, on every route that failed. And it
-	   costs the scroll region nothing — its scrollable overflow is identical to the
-	   pixel either way (1625 / 1388 / 1085 / 1179 on the four failing routes),
-	   because the boxes it now contains sit at their static position at the foot of
-	   content that was already that tall. */
+	/* This positioned scroll region contains off-flow descendants before they can enlarge the app shell. */
 	position: relative;
 	overflow-y: auto;
 	overscroll-behavior: contain;
@@ -337,7 +190,7 @@ body.admin-bar .bltn-app {
 	border-radius: 8px;
 }
 
-/* ---- lists (forums + threads share the row) ---- */
+
 .bltn-list {
 	padding: 6px 0;
 }
@@ -411,27 +264,14 @@ body.admin-bar .bltn-app {
 	color: var(--bltn-ink-2);
 }
 
-/* The leading qualifier in a meta line — one idiom, two words that use it.
-   `.bltn-closed` says what state a thread or forum is in; `.bltn-result__kind`
-   says which of three things a search result is. Both go first, both are one
-   word, and both are found by scanning a column of rows down its left edge
-   without reading any of it: every row starts its meta at the same x. They share
-   a rule because they share that role, so the two cannot drift into looking like
-   different kinds of thing.
-
-   Closed is deliberately not a glyph: a padlock would collide with
-   password-protected, a different state this app already renders. And
-   deliberately not bbPress's own treatment, which drops the whole row to #ccc —
-   that fails contrast and reads as disabled, when a closed thread is often the
-   one most worth reading. Used on five surfaces now: both row types, both screen
-   headers, and the result row. */
+/* These qualifiers are announced by adjacent text, so their pseudo-elements are decorative. */
 .bltn-closed,
 .bltn-result__kind {
 	color: var(--bltn-ink-2);
 	font-weight: 600;
 }
 
-/* ---- single forum: header + section labels ---- */
+
 .bltn-fhead {
 	padding: 18px 20px 15px;
 	border-bottom: 1px solid var(--bltn-line-soft);
@@ -462,7 +302,7 @@ body.admin-bar .bltn-app {
 .bltn-fhead__sub {
 	margin-inline-start: auto;
 }
-/* Native bbPress subscribe link, quietened to match the design. */
+
 .bltn-fhead__sub a,
 .bltn-thread__subscribe a {
 	font-size: 12px;
@@ -483,13 +323,11 @@ body.admin-bar .bltn-app {
 	font-weight: 700;
 }
 
-/* ---- reading view ---- */
+
 .bltn-thread {
 	padding: 18px 20px 26px;
 }
-/* The kicker: the forum a thread is in, or the parent a child forum hangs off.
-   It is the way UP, now that the app bar's control is the way OUT (issue #86).
-   Both screens share the treatment; only the block name differs. */
+
 .bltn-thread__label,
 .bltn-fhead__parent {
 	font-size: 10.5px;
@@ -499,15 +337,7 @@ body.admin-bar .bltn-app {
 	font-weight: 700;
 	margin: 0;
 }
-/* The anchor inherits the kicker entirely — this line looked exactly like this
-   before it was tappable, and that was the defect: it was painted in the accent,
-   the colour every link on the tier uses, while going nowhere. Nothing about it
-   changes except that it now does what it always looked like it did.
-
-   The hit area is grown by overlay, the way .bltn-permalink and the reskin tier's
-   targets are (§2.5.8, #76): 10.5px of uppercase renders a 13px box and the
-   criterion asks for 24. Horizontal inset is 0 so it stays within the gutter, and
-   nothing sits within 11px above or below it to collide with. */
+/* The nested anchor must inherit the kicker instead of the global link treatment. */
 .bltn-thread__label a,
 .bltn-fhead__parent a {
 	color: inherit;
@@ -549,25 +379,7 @@ body.admin-bar .bltn-app {
 	margin-inline-start: auto;
 }
 
-/* Topic tags — the reading view's one navigational control, sitting with the
-   thread header because that is what they describe.
-
-   Outlined, not filled. The filled wash pill is already spoken for twice on this
-   screen — Subscribe and the "Original post" chip — and both are teal-inked
-   because one is an action and the other a status. A tag is quieter than either:
-   a fact about the thread that happens to be followable. An outline puts it in
-   the same family without claiming the accent, and sans keeps it reading as
-   chrome against the serif body.
-
-   The voice lives on the container, not on the anchors, so the one case that
-   arrives as bare text still lands in it: on a spammed topic bbPress substitutes
-   the pre-spam terms from post meta and implodes them as plain strings, with no
-   links to style. A moderator viewing that topic gets a quiet grey line rather
-   than unstyled 16px body text.
-
-   Height, not just padding, is the constraint: 11px over 1.4 plus 4px of padding
-   and the border clears the 24px WCAG 2.5.8 minimum, which a tighter chip at this
-   type size does not. */
+/* bbPress emits topic tags as comma-separated text nodes, so they cannot become independent chips. */
 .bltn-tags {
 	display: flex;
 	flex-wrap: wrap;
@@ -612,12 +424,7 @@ body.admin-bar .bltn-app {
 	}
 }
 
-/* Reply context — "In reply to Mara L." above the byline of a reply that answers
-   another reply (issue #37). Bulletin's whole threading treatment: the loop stays
-   flat and chronological, so the parent is named rather than implied by an indent
-   that would point at whichever post happens to sit above. Sans, ink-3, above the
-   byline and smaller than it, so it reads as the caption to the post rather than
-   as part of it. Absent entirely on a root reply, which is most of them. */
+
 .bltn-replyto {
 	margin: 0 0 7px;
 	font-family: var(--bltn-sans);
@@ -630,8 +437,7 @@ body.admin-bar .bltn-app {
 	gap: 5px;
 	color: var(--bltn-ink-3);
 	text-decoration: none;
-	/* The pointer target is grown past the text box, not the text. See the
-	   .bltn-hit-24 note below the permalink rule. */
+	/* A pseudo-element enlarges the inline link target without enlarging its text box. */
 	position: relative;
 }
 .bltn-replyto a::after {
@@ -676,21 +482,7 @@ body.admin-bar .bltn-app {
 	margin-inline-start: auto;
 }
 
-/* A reply held for moderation, rendered for its author and for nobody else
-   (Query\PendingVisibility). Caution IS the right channel: this is a real
-   interruption to what the author expected to happen, which is the one thing
-   --bltn-caution exists to say. Amber would be wrong — #101 gave amber back to
-   unread, and "new to you" and "not yet public" are different facts.
-
-   Hugs the timestamp instead of taking the byline's trailing slot. The slot is
-   where an action goes (the author's Edit); this is a state of the post, and
-   pushing it to the far edge would read as a control. It also never shares the
-   row with that Edit — View\AuthorEdit declines on a held post — so the two are
-   not competing for the slot in the first place.
-
-   The dimming is the whole of the "not yet public" signal on the body: no tint,
-   no rule, no box. A held reply is still the author's own words and still worth
-   reading back; it just is not the same as the ones around it. */
+/* Pending posts retain a textual status so color is not the only cue. */
 .bltn-post--pending {
 	opacity: 0.78;
 }
@@ -700,18 +492,7 @@ body.admin-bar .bltn-app {
 	margin-inline-start: 0;
 }
 
-/* The author's own Edit, while the edit window is open (View\AuthorEdit). NOT in the
-   moderation tray: putting it there would hand a participant a "Moderate" toggle for
-   an ordinary act. It is transient by nature — five minutes by default — so it needs
-   no mode to hide behind, which is the whole reason it can sit in the open here.
-
-   Two elements, because the anchor is bbPress's: the span is ours and takes the flex
-   row's trailing slot, the anchor inside it is the control. Styling the wrapper rather
-   than `.bbp-topic-edit-link` means a site that filters that markup into something
-   else still gets our control instead of an unstyled blue link mid-byline.
-
-   No fill at rest. It is an action, not a label — the chip beside it is the one that
-   carries a wash, and two washed boxes in one byline would read as two chips. */
+/* Padding enlarges the inline author-edit link to the minimum touch target without changing its markup. */
 .bltn-byline__edit {
 	margin-inline-start: auto;
 	line-height: 1;
@@ -729,43 +510,24 @@ body.admin-bar .bltn-app {
 .bltn-byline__edit a:hover {
 	background: var(--bltn-wash);
 }
-/* WCAG 2.2 2.5.8 again, and solved the way .bltn-permalink solves it: a 12px label in
-   2px of padding renders a 16px box — measured in the browser, not derived — and the
-   target has to be 24. Grown with an inset overlay rather than more padding so the
-   resting geometry stays exactly what was approved; only the thumb notices. Vertical
-   only (16 + 8 = 24): the box is already 35px across, and extending it sideways is the
-   one direction that could reach the permalink four elements to its left. */
+
 .bltn-byline__edit a::after {
 	content: "";
 	position: absolute;
 	inset: -4px 0;
 }
-/* The chip claims the trailing slot on its own, but not when the edit control has
-   already taken it — then the chip simply follows at the row's own gap. */
+
 .bltn-byline__edit + .bltn-chip {
 	margin-inline-start: 0;
 }
 
-/* Per-reply permalink — the timestamp itself, so the affordance costs no pixels.
-   It inherits the size and colour of the .bltn-byline__time it lives in and adds
-   nothing: no underline, no glyph, no second element. "The time is the permalink"
-   is the convention every forum and timeline uses, and on a read-only screen this
-   is a nicety for sharing rather than a way to get anywhere — so it is not worth
-   buying discoverability with a rule under every byline. Hover and focus are the
-   only feedback; :focus-visible is handled by the global rule. */
+/* The timestamp is also the permalink; its pseudo-element supplies the touch target. */
 .bltn-permalink {
 	color: inherit;
 	text-decoration: none;
 	position: relative;
 }
-/* The one thing the "costs no pixels" argument did not cover: a 12px timestamp
-   renders a 15px-tall box, and WCAG 2.2 2.5.8 asks for 24. On a 22-reply thread
-   that was ~30 sub-minimum targets and every in-content affordance the screen
-   has. The target is grown with an inset overlay instead of padding, so the
-   permalink still occupies exactly the byline space it did — the decision that
-   it costs no pixels survives, and only the thumb notices. Vertical inset is
-   -6px (15 + 12 = 27) and horizontal -4px, kept small so two adjacent stops in
-   one byline cannot overlap. */
+/* The pseudo-element enlarges the timestamp link without changing line layout. */
 .bltn-permalink::after {
 	content: "";
 	position: absolute;
@@ -775,24 +537,14 @@ body.admin-bar .bltn-app {
 	color: var(--bltn-accent-ink);
 }
 
-/* Post body — serif reading face. Everything below is defence against real,
-   pasted-from-anywhere forum HTML: it must stay inside the column and never make
-   the page scroll sideways. */
+
 .bltn-post__body {
 	font-family: var(--bltn-serif);
 	font-size: 17px;
 	line-height: 1.62;
 	color: var(--bltn-ink);
 	overflow-wrap: anywhere;
-	/* A reading measure, on the prose only. Measured at 720px (the frame's desktop
-	   width) this ran to 80 characters a line at 17px — comfortable reading is
-	   45–75, and past that the eye loses its place on the return sweep. It is the
-	   one number on the desktop surface that decides whether a long post is
-	   pleasant, and desktop is the surface going to the client for review.
-	   `ch` rather than `px` so the measure tracks the serif's own metrics, and on
-	   `.bltn-post__body` alone rather than the frame, so the chrome — app bar,
-	   bottom bar, tag row, load-more — keeps using the full width. Below ~600px
-	   the frame is already narrower than 66ch, so this changes nothing on a phone. */
+
 	max-inline-size: 66ch;
 }
 .bltn-post__body p {
@@ -820,9 +572,7 @@ body.admin-bar .bltn-app {
 .bltn-post__body object {
 	max-inline-size: 100%;
 }
-/* Video oEmbeds arrive as fixed-size iframes, and we dequeued the theme's
-   responsive-embed CSS — so give known video hosts a 16:9 box that scales with
-   the column. Scoped by src so non-video iframes keep their own dimensions. */
+
 .bltn-post__body iframe[src*="youtube"],
 .bltn-post__body iframe[src*="youtu.be"],
 .bltn-post__body iframe[src*="vimeo"],
@@ -840,8 +590,7 @@ body.admin-bar .bltn-app {
 	font-style: italic;
 	font-size: 17px;
 }
-/* Code: wrap the box in its own horizontal scroll rather than blowing out the
-   column on a 200-column line. */
+
 .bltn-post__body pre {
 	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 	font-size: 13.5px;
@@ -861,7 +610,7 @@ body.admin-bar .bltn-app {
 	border-radius: 5px;
 	overflow-wrap: anywhere;
 }
-/* Tables scroll inside their own box; the page never does. */
+
 .bltn-post__body table {
 	display: block;
 	max-inline-size: 100%;
@@ -876,8 +625,7 @@ body.admin-bar .bltn-app {
 	border: 1px solid var(--bltn-line);
 	padding: 6px 10px;
 	text-align: start;
-	/* Keep natural column widths so the table box scrolls sideways instead of
-	   collapsing 10 columns into an unreadable character-per-line grid. */
+
 	white-space: nowrap;
 }
 .bltn-post__body ul,
@@ -894,27 +642,7 @@ body.admin-bar .bltn-app {
 	margin: 1.2em 0;
 }
 
-/* The edit record, when an author kept a log of one (bbPress appends it to the
-   reply's own content through `bbp_get_reply_content`, so it lands inside the
-   serif reading column and inherits everything meant for prose).
-
-   Undressed it renders as a bulleted 17px serif paragraph with a 14px avatar
-   stranded on its own line — the loudest thing under a short reply, saying the
-   least. It is a fact ABOUT the post, not part of it, so it takes the byline's
-   voice instead of the body's: quiet sans at the timestamp's size and ink.
-
-   ⚠ **Kept, not hidden**, and that was the choice. P4 gave authors an edit window,
-   and a post that can change silently is a worse forum than one that says it
-   changed — this is the only place a reader learns it did. Subtraction applies to
-   chrome, not to disclosure.
-
-   The avatar goes. At 14px beside 12px text it is a smudge, the byline overhead
-   already says whose post this is, and dropping it puts the sentence on one line
-   instead of three. Its `alt` carries the same name the link does, so nothing is
-   lost to a screen reader either.
-
-   Two selectors because bbPress emits one class for replies and another for
-   topics, and the opening post is a topic. */
+/* bbPress appends revision logs inside post content, so they need an explicit prose reset. */
 .bltn-post__body .bbp-reply-revision-log,
 .bltn-post__body .bbp-topic-revision-log {
 	margin: 1.1em 0 0;
@@ -933,8 +661,7 @@ body.admin-bar .bltn-app {
 .bltn-post__body .bbp-topic-revision-log li + li {
 	margin-block-start: 0.35em;
 }
-/* A name in a sentence, not a call to action: no underline, no accent, and it
-   inherits the line's own ink so the eye reads the sentence rather than the link. */
+
 .bltn-post__body .bbp-reply-revision-log a,
 .bltn-post__body .bbp-topic-revision-log a {
 	color: inherit;
@@ -950,30 +677,7 @@ body.admin-bar .bltn-app {
 	display: none;
 }
 
-/* ---- moderation: a mode, not furniture (issue #36) ----
-
-   bbPress puts a seven-item control row under the opening post and a five-item row
-   under every reply. On a 23-reply thread that is 24 control rows a moderator did not
-   ask for, on the screen whose entire job is the post. So the default state adds one
-   word — "Moderate", beside Subscribe — and the rows appear only when it is tapped.
-
-   THE HIDING IS CSS, THE MARKUP IS ALWAYS THERE. Every tray is server-rendered inside
-   .bltn-thread, and the mode is a class on that article, so a reply appended by the
-   load-more endpoint arrives already in whatever state the reader has the screen in.
-   No JS re-application step, and nothing to forget when a new list is added.
-
-   `.bltn-thread--modready` is what makes that safe, and it is added by the toggle's own
-   initialiser AFTER it has attached its listener (src/reading.ts). So both rules below
-   are inert until the script that answers them is demonstrably running: no class means
-   every tray shows inline and no toggle appears, which is exactly bbPress's own
-   behaviour — a moderator gets every control, working.
-
-   It used to key on `@media (scripting: enabled)`, which was wrong: that asks whether
-   scripting is ON, not whether OUR bundle ran. A bundle that 404s, throws early, or
-   finds no BLTN config leaves scripting "enabled" — and left a visible, inert toggle
-   above hidden trays. A broken control is worse than no control (Qodo, #62). Keying on
-   the class also drops the media query's own browser-support caveat, and there is still
-   no flash to suppress: hidden is not the default, it is what the script asks for. */
+/* Moderation controls are revealed as a mode; CSS keeps them absent when the mode is closed. */
 .bltn-modtoggle {
 	display: none;
 }
@@ -984,10 +688,7 @@ body.admin-bar .bltn-app {
 	display: none;
 }
 
-/* Quieter than Subscribe on purpose. Teal is the reader's own actions — links, the
-   subscribe pill — and a mode switch that is not one should not compete with them at
-   rest. Engaged, it fills teal, which is the tab bar's own active treatment and says
-   the true thing: you are in a mode, and it is on. */
+
 .bltn-modtoggle {
 	appearance: none;
 	cursor: pointer;
@@ -1007,27 +708,20 @@ body.admin-bar .bltn-app {
 	border-color: var(--bltn-accent);
 }
 
-/* The tray. Paper on the app's white surface reads as recessed — a place tools are
-   kept, not more of the thread — so the fill alone carries the elevation and there is
-   no border under it. Full-bleed like the rows it sits between, inset by the gutter. */
+
 .bltn-mod {
 	margin: 0 0 14px;
 	padding: 10px;
 	border-radius: 10px;
 	background: var(--bltn-bg);
 }
-/* The flex container is bbPress's own wrapper, not the tray. bbPress puts every
-   link inside one `<span class="bbp-admin-links">`, so a flex tray would lay out
-   that single span and leave the chips as inline text — touching, with ragged
-   wrapping and the gap doing nothing. Found by reading the computed box, not by
-   eye: it looked close enough to right in a screenshot. */
+/* bbPress wraps all moderation links in one span, so flex must apply to that upstream wrapper. */
 .bltn-mod .bbp-admin-links {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 6px;
 }
-/* Under a post, the tray belongs to the post above it, so it keeps the reading
-   measure's top spacing and closes the gap to the divider below. */
+
 .bltn-post .bltn-mod {
 	margin: 14px 0 16px;
 }
@@ -1041,17 +735,12 @@ body.admin-bar .bltn-app {
 	border-radius: 6px;
 	padding: 7px 10px;
 	text-decoration: none;
-	/* 44px is the touch target these sit in; the chip is smaller than that on
-	   purpose and reaches it through the tray's own padding and the 6px gaps. */
+	/* Tray padding expands each small chip to a 44px touch target. */
 	min-height: 30px;
 	display: inline-flex;
 	align-items: center;
 }
-/* Consequential actions get full-strength ink rather than a hue. The palette has one
-   accent and one amber, both spoken for, and inventing a red for a moderator-only
-   surface would spend the system's scarcest resource on its rarest screen. Weight and
-   contrast say "this one is different" without it — and bbPress already puts a
-   confirm() on the only action that cannot be undone, which is the real guardrail. */
+
 .bltn-mod a[class*="-trash-link"],
 .bltn-mod a[class*="-spam-link"],
 .bltn-mod a[class*="-delete-link"] {
@@ -1062,7 +751,7 @@ body.admin-bar .bltn-app {
 	color: var(--bltn-accent-ink);
 }
 
-/* ---- load more (replies, threads, forums — one control, three lists) ---- */
+
 .bltn-loadmore {
 	padding: 14px 20px 24px;
 }
@@ -1093,36 +782,12 @@ body.admin-bar .bltn-app {
 	color: #a4442f;
 }
 
-/* ---- the compose slot (foot of a thread) ------------------------------------
-
-   One slot, five states, at the end of the reading flow. It is inline rather than
-   in the fixed bottom bar because that bar is thread Prev/Next and it was JT's own
-   proposal — the same resolution "load more replies" took, for the same reason.
-
-   ⚠ **Geometry is `.bltn-loadmore__btn`'s, exactly, and that is deliberate.** This
-   tier already has an answer to "an action inline in the reading flow", and this is
-   the same problem; a second full-width button at a different height would be a new
-   component saying the same thing. They separate by FILL: load-more keeps the
-   secondary wash, the composer takes the filled teal, because on a long thread both
-   occupy this slot and two identical buttons stacked read as one control repeated.
-   Filled is also the prototype's approved `.composebar` and #90's rule that the
-   thing a screen exists to do takes the filled treatment. */
+/* Composer */
 .bltn-compose {
-	/* ⚠ The block-end inset is a safety distance, not rhythm. The fixed Prev/Next bar
-	   begins immediately below the scroll region, so when a reader is scrolled to the
-	   foot of a thread this is the entire gap between the composer's last control and
-	   "Next thread" — and mis-tapping Next mid-reply loses what was typed. 40px is one
-	   control height, which is the floor decision 4 set. It is a floor and not an
-	   answer: the real check is a thumb on a real device, which Chrome cannot make.
-
-	   The block-start inset separates the composer from the last reply, which
-	   otherwise butts straight against it — the replies are divided by hairlines and
-	   this slot is not one of them. */
+	/* Extra block-end space keeps composer content clear of the fixed navigation and safe area. */
 	padding: 20px 20px 40px;
 }
-/* The trigger, and the sign-in control that stands in for it — one rule, because
-   they are the same control with different destinations. `a` needs the flex
-   centring and the text-decoration reset that `button` does not. */
+
 .bltn-compose__open {
 	appearance: none;
 	display: flex;
@@ -1148,12 +813,7 @@ body.admin-bar .bltn-app {
 	background: var(--bltn-accent-ink);
 	color: #fff;
 }
-/* Closed. One quiet line, no box and no tint — and emphatically not
-   --bltn-caution. DESIGN.md is explicit that a closed thread is not a negative
-   ("often the one most worth reading: resolved, archived, canonical. Nothing is
-   dimmed"), so the severity channel is the wrong channel for it. Centred because it
-   is a statement about the screen rather than a field label, which is the same
-   voice the empty states use. */
+
 .bltn-compose__note {
 	margin: 0;
 	font-family: var(--bltn-sans);
@@ -1163,74 +823,29 @@ body.admin-bar .bltn-app {
 	text-align: center;
 }
 
-/* Held for review — and here the caution channel IS right, which is exactly the
-   distinction the note above is at pains to draw. A closed thread is a property of
-   the thread; a held reply is an interruption to what this reader just tried to do.
-   Same one line and same centring, one step of colour.
-
-   Left below the composer's own margin rather than given a box: the row it is about
-   already carries the matching chip a screen-length up, and two framed things saying
-   "awaiting review" would be the clutter this product exists to remove. */
+/* Held replies retain explicit caution text, so color is not the only status cue. */
 .bltn-compose__note--held {
 	margin-block-end: 14px;
 	font-weight: 600;
 	color: var(--bltn-caution);
 }
-/* ⚠ An outline removed on purpose, which is otherwise close to never the answer.
-
-   Since #119 this line is the redirect's fragment target and carries `tabindex="-1"`
-   so assistive tech lands on it (see View\HeldNotice). The browser then paints its
-   default focus ring — and measured on the fixture, that turns a deliberately
-   BOXLESS quiet line into a rounded outlined box sitting directly above the reply
-   composer, where it reads as an empty input. DESIGN.md is explicit that this
-   message gets no box; the ring was handing it one.
-
-   Safe here, and only here, because `tabindex="-1"` keeps the element out of the tab
-   order: this is a programmatic landing spot, not a keyboard-operable control, and
-   nothing happens if a reader types into it. WCAG's Focus Visible is about the
-   latter. It is the same pattern a skip-link target uses. Do not copy this rule to
-   anything a reader can Tab to.
-
-   ⚠ `.bltn` is carried on the selector to beat `.bltn :focus-visible` further down
-   this file, and `:focus-visible` is the state to name because that is the one the
-   global rule matches. Without the extra class the two tie at (0,2,0) and source
-   order hands it to the global rule — which is what happened on the first attempt,
-   measured as `outline: 2px solid rgb(14, 124, 107)` still painted. */
+/* The focused notice is already identified by its persistent border; suppress the duplicate global outline. */
 .bltn .bltn-compose__note--held:focus-visible,
 .bltn .bltn-compose__note--held:focus {
 	outline: none;
 }
 
-/* ---- the composer itself ----------------------------------------------------
-
-   bbPress's own `form-reply.php`, inside our chrome. Nothing here re-authors its
-   markup: the fields, the nonces, the anonymous block and the whole write path stay
-   upstream's, and this plugin registers no template stack.
-
-   ⚠ **This tier suppresses every foreign stylesheet, and two still arrive.**
-   `wp_editor()` prints `editor.css` and `buttons.css` as `<link>` elements INSIDE
-   the editor markup rather than enqueuing them, so `Asset\AssetManager`'s dequeue
-   never sees them — measured on wp-env, 2026-08-14. So the strip is styled OVER
-   core here exactly as it is on reskin, not replaced. If that ever changes, these
-   rules still hold: they set every property they rely on rather than unsetting
-   core's. */
+/* bbPress composer markup */
 .bltn-compose__form {
 	padding-block-start: 4px;
 }
-/* bbPress draws the form as a bordered fieldset with its own padding and a legend
-   naming the thread. The border and padding go — the slot's own gutter is the
-   inset, and a box around a form at the end of a thread is a second edge inside an
-   edge. */
+/* Reset the border and padding supplied by bbPress’s fieldset wrapper. */
 .bltn-compose__form fieldset.bbp-form {
 	border: 0;
 	margin: 0;
 	padding: 0;
 }
-/* The legend reads "Reply To: {title}" — the title the reader has been looking at
-   since the top of the screen. Announced, not shown: it is the form's accessible
-   name, which is worth keeping, and repeating the thread title above the field is
-   the clutter this product exists to remove. Same treatment as View\ScreenHeading's
-   h1, and the same reasoning. */
+/* Keep the legend as the form’s accessible name while hiding the repeated visible title. */
 .bltn-compose__form fieldset.bbp-form legend {
 	position: absolute;
 	inline-size: 1px;
@@ -1242,12 +857,7 @@ body.admin-bar .bltn-app {
 	white-space: nowrap;
 	border: 0;
 }
-/* A notice inside the form: "your account may post unrestricted HTML", or "this
-   forum is closed but your capabilities still allow it". Facts about the writer's
-   own situation, so they take the quiet voice rather than bbPress's yellow band —
-   and rather than the caution colour, which belongs to things that can go wrong.
-   The severity variants are excluded so anything bbPress marks .error or .warning
-   keeps its own treatment. */
+
 .bltn-compose__form div.bbp-template-notice:not(.info, .important, .error, .warning),
 .bltn-compose__form div.bbp-template-notice.info {
 	margin: 0 0 14px;
@@ -1269,19 +879,7 @@ body.admin-bar .bltn-app {
 	line-height: 1.4;
 	color: var(--bltn-ink-2);
 }
-/* ⚠ **A failed reply is silent on this tier without this rule, and that is what
-   makes it load-bearing rather than decorative.** bbPress reports validation
-   failures through `bbp_template_notices()`, which prints inside the form
-   (`form-reply.php`) — and it dresses them with `bbp-default`, which the takeover
-   dequeues along with every other foreign stylesheet. So a reader whose reply was
-   rejected would get bbPress's words in bbPress's markup wearing nothing at all: a
-   bare list where a warning should be, indistinguishable from the capability note
-   two lines above it.
-
-   The caution pair reads exactly as it does on the reskin tier — colour on the words,
-   a 1px rule in the gutter, no stripe and no tint — because a reader meeting an error
-   here has already met that vocabulary on a profile or a merge screen. One product,
-   one way of saying something went wrong. */
+/* bbPress renders submission errors inside the form; preserve their caution treatment and announcement. */
 .bltn-compose__form div.bbp-template-notice:is(.error, .warning) {
 	margin: 0 0 14px;
 	padding: 12px 14px;
@@ -1298,13 +896,7 @@ body.admin-bar .bltn-app {
 	color: var(--bltn-caution);
 	text-decoration: underline;
 }
-/* The formatting strip. Ten buttons — Chrome\ComposerSettings drops `img`, the only
-   one that asks a reader on a phone for a URL they do not have. Core's slab and
-   bordered container go; each button takes the secondary control step, which is what
-   these are: helpers beside a field, not the thing the screen exists to do.
-
-   ⚠ `min-inline-size` is the touch floor (#76's 24px), not the look. `b` and `i` are
-   one character wide and would otherwise land at 25px of mostly padding. */
+/* WordPress quicktags arrive as editor chrome, so this wrapper removes their independent panel styling. */
 .bltn-compose__form .wp-editor-container {
 	border: 0;
 	background: none;
@@ -1344,15 +936,7 @@ body.admin-bar .bltn-app {
 .bltn-compose__form .quicktags-toolbar input[type="button"]:hover {
 	background: color-mix(in srgb, var(--bltn-accent) 12%, var(--bltn-wash));
 }
-/* Fields. The same arithmetic as the reskin tier's and the password prompt's — 15px
-   on 10px of padding and a 1px border lands on the control scale's 40px — so the two
-   tiers hold one field vocabulary rather than one each.
-
-   ⚠ The textarea reads in the SERIF, alone among the fields on either tier, and that
-   is the one deliberate divergence. It is the only field on this product whose
-   content becomes a post: what is typed here appears three lines up, in that face,
-   the moment it is submitted. Every other field collects a label, a tag or a
-   credential. */
+/* Padding, rather than bbPress fixed heights, establishes a consistent control size. */
 .bltn-compose__form :is(input[type="text"], input[type="email"], input[type="url"], select, textarea) {
 	appearance: none;
 	display: block;
@@ -1377,18 +961,7 @@ body.admin-bar .bltn-app {
 	line-height: 1.5;
 	resize: vertical;
 }
-/* A select has to keep saying it is a picker. `appearance: none` above is what makes
-   the 40px hold across engines, and it takes the native arrow with it, so the chevron
-   is drawn back on — the row chevron's shape, in --bltn-ink-3.
-
-   ⚠ Only the topic form has selects (Topic Type, Topic Status); the reply form has
-   none, which is why this arrives with the forum screen rather than with the reply
-   composer. Without it they were the one run of native controls left on the tier.
-
-   ⚠ The colour is a literal, not var(--bltn-ink-3): a data URI cannot read a custom
-   property, and CLAUDE.md trap #1 is iOS Safari silently dropping var() inside SVG
-   anyway. If the token moves, this moves with it. Physical `right`, mirrored with the
-   reskin tier's copy when an RTL layer exists. */
+/* Removing native appearance requires restoring a picker affordance; SVG data URIs cannot use CSS variables. */
 .bltn-compose__form select {
 	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%2369716a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 	background-repeat: no-repeat;
@@ -1396,13 +969,11 @@ body.admin-bar .bltn-app {
 	background-size: 12px 8px;
 	padding-inline-end: 36px;
 }
-/* One ring on focus, not two — the field's own border would sit inside the global
-   accent outline. Same move as the reskin tier and the password prompt. */
+/* Remove the field border on focus to avoid a second ring inside the global outline. */
 .bltn-compose__form :is(input, select, textarea):focus-visible {
 	border-color: transparent;
 }
-/* Labels above their fields: bbPress puts "Tags:" on its own line already, so this
-   is about voice rather than layout. */
+
 .bltn-compose__form label[for] {
 	display: block;
 	padding: 14px 0 5px;
@@ -1411,8 +982,7 @@ body.admin-bar .bltn-app {
 	font-weight: 600;
 	color: var(--bltn-ink-2);
 }
-/* The subscribe checkbox keeps its label beside it — one line, one target. 24px is
-   the touch floor itself; a run of one does not need more. */
+/* Keep the checkbox and label together while meeting the 24px touch-target minimum. */
 .bltn-compose__form input[type="checkbox"] {
 	appearance: auto;
 	inline-size: 24px;
@@ -1439,9 +1009,7 @@ body.admin-bar .bltn-app {
 	padding-block-start: 18px;
 	float: none;
 }
-/* Submit: the thing the screen exists to do, so the filled teal — the same fill the
-   trigger it replaced was wearing, which is what makes opening the composer read as
-   one continuous action rather than a hand-off between two controls. */
+
 .bltn-compose__form button[type="submit"] {
 	appearance: none;
 	display: inline-flex;
@@ -1466,18 +1034,7 @@ body.admin-bar .bltn-app {
 	background: var(--bltn-accent-ink);
 }
 
-/* ---- the collapse -----------------------------------------------------------
-
-   ⚠ **The default state is OPEN, and the script closes it.** Every declaration here
-   is applied by a class `reading.ts` adds, so a document that never runs our script
-   shows the whole form and no trigger — failure yields more, not less. Issue #62's
-   scar was a control hidden by a signal the script did not control; this is the
-   inverse of that arrangement, on purpose.
-
-   `hidden` is not used for either half: the trigger has to be absent from the
-   accessibility tree when the form is open, and the form when it is collapsed, and
-   `display: none` is what does that in both directions without a second attribute
-   for the script to keep in step. */
+/* The form stays open without script; this control only enables progressive collapse. */
 .bltn-compose__open {
 	display: none;
 }
@@ -1487,8 +1044,7 @@ body.admin-bar .bltn-app {
 .bltn-compose.is-collapsed .bltn-compose__form {
 	display: none;
 }
-/* Cancel, added by the script beside the submit it shares a row with. Secondary
-   fill: closing the composer is not the thing the screen exists to do. */
+
 .bltn-compose__cancel {
 	appearance: none;
 	display: block;
@@ -1510,54 +1066,26 @@ body.admin-bar .bltn-app {
 .bltn-compose__cancel:hover {
 	background: color-mix(in srgb, var(--bltn-accent) 12%, var(--bltn-wash));
 }
-/* The edit forms' Cancel is an ANCHOR, because there it navigates rather than
-   collapsing something in place (Chrome\EditExit) — which also means it works with no
-   script, unlike the composer's. A button centres its own label and an anchor does
-   not, so the block above leaves it top-left in a 40px box; these three lines are the
-   whole difference. Same shape as `a.bltn-compose__open` below, for the same reason. */
+/* Edit cancellation is an anchor for no-script navigation, unlike the in-place composer control. */
 a.bltn-compose__cancel {
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	text-decoration: none;
 }
-/* The sign-in control is not collapsible — it IS the resting state — so it opts back
-   in on its own. An anchor rather than a button is what tells the two apart, and it
-   is also what makes them different controls: one opens something on this page, the
-   other leaves for wp-login.php and comes back. */
+
 a.bltn-compose__open {
 	display: flex;
 }
 
-/* ---- the compose bar (forum screen) -----------------------------------------
-
-   "Start a thread", fixed at the foot of the forum screen. The prototype puts it
-   here and JT approved it.
-
-   ⚠ **A different shape from the reading view's inline composer, and deliberately
-   so.** That screen's bottom is spoken for by thread Prev/Next — JT's own proposal —
-   and this one's is free. The actions differ too, which is what makes the
-   inconsistency bearable: starting a thread is a screen-level action, available
-   wherever you are in a long list; replying belongs where the conversation ended.
-
-   Geometry is the Prev/Next bar's, because they are the same furniture on two
-   screens: the same top hairline, the same inset, the same safe-area inset so the
-   control clears the home indicator rather than sitting under it. */
+/* Forum composer */
 .bltn-composebar {
 	display: flex;
 	padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
 	border-block-start: 1px solid var(--bltn-line-soft);
 	background: var(--bltn-surface);
 }
-/* An anchor, not a button — see View\StartThread. With no script the form is
-   already open at the foot of the list and this jumps to it, which is an ordinary
-   in-page link doing an ordinary thing; the script upgrades a control that already
-   worked rather than supplying one that did not.
-
-   ⚠ Which means the script owes the same journey. This bar is fixed to the foot of
-   the viewport and the form is at the foot of the list, so a tap that cancels the
-   jump and does not scroll opens a composer nobody can see — measured at 0 visible
-   pixels of 660, and reported as a broken button. reading.ts scrolls to it. */
+/* This is an anchor so no-script navigation still reaches the already-open form. */
 .bltn-composebar__btn {
 	display: flex;
 	flex: 1 1 auto;
@@ -1582,21 +1110,15 @@ a.bltn-compose__open {
 	background: var(--bltn-accent-ink);
 	color: #fff;
 }
-/* Away while the composer is open: the bar IS the collapsed representation, so
-   leaving it up would put "Start a thread" under a thread being started. Stated
-   explicitly because `hidden` alone loses to the `display: flex` above. */
+
 .bltn-composebar[hidden] {
 	display: none;
 }
 
-/* ---- bottom bar (thread Prev/Next, scoped to the current forum) ---- */
+
 .bltn-navbar {
 	display: grid;
-	/* Zero minimums, so the bar can compress instead of forcing the shell wider than
-	   the viewport. With `auto` in the middle the count's nowrap text was
-	   incompressible, and once the app bar stopped setting the shell's width this bar
-	   became the next thing that did — 269px of min-content, which clipped the screen
-	   at 200% zoom on a phone. */
+
 	grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr);
 	align-items: center;
 	gap: 6px;
@@ -1643,16 +1165,13 @@ a.bltn-compose__open {
 	text-align: center;
 	white-space: nowrap;
 	font-variant-numeric: tabular-nums;
-	/* Truncate rather than push the bar wider than the screen. "Thread 20 of 23"
-	   stays on one line wherever it fits, which is every real phone; below that the
-	   position ellipsises and the two controls keep their targets. Losing the tail of
-	   a count is a smaller failure than clipping the screen it sits on. */
+	/* Truncation protects the fixed navigation controls and their touch targets on narrow screens. */
 	min-inline-size: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
 
-/* ---- empty states ---- */
+
 .bltn-empty {
 	padding: 48px 28px;
 	text-align: center;
@@ -1670,12 +1189,8 @@ a.bltn-compose__open {
 	margin: 0;
 }
 
-/* ---- search (issue #35) ---- */
-/* The field is the screen's only control and the list below it has no ceiling —
-   load-more grows it a page at a time — so a field that scrolled away would be a
-   control the reader has to go and find again. Sticky costs one property, no new
-   element, and no layer of its own: it stops at the scrollport edge under the app
-   bar, on the same surface, keeping the same hairline it has at rest. */
+
+
 .bltn-search {
 	position: sticky;
 	inset-block-start: 0;
@@ -1702,11 +1217,9 @@ a.bltn-compose__open {
 }
 .bltn-search__field::placeholder {
 	color: var(--bltn-ink-3);
-	opacity: 1; /* Firefox dims placeholders by default, below our measured 4.5:1. */
+	opacity: 1;
 }
-/* Teal on the glyph, not behind it. The submit is an action and should say so,
-   but a filled block beside a field is the treatment the topic archive was
-   criticised for (#46) — and this bar already spends its colour elsewhere. */
+
 .bltn-search__go {
 	flex: 0 0 auto;
 	appearance: none;
@@ -1724,10 +1237,7 @@ a.bltn-compose__open {
 .bltn-search__go:hover {
 	background: var(--bltn-wash);
 }
-/* The result row's third line: a preview for the kinds that have a name of their
-   own, and the thread it lives in for the kind that does not (see View\SearchRow).
-   Not clamped — View\SearchList already caps the text, so a clamp would only hide
-   what the cap deliberately kept. */
+
 .bltn-result__sub {
 	margin: 6px 0 0;
 	font-size: 13.5px;
@@ -1735,26 +1245,7 @@ a.bltn-compose__open {
 	color: var(--bltn-ink-2);
 }
 
-/* A reply result is headlined by its own words, so its headline is as long as the
-   excerpt allows — three lines of 17px serif at 390px, and four below about 350px.
-   Clamped at three, which is the design width's own answer: nothing is cut on a
-   phone, and the narrow case stops growing.
-
-   Three and not the two the review proposed, because clamping fights the marking
-   below it: a term matched on the clipped line is ellipsised away, and a result row
-   that hides the reason it is in the list is worse than a tall one. Shortening the
-   headline to fit two lines has the same defect.
-
-   Which is also why the clamp lifts below 360px rather than doing its most work
-   there. Measured: at 320px a term matching at the *end* of the excerpt was hidden
-   on 15 of 15 rows (`/forums/search/real post/`), and at 360px and above on none.
-   So the narrowest viewport is exactly where clamping costs the most and the rule
-   above decides it — a fourth line is the price of the mark staying visible, and
-   320px is the reflow benchmark, where losing content is the thing not to do.
-
-   The genuinely better answer — an excerpt windowed around the match, which would
-   let the clamp apply at every width — belongs with the flooding question (13 of 15
-   rows from one thread), and neither is worth doing without the other. */
+/* Reply excerpts use a line clamp where supported; the un-clamped text remains the fallback. */
 @media (min-width: 360px) {
 	.bltn-result .bltn-row__title {
 		display: -webkit-box;
@@ -1764,21 +1255,7 @@ a.bltn-compose__open {
 	}
 }
 
-/* The matched terms. A result list is triaged against words the reader typed a
-   second ago, and nothing on the row said which words those were — so confirming a
-   row matched meant reading it.
-
-   --bltn-mark is the accent at 18%, held as flat rgba rather than a color-mix:
-   this is the one tint in the app that carries meaning rather than decoration, so
-   it should not depend on color-mix support. Computed, not judged by eye — over the
-   row's white surface the tint is rgb(212,231,228), which leaves the headline
-   (--bltn-ink) at 13.38:1 and the supporting line (--bltn-ink-2) at 5.15:1; on
-   --bltn-bg paper the weaker of the two is still 4.69:1, so a row moved onto paper
-   stays above 4.5. The 6% --bltn-wash used for button fills was measured at this and
-   is far too faint to read as a mark.
-
-   `color: inherit` resets the user agent's black-on-yellow, which would otherwise
-   overrule both the serif headline's ink and the supporting line's grey. */
+/* Search marks use color plus font weight so highlighting does not rely on color alone. */
 .bltn-result mark {
 	background: var(--bltn-mark);
 	color: inherit;
@@ -1786,15 +1263,8 @@ a.bltn-compose__open {
 	padding-inline: 1px;
 }
 
-/* ---- password-protected forum/topic (issue #18) ---- */
-/* WordPress's own password form (form.post-password-form), wrapped in our shell
-   and restyled here so the field and button read as Bulletin, not the theme.
 
-   Scoped to `.bltn`, the class both documents carry, rather than to the screen
-   wrapper: a password form can also arrive mid-thread, when an individual reply
-   carries a password of its own and the reading view renders its prompt in place of
-   the body (see #54 — that one is the reader's only way in, so it is emitted, not
-   withheld). One rule for every prompt Bulletin renders, wherever it lands. */
+/* WordPress emits the protected-post form outside bbPress form wrappers. */
 .bltn-protected {
 	padding: 40px 24px 48px;
 	max-inline-size: 34rem;
@@ -1811,37 +1281,14 @@ a.bltn-compose__open {
 	margin: 0;
 }
 .bltn .post-password-form p {
-	/* Sans, explicitly: mid-thread the form inherits the serif reading face, and a
-	   prompt about access is chrome, not the post's words. */
+
 	font-family: var(--bltn-sans);
 	font-size: 13.5px;
 	color: var(--bltn-ink-2);
 	margin: 0 0 14px;
 }
 
-/* The wrong-password state. WordPress 6.8+ emits the message in its own wrapper
-   with role="alert", and points the field's aria-describedby at it — so the
-   semantics are core's and complete. What core leaves to the stylesheet is telling
-   it apart, and the rule above was catching it: "Invalid password." rendered at
-   13.5px/400/--bltn-ink-2, byte-identical to the instruction sentence under it. A
-   reader who mistyped saw one extra grey line and no other change (measured on the
-   fixture, 390px).
-
-   So the error becomes the strongest text in the block instead of the quietest: 600
-   weight, behind a solid rule. It was near-black, and this note used to say the colour
-   was deliberately withheld because introducing red for one string is a palette
-   decision for JT rather than a side effect of a design pass. That reasoning has been
-   overtaken twice: the palette now HAS a caution token (#100 — unread needed amber
-   back, so caution had to go somewhere), and the decision was ours to make, not JT's.
-   The differentiators are unchanged; only the colour they are made of is. The rule
-   comes down 2px → 1px so the app has exactly one caution treatment rather than two.
-
-   This note used to claim a size step as well — the error was 14px against the
-   instruction's 13.5. That was half a pixel, which is to say it was never doing any
-   work, and the type scale (#77) collapsed both onto 13.5. The three differentiators
-   above are the ones that were always carrying it. Going a real step up, to 15px,
-   would mean setting sans chrome at the serif reading step; the error belongs on 13.5
-   with the rest of the form. See Chrome\PasswordForm for the other half (the caret). */
+/* WordPress 6.8+ supplies an alert wrapper; older markup continues to use the adjacent form state. */
 .bltn .post-password-form-invalid-password {
 	padding-inline-start: 12px;
 	border-inline-start: 1px solid var(--bltn-caution);
@@ -1872,8 +1319,7 @@ a.bltn-compose__open {
 	background: var(--bltn-surface);
 	border: 1px solid var(--bltn-line-soft);
 	border-radius: 10px;
-	/* 10px, not 11: the field lands on the control scale's 40px step. See the scale
-	   note in DESIGN.md — this pair was 42 and 38, which is two heights for one idea. */
+
 	padding: 10px 13px;
 	margin-block: 6px 12px;
 }
@@ -1893,9 +1339,7 @@ a.bltn-compose__open {
 	background: var(--bltn-wash);
 	border: 0;
 	border-radius: 11px;
-	/* 12px, not 11: the submit joins the field on 40px. #75 declined to grow it to the
-	   review's 44px floor because that made it the tallest control in the app; 40 is
-	   the app bar's own height, so it is the tallest nothing. */
+
 	padding: 12px 18px;
 	transition: background 0.15s ease;
 }
@@ -1903,54 +1347,21 @@ a.bltn-compose__open {
 	background: color-mix(in srgb, var(--bltn-accent) 12%, var(--bltn-wash));
 }
 
-/* ---- misc ---- */
-/* `.bltn-visually-hidden` used to sit here: a second, never-referenced copy of
-   `.bltn-sr-only` above, on the deprecated `clip` rather than `clip-path`. Removed
-   while adding the search field's label, which is what would have made it two live
-   utilities for one job (#35). */
+
+
 .bltn :focus-visible {
 	outline: 2px solid var(--bltn-accent);
 	outline-offset: 2px;
 	border-radius: 6px;
 }
 
-/* ---- reskin (issues #32, #43) ----
-   On a reskin screen bbPress renders its OWN markup inside our chrome; here we align
-   it to Bulletin's design language — sans chrome, the one teal accent, our spacing
-   and type scale — without rebuilding the markup, the same way .bltn-protected
-   restyles WordPress's native password form. Everything is scoped under .bltn-reskin
-   so it can't reach the takeover screens or bbPress outside our shell.
+/* bbPress reskin */
 
-   TWO LAYERS, and the distinction is load-bearing:
 
-   1. The SHARED layer — `.bltn-reskin .bltn-reskin__body #bbpress-forums …` — is
-      every rule about markup bbPress reuses across screens: the three loops and
-      their card, notices, pagination, the search form, row actions. It applies to
-      any reskin screen that renders one.
-   2. The PROFILE layer keeps a `#bbp-*` ID of its own (#bbp-single-user-details,
-      #bbp-user-body) and so is by definition only the member-profile screens: the
-      avatar and identity band, the tab bar, the labelled metadata sections.
-
-   Issue #32 shipped the loop card under `#bbpress-forums #bbp-user-wrapper`, which
-   made it invisible to every other reskin screen — the topic archive rendered a raw
-   floated <ul>-as-table on a phone (#43). The shared layer drops that wrapper.
-   Because that costs an ID of specificity against bbPress's own chains, the prefix
-   carries `.bltn-reskin` as well: (1 id, 3 classes) beats every bbPress selector on
-   this markup, whose worst case is `#bbpress-forums li.bbp-body li.bbp-topic-title`
-   (1 id, 2 classes, 2 types) inside its ≤480px block. Do not shorten the prefix
-   without re-checking that; the profile suite is screenshot-regression-gated on it.
-   Adding a rule? Ask which layer it belongs to, and make the *reason* fit — a rule
-   justified by "the author is always the profile owner here" cannot live in the
-   shared layer, because off the profile it isn't true. */
-
-/* The reskin document is app bar + one scroll region. */
 .bltn-reskin .bltn-app {
 	display: grid;
 	grid-template-rows: auto 1fr;
-	/* Same zero-minimum column as `.bltn-screen`, and for the same reason — this
-	   grid has the same shape and the same app bar in it. Latent here rather than
-	   live: the reskin bar carries the (short) site name, so it measured no
-	   overflow. Stated so a longer name never reintroduces the clipping. */
+
 	grid-template-columns: minmax(0, 1fr);
 }
 .bltn-reskin__body {
@@ -1965,7 +1376,7 @@ a.bltn-compose__open {
 	font-size: inherit;
 	color: inherit;
 }
-/* bbPress's own link blue gives way to the one teal accent. */
+
 .bltn-reskin__body a {
 	color: var(--bltn-accent-ink);
 	text-decoration: none;
@@ -1974,44 +1385,7 @@ a.bltn-compose__open {
 	text-decoration: underline;
 }
 
-/* WCAG 2.2 §2.5.8 (Target Size, Minimum) on the reskin tier — issue #76.
-
-   Measured at 390px across eight routes: ~290 targets under 24px, every failure a
-   height and none a width, and zero of them inline-in-prose (the exception 2.5.8
-   grants). The meta run is the bulk of it — an author at 13px, "started in" and
-   freshness at 15 — with the card title itself 2px short at 22.
-
-   The target grows through an overlay, not padding, for the reason .bltn-permalink
-   already grows that way on the takeover tier: the row keeps exactly the pixels it
-   had and only the thumb notices. It differs from that rule in using a fixed 24px
-   box centred on the link rather than a symmetric inset, because these link heights
-   run 13-22px — an inset large enough for the 13s would push the 22s to 34 and start
-   colliding for no gain.
-
-   The list is enumerated rather than written as `#bbpress-forums a`, so a link inside
-   a post body — the one place 2.5.8's prose exception applies, and the one place a
-   forum's own HTML can put anything at all — is never grown into its neighbours.
-
-   Costs one pixel: `p.bbp-topic-meta` below goes 4px -> 5px. At 4px the grown boxes
-   of a card's title and its "Started by:" line miss each other by 0.7px; at 5px every
-   route measures 0 targets under 24 and 0 overlapping pairs. Fifteen rows of archive
-   grow 1628px -> 1643px, which is 0.9%.
-
-   What is met is §2.5.8 itself — every target on every reskin route measures 24px or
-   more, at both roles. What is NOT zero everywhere is the intersection between two
-   grown targets that were already close: a favourite toggle beside a long card title
-   (1.2px), a forum title beside its row's freshness (3.3-4.1px), and a keymaster's
-   admin links against each other (1.5px). Those are ≥24px targets whose edges touch,
-   which the criterion permits — closing them means buying vertical space by the line,
-   and the one place that trade is worth taking is the destructive one, below.
-
-   ⚠ ONE EXCEPTION, recorded not fixed: the child-forum links in `ul.bbp-forums-list`
-   on a Subscriptions row. They are a run of INLINE links that wraps, and two lines
-   18px apart cannot both carry a 24px target — grown, they collide by 6px, and taking
-   the list to a 24px line-height still leaves 2.9px while costing that row 12px.
-   Giving each child its own line would resolve it and cost far more. Issue #76 holds
-   the measurements. (Labelling those counts in #74 is what pushed that list from one
-   line to two, so this got harder before it got fixed.) */
+/* Expand small bbPress inline links to the 24px minimum target without changing upstream markup. */
 .bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-topic-title a,
 .bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-topic-freshness a,
 .bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-forum-info a.bbp-forum-title,
@@ -2037,34 +1411,7 @@ a.bltn-compose__open {
 	transform: translateY(-50%);
 	height: 24px;
 }
-/* A meta run carrying edit actions is given room as well as size.
-
-   Where bbPress prints admin links, the run holds six or seven more targets on top of
-   the date and permalink — 145 on a keymaster's view of Replies Created against 55
-   without. All of them clear 24px, but grown they intersect at the edges by up to 6px,
-   and the pair that intersects is `bbp-reply-permalink` beside `bbp-reply-spam-link`.
-   An ambiguous band between "go to this reply" and "mark it spam" is a different kind
-   of defect from one between two ways of reading the same thread, so this run gets a
-   24px line: a keymaster's worst intersection drops from 6px to 1.5px, and a member's
-   to zero.
-
-   Keyed on the links being present rather than on the role, because the hazard is: a
-   member still inside bbPress's edit window has edit and trash on her own posts and
-   should get the same run. The price is +8.8% on that screen's height, paid only where
-   destructive controls are actually on screen — a logged-out reader of the same tab
-   measures 2571px against a keymaster's 3193px. (On the dev fixture only the keymaster
-   exercises it: the seeded replies are days old and past the edit lock, so a member's
-   run carries no links.)
-
-   ⚠ The selector tests for a link INSIDE the wrapper, not the wrapper. bbPress prints
-   `<span class="bbp-admin-links"></span>` on every reply whether or not the reader can
-   act on it — 15 empty ones on a logged-out view of Replies Created — so `:has(span
-   .bbp-admin-links)` alone charges the height to every reader, including the one with
-   no controls at all, which is the exact opposite of the intent above. Found in review
-   of #84.
-
-   Where :has() is unsupported everyone keeps the tighter line, which is where everyone
-   is today — the same graceful-degradation bargain the even/odd band below makes. */
+/* Admin action runs need their own line so expanded targets do not overlap adjacent metadata. */
 .bltn-reskin
 	.bltn-reskin__body
 	#bbpress-forums
@@ -2073,47 +1420,13 @@ a.bltn-compose__open {
 	line-height: 24px;
 }
 
-/* A title long enough to wrap is several inline fragments, and one absolutely
-   positioned overlay covers only the first — the second line would keep its 22px.
-   `inline-block` makes the whole title one box instead, and that box is already taller
-   than 24px whenever it wraps, so the ELEMENT is the target and the overlay above has
-   nothing left to do there. A title that fits on one line stays at 22px and is grown by
-   that same overlay. Both cases are covered without a second rule.
-
-   There was one here, re-declaring `inset: 0` on the title's ::after, and it was dead:
-   the generic overlay selector carries the `li.bbp-topic-title` class as well, so it
-   won on specificity and the override never applied. It is gone rather than made to
-   win, because what it was for is already true. Found in review of #84.
-
-   Safe because the title carries no permanent underline (only :hover, and the box is
-   the text's own width), and the meta line beneath it is a separate block that was
-   already breaking the line. */
+/* Per-fragment pseudo-elements keep wrapped inline links tappable across every rendered line. */
 .bltn-reskin .bltn-reskin__body #bbpress-forums a.bbp-topic-permalink,
 .bltn-reskin .bltn-reskin__body #bbpress-forums a.bbp-forum-title {
 	display: inline-block;
 }
 
-/* A permanent underline on the META links, and only those.
-
-   The defect it answers: a loop card embeds four links inside a run of meta grey —
-   "Started by: Mara K. in: Troubleshooting" · "1 day ago" · "Mara K." — where colour
-   was the only thing marking them tappable. Measured, the accent against the grey
-   they sit among is 1.15:1 (2.27:1 against body ink), and WCAG technique F73 wants
-   ≥3:1 when colour is the sole distinction. `:hover` cannot supply it on the phone
-   this is built for: there is no hover on a touch screen, so that cue existed only
-   for desktop.
-
-   Scoped rather than applied to every `a`, because the first version of this WAS
-   every `a` and it underlined the card TITLE too — 15 ruled serif headlines down a
-   screen, which is the "reads as ruled" outcome this rule exists to avoid. A title
-   needs no underline: at 16px serif 600 in full ink above 12px sans grey it is
-   already distinguished by face, size, weight and position, so colour is not its
-   only cue and F73 does not reach it. The tab bar is excluded for the same reason —
-   a filled teal chip is not distinguished by colour alone either.
-
-   A tinted underline rather than full strength, so four of them in one card sit
-   quietly. `color-mix` degrades to the text colour where unsupported, which is
-   stronger than intended, never absent. */
+/* Meta links keep a resting underline because their surrounding text has nearly the same color. */
 .bltn-reskin__body p.bbp-topic-meta a,
 .bltn-reskin__body li.bbp-topic-freshness a,
 .bltn-reskin__body div.bbp-reply-header span.bbp-header a,
@@ -2136,12 +1449,7 @@ a.bltn-compose__open {
 	text-decoration-color: var(--bltn-accent-ink);
 }
 
-/* Header band: the avatar and the identity block (name + @handle + role,
-   injected by JTZL\Bulletin\View\ProfileIdentity) stack as ONE unit, then the
-   section nav spans the width below them as one control. bbPress sizes the
-   avatar to 150px and floats the details column through deep
-   `#bbpress-forums #bbp-single-user-details` ID chains, so these rules mirror
-   that chain (plus .bltn-reskin__body) to out-specify it and unset the floats. */
+/* Mirror bbPress’s ID specificity to undo its floated profile header columns. */
 .bltn-reskin__body #bbpress-forums #bbp-single-user-details {
 	width: auto;
 	float: none;
@@ -2154,12 +1462,7 @@ a.bltn-compose__open {
 .bltn-reskin__body #bbpress-forums #bbp-single-user-details #bbp-user-avatar {
 	width: auto;
 	float: none;
-	/* No bottom margin. It carried 10px when this header was three stacked blocks and
-	   the margin was the only thing separating them. In a wrapping flex row it becomes
-	   part of the first line's cross-size instead: the line grows to the avatar's
-	   MARGIN box, so `align-items: center` centred the identity block 5px low, and the
-	   gap before the tab strip measured 26px against the 16 its own margin asks for.
-	   Spacing on this header is the container's job now, not the avatar's. */
+
 	margin: 0;
 }
 .bltn-reskin__body
@@ -2174,16 +1477,7 @@ a.bltn-compose__open {
 	object-fit: cover;
 	display: block;
 }
-/* The header is a row: avatar, then the name block beside it, then the tabs on
-   their own line beneath.
-
-   It was three stacked full-width blocks, which gave a 60px avatar a whole row to
-   itself and started the name below it — while the comment here claimed avatar and
-   name "read as a single unit" and DESIGN.md specified the name "beside the avatar".
-   The intent was recorded twice and delivered nowhere (issue #88).
-
-   Wrapping rather than a fixed two-column grid, so the tab strip takes the full width
-   on its own line by asking for it (`flex: 1 0 100%`) instead of by being placed. */
+/* Wrapping lets bbPress profile tabs take a full row beneath the avatar and identity. */
 .bltn-reskin__body #bbpress-forums #bbp-single-user-details {
 	display: flex;
 	flex-wrap: wrap;
@@ -2193,11 +1487,10 @@ a.bltn-compose__open {
 .bltn-reskin__body #bbpress-forums #bbp-single-user-details #bbp-user-avatar {
 	flex: 0 0 auto;
 }
-/* Identity block: the display name leads (serif, as in the reading view), with
-   @handle and role as one quiet meta line beneath. */
+
 .bltn-reskin__body #bbpress-forums #bbp-single-user-details .bltn-identity {
 	flex: 1 1 auto;
-	/* A long display name shortens rather than pushing the row wider than the gutter. */
+
 	min-inline-size: 0;
 	margin: 0;
 }
@@ -2217,20 +1510,7 @@ a.bltn-compose__open {
 	font-size: 12px;
 	color: var(--bltn-ink-3);
 }
-/* The edit form, reflowed off bbPress's desktop two-column layout (issue #88).
-
-   Upstream floats the label into a 20% column, right-aligned, with the field at 60%
-   beside it. At 390px that computes to a 61px label column of which 20px is padding —
-   41px of text room against the ~62px "Nickname" needs — so `overflow-wrap` did as it
-   was told and broke the word: "Nickn / ame", "Displa / y Name", "Websit / e".
-
-   Label above its field, both full width, which is the same move the tier already
-   makes on the `<ul>`-as-table loops: "reflow, don't replicate". It is the last
-   floated desktop layout on the tier.
-
-   `label[for]` matches upstream's own selector rather than every label, so the
-   checkbox rows — where bbPress puts the label AFTER the input and expects them on one
-   line — keep their shape. */
+/* bbPress floats profile labels into a narrow desktop column; checkbox labels must remain inline. */
 .bltn-reskin .bltn-reskin__body #bbpress-forums #bbp-your-profile fieldset label[for] {
 	float: none;
 	inline-size: auto;
@@ -2248,11 +1528,7 @@ a.bltn-compose__open {
 	inline-size: 100%;
 	max-inline-size: 100%;
 }
-/* Except the checkboxes, which upstream already excludes from its 60% and which would
-   otherwise become a full-width box with a tick in the corner. They are sized here
-   rather than left at `auto` because this selector carries one more type than the
-   tier-wide control rule (issue #90) and would win against it: same 24px floor, stated
-   where the cascade actually lands. */
+/* This more-specific checkbox reset prevents the shared full-width control rule from winning. */
 .bltn-reskin
 	.bltn-reskin__body
 	#bbpress-forums
@@ -2265,17 +1541,13 @@ a.bltn-compose__open {
 	vertical-align: middle;
 }
 
-/* Section nav → one segmented control. Every tab is a chip on a shared track,
-   so there is no active-pill-vs-plain-text split — the active tab is simply the
-   filled teal one. The row wraps so EVERY tab stays visible (never a truncating
-   scroll strip, which was the earlier complaint). */
+
 .bltn-reskin__body
 	#bbpress-forums
 	#bbp-single-user-details
 	#bbp-user-navigation {
 	float: none;
-	/* Its own line under the avatar row — see the flex container above. The top margin
-	   is what the identity block used to carry as a bottom one. */
+
 	flex: 1 0 100%;
 	margin: 16px 0 0;
 }
@@ -2339,34 +1611,21 @@ a.bltn-compose__open {
 	a {
 	color: #fff;
 	background: var(--bltn-accent);
-	/* bbPress fades its own active tab (`opacity: 0.8`, bbpress.css:1341). We
-	   replaced its background and its colour but not that, so the pair we
-	   intended — white on the accent, 4.69:1 — composited to 3.87:1 and failed
-	   AA on the one chip that says where the reader is. Same shape as the
-	   placeholder reset further up: a foreign dim, undone, not a colour of ours
-	   changed. */
+	/* Reset bbPress’s active-tab opacity so the foreground retains AA contrast. */
 	opacity: 1;
 }
 
-/* Body: the display name leads, then labelled metadata sections. */
+
 .bltn-reskin__body #bbp-user-body {
 	padding: 18px 20px 26px;
 }
-/* The one place the shared loop card needs adjusting for its surroundings. A card
-   carries its own 20px gutter and the loop runs full-bleed, but here the loop sits
-   inside the tab body's 20px padding — which would inset the text to 40px and stop
-   the divider short of both edges — so each loop is pulled back out to the shell
-   edge. Nothing else about the card changes, and no other reskin screen needs it,
-   because no other one pads the box the loop lands in. */
+
 .bltn-reskin .bltn-reskin__body #bbpress-forums #bbp-user-body ul.bbp-topics,
 .bltn-reskin .bltn-reskin__body #bbpress-forums #bbp-user-body ul.bbp-replies,
 .bltn-reskin .bltn-reskin__body #bbpress-forums #bbp-user-body ul.bbp-forums {
 	margin-inline: -20px;
 }
-/* The identity block in the header now carries the @name, so bbPress's own
-   `@nicename` heading on the Profile tab is a duplicate — hide it. The loop tabs'
-   section headings ("Forum Topics Started" …) are kept but quieted to a label,
-   since the active tab already names the section. */
+/* Hide bbPress’s duplicate profile heading; the custom identity block already provides it. */
 .bltn-reskin__body #bbp-user-body #bbp-user-profile > .entry-title {
 	display: none;
 }
@@ -2402,56 +1661,15 @@ a.bltn-compose__open {
 	border-top: 1px solid var(--bltn-line-soft);
 	margin: 18px 0 0;
 }
-/* The loop cards are pulled full-bleed out of this section's 20px gutter (see the
-   shared layer's card rule), and on the profile tabs alone that pull-out was being
-   clipped away: bbPress gives this box `overflow: auto` (bbpress.css:1278), which
-   makes it a scroll container, and a scroll container clips at its padding box.
-
-   The cards are the section's own width, so the clip landed exactly on their text
-   box — measured at 390px, the row's background and its divider both spanned 20–370
-   instead of 0–390. Full-bleed is what DESIGN.md specifies for this card and what the
-   archive screens, which have no such wrapper, already got; here it was recorded and
-   not delivered. Found by shooting the surfaces for #96, and it is the second defect
-   from this wrapper — the first is the pagination note further down.
-
-   ⚠ `overflow: visible` alone would give the floats back. That rule is float
-   containment (note the `clear: right` beside it, and bbPress floats plenty on this
-   screen), so `display: flow-root` replaces the containment without the clipping —
-   verified on Topics Started and Replies Created: the section keeps its height and
-   the body gains no horizontal overflow. `overflow: clip visible` was the other
-   candidate and is wrong for the same reason: it un-clips one axis and contains
-   nothing. */
+/* flow-root preserves bbPress float containment while allowing full-bleed cards to escape its padded wrapper. */
 .bltn-reskin .bltn-reskin__body #bbpress-forums .bbp-user-section {
 	overflow: visible;
 	display: flow-root;
 }
 
-/* ==== SHARED LAYER: the three loops and one card ====
+/* Shared bbPress loops */
 
-   bbPress renders every list from one of three loops: the topic loop (a forum's
-   threads, the topic archive, a tag archive, a registered view, and the profile's
-   Topics Started / Favourites / Subscriptions / Engagements tabs), the reply loop
-   (Replies Created) and the forums loop (a forum's children, the "Subscribed forums"
-   section). All three arrive as a floated <ul>-as-table; all three are reflowed into
-   the same mobile card. We keep EVERY field bbPress renders — counts, freshness, the
-   search box, sub-forums, the reply author, the subscribe/favourite row action and
-   the admin links — and only recolour and retype it. The table's column-label chrome
-   (the header and footer rows) is reflowed, not shown as a table row: its labels move
-   onto each value, so no data is lost.
-
-   The card owns the 20px gutter (padding: 15px 20px) and the loop runs full-bleed to
-   the shell edge, so its divider spans the whole width — the reading view's
-   .bltn-row, exactly. Where a loop sits inside a section that already pads (the
-   profile's #bbp-user-body), the profile layer pulls it back out; see the one
-   margin-inline override there. */
-
-/* Topics loop (Topics Started / Favourites / Subscriptions / Engagements): reflowed
-   from bbPress's floated <ul>-as-table into a stack of mobile cards — every field
-   kept, no horizontal data table on a phone. The column header's labels ("Voices",
-   "Posts") move onto each value via ::before, so dropping the now-columnless header
-   (and its matching empty footer spacer) loses no information. bbPress floats the
-   table and its overflow:hidden collapses the list to a sliver once the columns are
-   unfloated, so we reset width/float/overflow down the subtree. */
+/* bbPress loops are floated table-like lists; reset their subtree before reflowing values into cards. */
 .bltn-reskin .bltn-reskin__body #bbpress-forums ul.bbp-topics {
 	width: auto;
 	margin: 0;
@@ -2466,8 +1684,7 @@ a.bltn-compose__open {
 	width: auto;
 	border: 0;
 }
-/* Each topic → a card. bbPress also puts a border-top on every row, which would
-   double up against our divider, so the border is reset before the divider is set. */
+/* Reset bbPress’s row border before adding the card divider to avoid a doubled rule. */
 .bltn-reskin
 	.bltn-reskin__body
 	#bbpress-forums
@@ -2482,7 +1699,7 @@ a.bltn-compose__open {
 	border: 0;
 	border-bottom: 1px solid var(--bltn-line-soft);
 }
-/* Title block, then the counts + freshness reflowed to one inline meta line. */
+
 .bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-topic-title {
 	float: none;
 	width: auto;
@@ -2496,26 +1713,7 @@ a.bltn-compose__open {
 	line-height: 1.3;
 	color: var(--bltn-ink);
 }
-/* Unread on this tier (#102). The class is put on the row by Chrome\UnreadClasses and
-   the mark is drawn here, which is the whole reason the reskin screens could carry the
-   accent at all: six of them are bbPress's own loops, and this is one CSS rule instead
-   of six rebuilt templates.
-
-   Same 7px amber as the takeover's `.bltn-row__dot`, on its own line above the title —
-   and at the LEADING edge, where the takeover puts a thread row's at the trailing one.
-   Both departures were measured at 390px rather than chosen:
-
-   - Trailing fails because bbPress floats a row action right (favourites carries an `×`
-     on every card). A dot pushed to that corner wraps around the float and opens ~40px
-     of dead band above every title, with the two marks stacked on each other.
-   - Inline before the title fails on the row whose title happens to fit one line: the
-     dot then shares that line and indents the title 15px, so a list's titles start at
-     two different x depending on their length. A column of rows that do not align is
-     worse than a dot in an unexpected corner.
-
-   Its own line at the leading edge has neither problem, and keeps the property the
-   placement is for: every dot in the list on one x. The words behind it are printed
-   into the row by the same class, so the dot is decoration and never the only cue. */
+/* The unread class also prints status text, so the dot remains decorative. */
 .bltn-reskin .bltn-reskin__body #bbpress-forums ul.bltn-is-unread li.bbp-topic-title::before,
 .bltn-reskin .bltn-reskin__body #bbpress-forums ul.bltn-is-unread li.bbp-forum-info::before {
 	content: "";
@@ -2526,8 +1724,7 @@ a.bltn-compose__open {
 	border-radius: 50%;
 	background: var(--bltn-unread);
 }
-/* A long thread's inline page jumps sit beside its title, so they inherit the serif
-   title face and bbPress's #ddd box. They're chrome: quiet sans chips on our line. */
+
 .bltn-reskin .bltn-reskin__body #bbpress-forums span.bbp-topic-pagination a {
 	border: 1px solid var(--bltn-line);
 	border-radius: 4px;
@@ -2539,8 +1736,7 @@ a.bltn-compose__open {
 	#bbpress-forums
 	li.bbp-topic-title
 	p.bbp-topic-meta {
-	/* 5px, not 4: the one pixel §2.5.8 needs. See the target-size block above — at
-	   4px a card's grown title box and its grown "Started by:" box miss by 0.7px. */
+	/* The extra pixel is required for the expanded inline links to meet the 24px target. */
 	margin: 5px 0 0;
 	font-size: 12px;
 	color: var(--bltn-ink-3);
@@ -2557,8 +1753,7 @@ a.bltn-compose__open {
 	text-align: start;
 	color: var(--bltn-ink-3);
 }
-/* The freshness cell carries the last poster in a nested <p>; inline, it joins the
-   meta line instead of breaking to a centred line of its own. */
+
 .bltn-reskin
 	.bltn-reskin__body
 	#bbpress-forums
@@ -2567,9 +1762,7 @@ a.bltn-compose__open {
 	display: inline;
 	margin: 0 0 0 14px;
 }
-/* Restore the labels the column header used to carry, per value — as a leading
-   field label ("Voices 3", not "3 voices") so it reads correctly at a count of 1
-   (CSS can't pluralise a numeric value). */
+
 .bltn-reskin
 	.bltn-reskin__body
 	#bbpress-forums
@@ -2582,11 +1775,7 @@ a.bltn-compose__open {
 	li.bbp-topic-reply-count::before {
 	content: "Posts ";
 }
-/* No faces in a list row — anywhere. The takeover's own thread and forum rows show
-   none, so a reskinned list that did would read as a different product on the screen
-   next door. Within the card it also has to be all or nothing: one avatar for the
-   freshness author and none for the topic starter read as a mistake. Both names stay,
-   which is the field's actual content. (Parked for review with Yoren, 2026-07-25.) */
+
 .bltn-reskin
 	.bltn-reskin__body
 	#bbpress-forums
@@ -2600,12 +1789,7 @@ a.bltn-compose__open {
 	display: none;
 }
 
-/* Reply loop (Replies Created): the same card, with one structural catch — a reply
-   is TWO sibling divs, bbPress's meta band (div.bbp-reply-header) and the reply
-   itself (div.reply), with no element wrapping the pair. So one padding box is
-   split across them and the divider hangs off the second. Everything is kept: the
-   topic the reply answers, its date, the #anchor, the admin links, the author name
-   and role, and the reply body. */
+/* bbPress emits each reply as sibling header and body nodes, so the card box is split across both. */
 .bltn-reskin .bltn-reskin__body #bbpress-forums ul.bbp-replies {
 	width: auto;
 	margin: 0;
@@ -2620,8 +1804,7 @@ a.bltn-compose__open {
 	width: auto;
 	border: 0;
 }
-/* Top half of the card: the meta band, off bbPress's own #f4f4f4. It is re-tinted
-   further down to match the reply it belongs to, so the pair reads as one card. */
+
 .bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-reply-header {
 	padding: 15px 20px 0;
 	border: 0;
@@ -2630,10 +1813,7 @@ a.bltn-compose__open {
 	font-size: 12px;
 	color: var(--bltn-ink-3);
 }
-/* The topic a reply answers is the card's title, so it leads on its own line —
-   bbPress emits it after the date, hence the reorder. That costs nothing in
-   accessibility: the date is a non-focusable span, so DOM focus order (topic →
-   #anchor → admin links) already matches the reordered reading order. */
+/* Visual reordering is safe because the non-focusable date does not alter DOM focus order. */
 .bltn-reskin
 	.bltn-reskin__body
 	#bbpress-forums
@@ -2653,19 +1833,7 @@ a.bltn-compose__open {
 	flex: 1 1 100%;
 	margin-bottom: 3px;
 }
-/* "in reply to: {thread}" is the CONTAINER, not the content, and it was being set
-   in the reading face at title size — because bbPress reuses `a.bbp-topic-permalink`
-   here, which the topic loop's own rule (further up) makes serif 16px/600 ink.
-   The effect on the Replies Created tab was the manufactured duplicate that issue
-   #35 diagnosed and fixed on search, still live one tier over: six replies to one
-   thread rendered as six rows headlined by the same title, with each reply's actual
-   words as the last, smallest, greyest line. The reader's own record of what they
-   wrote read as a rendering bug.
-   So the pair is swapped back into the register the rest of the system uses — the
-   thread name to the meta line, the reply's own words already being serif 15px via
-   `div.bbp-reply-content`. Retype only: every field bbPress rendered is still here,
-   in the same order, saying the same thing. Same weighting `View\SearchRow` gives
-   the same two facts on the takeover tier. */
+/* bbPress reuses the topic permalink class inside reply metadata; override the card-title treatment here. */
 .bltn-reskin
 	.bltn-reskin__body
 	#bbpress-forums
@@ -2682,16 +1850,12 @@ a.bltn-compose__open {
 .bltn-reskin .bltn-reskin__body #bbpress-forums a.bbp-reply-permalink {
 	color: var(--bltn-ink-3);
 }
-/* Bottom half: the reply. bbPress floats a 115px centred author column and
-   indents the content 130px to clear it — both unwound to a byline over a
-   full-width body. */
+/* Undo bbPress’s floated author column and content indent for the stacked reply card. */
 .bltn-reskin .bltn-reskin__body #bbpress-forums li.bbp-body div.reply {
 	padding: 0 20px 15px;
 	border-bottom: 1px solid var(--bltn-line-soft);
 }
-/* bbPress's own narrow-screen rule turns this into an 80px-padded relative box
-   with the avatar absolutely placed in the gutter and a hairline under it. With the
-   avatar gone, all of that has to go too or the byline sits in an empty 80px well. */
+/* Undo bbPress’s narrow-screen avatar gutter after the avatar is removed. */
 .bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-reply-author {
 	position: static;
 	float: none;
@@ -2702,10 +1866,7 @@ a.bltn-compose__open {
 	border: 0;
 	text-align: start;
 }
-/* Same rule as the topics card: no faces in a list row. It reads most obviously on
-   the profile, where every card has the same author and the avatar would be one face
-   ten times over, but that is not the reason — the reason is that the takeover's rows
-   carry no avatar either. The name and role carry the field. */
+
 .bltn-reskin
 	.bltn-reskin__body
 	#bbpress-forums
@@ -2741,10 +1902,7 @@ a.bltn-compose__open {
 	.bbp-author-role::before {
 	content: " \00B7  ";
 }
-/* Moderators also get the author's IP, as a block div inside the byline — inlined
-   so it joins the byline instead of orphaning under it. bbPress parenthesises it,
-   so it needs no separator of its own, and paints it bold #747474, which is neither
-   our weight nor our grey. */
+/* bbPress emits moderator IP data as a block inside the byline, so restore inline flow. */
 .bltn-reskin
 	.bltn-reskin__body
 	#bbpress-forums
@@ -2764,10 +1922,7 @@ a.bltn-compose__open {
 	font-weight: 400;
 	color: inherit;
 }
-/* The moderator's admin links (Edit | Move | Split | Trash | Spam …) come as one
-   wide item, so they take their own line in the meta row. bbPress's own 10px
-   uppercase reads as a quiet label row and is kept; only its greys (#707070 links
-   on #ddd separators) come into the palette. */
+
 .bltn-reskin .bltn-reskin__body #bbpress-forums span.bbp-admin-links {
 	color: var(--bltn-line);
 }
@@ -2783,9 +1938,7 @@ a.bltn-compose__open {
 	color: var(--bltn-ink);
 }
 
-/* Forums loop (the "Subscribed forums" section of Subscriptions) — the same card
-   as a topic, keeping the description, the sub-forum list with its counts, both
-   totals and the freshness line. */
+
 .bltn-reskin .bltn-reskin__body #bbpress-forums ul.bbp-forums {
 	width: auto;
 	margin: 0;
@@ -2833,21 +1986,12 @@ a.bltn-compose__open {
 	font-size: 12px;
 	color: var(--bltn-ink-2);
 }
-/* A password-protected post contributes nothing to its row — the description is
-   withheld outright rather than showing WordPress's password form in the slot
-   (issue #54, View\ProtectedRowContent). bbPress still prints the wrapper, so the
-   slot survives as an empty div and would otherwise keep the margin that separates
-   it from the title above it. */
+/* WordPress withholds protected content but bbPress leaves an empty wrapper whose margin must be reset. */
 .bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-forum-content:empty,
 .bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-reply-content:empty {
 	margin: 0;
 }
-/* Sub-forums: bbPress's inline list of children with their (topics, replies)
-   counts, quietened to a meta line. Upstream this list is indented as a nested
-   block — margin-left, padding-left and a border-left hairline, together. Dropping
-   the indent means dropping the border with it, or the hairline is left flush
-   against the text marking nothing. The list reads as subordinate from its size and
-   position under the description; it does not need a rule as well. */
+
 .bltn-reskin .bltn-reskin__body #bbpress-forums ul.bbp-forums-list {
 	margin: 5px 0 0;
 	padding: 0;
@@ -2902,9 +2046,7 @@ a.bltn-compose__open {
 	display: none;
 }
 
-/* Row action: the +/× that subscribes or favourites from the list. bbPress floats
-   it right and paints it a green or pink mini-button; kept in place, restyled as a
-   quiet square chip — teal to add, neutral to remove. */
+
 .bltn-reskin .bltn-reskin__body #bbpress-forums #subscription-toggle,
 .bltn-reskin .bltn-reskin__body #bbpress-forums #favorite-toggle {
 	margin-inline-start: 10px;
@@ -2942,10 +2084,7 @@ a.bltn-compose__open {
 	color: var(--bltn-ink-3);
 }
 
-/* Empty state: bbPress's notice is a loud yellow box. The plain notice is only
-   ever "no topics/replies/forums were found here", so it takes our quiet centred
-   empty-state voice; the .error/.warning/.info variants carry real meaning and
-   keep a tinted band, recoloured off the yellow. */
+
 .bltn-reskin__body #bbpress-forums div.bbp-template-notice {
 	margin: 0;
 	padding: 30px 4px;
@@ -2985,10 +2124,7 @@ a.bltn-compose__open {
 	font-size: 13.5px;
 	color: var(--bltn-ink-2);
 }
-/* The caution pair. The colour is on the words, not on a stripe: the words are what
-   carries the meaning, and a 3px coloured rule down an alert is the shape #97 already
-   took off the reskin rows so that tone stays reserved for things that mean something.
-   1px keeps a marker in the gutter at a weight that reads as a rule rather than a bar. */
+
 .bltn-reskin__body #bbpress-forums div.bbp-template-notice.error,
 .bltn-reskin__body #bbpress-forums div.bbp-template-notice.warning {
 	border-inline-start: 1px solid var(--bltn-caution);
@@ -2998,36 +2134,14 @@ a.bltn-compose__open {
 	font-weight: 600;
 	color: var(--bltn-caution);
 }
-/* A link inside a caution block. Stated although nothing bbPress renders reaches it —
-   none of its 185 bbp_add_error() messages carries a link — for the reason the login
-   form's severity band below is stated: the tier's `a` rule sets colour explicitly, so
-   it wins over the inherited caution, and an error arriving one day with a link in it
-   would put a teal word inside a red sentence. bbp_template_notices() prints whatever
-   is in $bbp->errors, and another plugin's errors go through it too.
-
-   Underlined at rest, where the tier's links are not: inside this block the caution
-   colour is the block's own voice, so it cannot also be what marks the link. */
+/* Links in caution text need an underline because inherited caution color cannot distinguish them. */
 .bltn-reskin__body #bbpress-forums div.bbp-template-notice.error a,
 .bltn-reskin__body #bbpress-forums div.bbp-template-notice.warning a {
 	color: var(--bltn-caution);
 	text-decoration: underline;
 }
 
-/* Topic tags, this tier's copy of them (#33). The takeover reading view calls
-   bbp_topic_tag_list() with our own wrapper and gets chips; a topic that declines
-   the takeover — threaded replies, #12 — reaches the same upstream call through
-   bbPress's own content-single-topic.php, with bbPress's defaults: a "Tagged:"
-   label and a comma-separated list, printed as a direct child of #bbpress-forums.
-   Left unstyled it arrived at 14px in full body ink and reaching both shell edges,
-   reading as content on the one screen whose job is to make bbPress read as ours.
-
-   Recoloured and retyped rather than rebuilt into the takeover's chips, and that is
-   the tier's rule rather than thrift: bbPress separates the anchors with literal
-   ", " text nodes, so a flex row of pills would set a stray comma between every two
-   of them. Same reason "Started by:" and "Voices" survive on the loop cards — this
-   tier keeps every field bbPress renders and only changes its voice. Sized to the
-   breadcrumb directly above it, so the two read as one band of chrome above the
-   thread rather than as two unrelated lines. */
+/* bbPress outputs tags with literal comma text nodes, preventing a chip layout without template changes. */
 .bltn-reskin .bltn-reskin__body #bbpress-forums > div.bbp-topic-tags {
 	padding-inline: 20px;
 	margin: 0 0 10px;
@@ -3043,15 +2157,7 @@ a.bltn-compose__open {
 	color: var(--bltn-ink-2);
 	text-decoration: none;
 }
-/* Search: off bbPress's float:right, a full-width field in our input styling — no
-   longer squeezed beside the section heading.
-
-   This is the PER-TAB search on a profile (`form-topic-search` / `form-reply-search`,
-   scoped to that member's own topics or replies), which is a filter over the list it
-   sits above. The GLOBAL field bbPress puts on the topic archive shares this wrapper
-   class but is a different control, and it is hidden now that the app bar carries one
-   — see the rule further down. Both are matched here because the styling is the same
-   either way and only one of them survives to use it. */
+/* The direct-child global search and nested profile filters share markup but serve different scopes. */
 .bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-search-form {
 	float: none;
 	margin: 0 0 16px;
@@ -3093,76 +2199,21 @@ a.bltn-compose__open {
 	cursor: pointer;
 }
 
-/* ==== SHARED LAYER: every form the tier renders (issue #90) ====
+/* Shared bbPress forms */
 
-   Until this, the tier dressed exactly one form — the per-tab search above — and
-   every other control on it was on bbPress's or the browser's defaults. Measured at
-   390px, nine surfaces render controls and not one of them was ours:
-
-     profile edit          11  (14 once Generate Password reveals the rest)
-     profile edit, keymaster  13  (adds the two role selects)
-     topic merge            4      topic split            6
-     topic-tag edit         7
-     [bbp-login]            4      [bbp-register]         3   [bbp-lost-pass]  2
-
-   ⚠ FOURTEEN of those breached the 24px floor (§2.5.8), not the two #90 measured.
-   The rest were behind a click (Generate Password reveals Hide and Cancel, both
-   21px), behind a role (merge/split/tag need a moderator) or behind a shortcode. Every
-   checkbox and radio on the tier renders at the browser's 13px, which is half the
-   floor, and each one is a moderator's "copy subscribers to the new topic" or a
-   reader's "keep me signed in".
-
-   ⚠ The account forms are NOT excluded from this tier, though #90 assumed they were.
-   `is_bbpress()` ends on `bbp_has_shortcode()`, so a page carrying [bbp-login] IS a
-   bbPress screen; ScreenClassifier excludes only forum create/edit (it excluded the
-   topic and reply edit forms too until P4 rendered them), so the reskin catch-all
-   wraps it. Verified in-shell: the login form rendered flush to
-   both screen edges with no gutter at all, because it is the one form bbPress puts
-   OUTSIDE #bbpress-forums — and every rule on this tier, the gutter included, is
-   anchored on that ID.
-
-   THREE BRANCHES, and they are specificity, not meaning. Each rule below states one
-   thing — "this is a form control on this tier" — and has to state it up to three
-   times because bbPress dresses the same markup at three different weights:
-
-     1. `#bbpress-forums #bbp-your-profile` — the profile edit form, which bbPress
-        reaches at TWO ids (`#bbpress-forums #bbp-your-profile fieldset input`).
-     2. `#bbpress-forums fieldset.bbp-form` — merge, split, topic-tag edit; the
-        competing rule is one id (`fieldset.bbp-form input[type="text"]`, the
-        `height: 28px` that sets every field on the tier).
-     3. `.bbp-login-form` — the three account forms, outside #bbpress-forums entirely.
-
-   The tails stay narrow deliberately: fields are matched only inside
-   `fieldset.bbp-form`, the one wrapper all nine surfaces share and the one the search
-   form is NOT in. So the per-tab search field keeps its own rules by construction
-   rather than by winning a cascade race — check that before widening any tail here.
-
-   The look is the password form's (#18), which is the precedent #90 names: our
-   surface, our line, 10px radius, and the control scale's 40px step reached the same
-   way (15px on 10px of padding). One deviation, recorded: the border is `--bltn-line`
-   rather than the prompt's `--bltn-line-soft`. On a one-field prompt the softer line
-   is enough; on an eleven-field form the boundary is doing more work, and
-   `--bltn-line` is already this tier's field border on the search box above. */
-
-/* The frame first. bbPress draws each fieldset as a bordered box with its own 20px
-   padding, which on the profile edit sits INSIDE #bbp-user-body's 20px — two nested
-   insets, 82px of the 390 spent before a field starts. The border goes (the label and
-   the section heading say where a group begins), and the padding becomes the tier's
-   gutter on the screens that have none of their own. */
+/* Remove nested bbPress fieldset insets; the surrounding screen supplies the form gutter. */
 .bltn-reskin .bltn-reskin__body #bbpress-forums fieldset.bbp-form,
 .bltn-reskin .bltn-reskin__body .bbp-login-form fieldset.bbp-form {
 	border: 0;
 	padding: 0 20px;
 	margin: 0 0 20px;
 }
-/* The account forms are the whole screen, and nothing above them opens a gutter —
-   they are the one form outside #bbpress-forums, so the top inset is theirs to set. */
+/* Account forms sit outside #bbpress-forums and therefore supply their own top inset. */
 .bltn-reskin .bltn-reskin__body .bbp-login-form {
 	margin: 0;
 	padding-block-start: 20px;
 }
-/* Merge, split and topic-tag edit nest a fieldset inside a fieldset; the gutter is
-   the outer one's job, or it compounds to 40 and 60px. */
+
 .bltn-reskin
 	.bltn-reskin__body
 	#bbpress-forums
@@ -3171,18 +2222,12 @@ a.bltn-compose__open {
 	padding-inline: 0;
 	margin-block-end: 16px;
 }
-/* The profile edit already sits in #bbp-user-body's gutter. `fieldset` bare, so the
-   submit's own fieldset.submit is included. */
+
 .bltn-reskin .bltn-reskin__body #bbpress-forums #bbp-your-profile fieldset {
 	border: 0;
 	padding-inline: 0;
 }
-/* A group's name. bbPress hides the legend on the profile edit and shows it on
-   merge/split/tag ("Split Method", "Topic Extras"), where it is the only thing naming
-   the group — so it is kept and quieted to the tier's section label, the same
-   treatment the profile's own section headings take. The edit form's four <h2>s
-   ("Name", "Contact Info", "About Yourself", "Account") are the same species arriving
-   as headings, and were rendering at the browser's 26px bold. */
+/* Keep bbPress legends because they are the only accessible names for several field groups. */
 .bltn-reskin .bltn-reskin__body #bbpress-forums fieldset.bbp-form legend,
 .bltn-reskin .bltn-reskin__body .bbp-login-form fieldset.bbp-form legend,
 .bltn-reskin
@@ -3202,14 +2247,7 @@ a.bltn-compose__open {
 	text-transform: uppercase;
 	color: var(--bltn-ink-3);
 }
-/* ⚠ A label inside a legend is a control's name, not a group's. The edit forms put
-   the revision-log checkbox and its own `<label for="bbp_log_reply_edit">` INSIDE the
-   `<legend>` (common/template.php:1745, :1782), so the section-label voice above
-   painted "Keep a log of this edit:" as a heading — 10.5px uppercase in ink-3, beside
-   "Notify the author of follow-up replies via email" at 13.5px sentence case, two
-   checkboxes on one form speaking in two registers. The legend keeps its voice; a
-   label inside it gets the tier's ordinary one back. Only reachable since P4 brought
-   the edit forms onto this tier: no other reskin screen nests a control in a legend. */
+/* bbPress nests some control labels inside legends; restore ordinary label styling for those controls. */
 .bltn-reskin .bltn-reskin__body #bbpress-forums fieldset.bbp-form legend label {
 	font-size: 13.5px;
 	font-weight: 400;
@@ -3218,10 +2256,7 @@ a.bltn-compose__open {
 	color: var(--bltn-ink);
 }
 
-/* The account forms' labels, reflowed above their fields — bbPress gives them a
-   140px inline-block column, which is the same desktop shape #88 took off the profile
-   edit, on the one form that renders outside #bbpress-forums. The checkbox row is
-   excluded: there the label follows its input on one line and belongs there. */
+/* bbPress account labels use a desktop inline column; checkbox labels remain inline after their inputs. */
 .bltn-reskin .bltn-reskin__body .bbp-login-form .bbp-username label,
 .bltn-reskin .bltn-reskin__body .bbp-login-form .bbp-email label,
 .bltn-reskin .bltn-reskin__body .bbp-login-form .bbp-password label,
@@ -3240,22 +2275,13 @@ a.bltn-compose__open {
 	font-weight: 600;
 	color: var(--bltn-ink-2);
 }
-/* Rows. bbPress spaces them with a 20px bottom margin on the profile edit and
-   nothing anywhere else. The topic-tag screen puts a <form> between the fieldset and
-   its rows, which is why the child combinator is stated twice rather than once. */
+/* Repeat the child path because bbPress topic-tag rows add an intervening form element. */
 .bltn-reskin .bltn-reskin__body .bbp-login-form fieldset.bbp-form > div,
 .bltn-reskin .bltn-reskin__body #bbpress-forums fieldset.bbp-form > div,
 .bltn-reskin .bltn-reskin__body #bbpress-forums fieldset.bbp-form > form > div {
 	margin-block-end: 16px;
 }
-/* The register form's notice, which the tier's notice rules never reached — they are
-   anchored on #bbpress-forums, and this form is the one outside it, so bbPress's raw
-   yellow box was rendering above the first field.
-
-   It takes the tinted-band treatment rather than the plain notice's centred empty-state
-   voice, and that is not a shortcut: the voice up there reads "no topics were found
-   here", while this notice is two sentences telling a stranger what registering will
-   do. Same shape as `.info` — informational, so it keeps a band. */
+/* Account forms sit outside #bbpress-forums, so their notices need a separate selector branch. */
 .bltn-reskin .bltn-reskin__body .bbp-login-form div.bbp-template-notice {
 	margin: 0 0 16px;
 	padding: 12px 14px;
@@ -3277,14 +2303,7 @@ a.bltn-compose__open {
 	font-size: 13.5px;
 	color: var(--bltn-ink-2);
 }
-/* The severity band, mirroring the one the notice rules above give `.error` and
-   `.warning` inside #bbpress-forums. Nothing reaches it today — measured: bbPress
-   renders exactly one notice inside these forms (the register template's plain
-   instruction list), and a failed login or registration never comes back here at all,
-   because the form posts to wp-login.php, which renders WordPress's own error page
-   outside Bulletin. It is stated because the base rule above matches every variant, so
-   without it an error arriving one day would be flattened into the informational band
-   rather than merely left undressed. Found in review. */
+/* Keep severity variants distinct from the account form’s base informational notice. */
 .bltn-reskin .bltn-reskin__body .bbp-login-form div.bbp-template-notice.error,
 .bltn-reskin
 	.bltn-reskin__body
@@ -3308,18 +2327,14 @@ a.bltn-compose__open {
 	color: var(--bltn-caution);
 	text-decoration: underline;
 }
-/* bbPress floats the submit row right, which makes it a shrink-to-fit box — a button
-   asking for 100% inside it resolves against its own text and lands at 86px. Unfloated,
-   the width below means what it says. */
+/* Unfloat bbPress’s shrink-to-fit submit row so a full-width button resolves against the form. */
 .bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-submit-wrapper,
 .bltn-reskin .bltn-reskin__body .bbp-login-form div.bbp-submit-wrapper {
 	float: none;
 	margin-block-start: 16px;
 	text-align: start;
 }
-/* Field help. bbPress prints it as an italic blue-bordered box indented to the
-   20% label column that no longer exists — a leftover of the desktop layout #88
-   reflowed. Quiet meta text under its field, like every other secondary line here. */
+
 .bltn-reskin .bltn-reskin__body #bbpress-forums #bbp-your-profile p.description,
 .bltn-reskin
 	.bltn-reskin__body
@@ -3339,8 +2354,7 @@ a.bltn-compose__open {
 	color: var(--bltn-ink-3);
 }
 
-/* The field. Same arithmetic as the password prompt's: 15px (the scale's form-field
-   step) on 10px of padding and a 1px border lands on the control scale's 40px. */
+
 .bltn-reskin
 	.bltn-reskin__body
 	#bbpress-forums
@@ -3384,8 +2398,7 @@ a.bltn-compose__open {
 	display: block;
 	inline-size: 100%;
 	max-inline-size: 100%;
-	/* Undoing bbPress's fixed 28px, which is where every short field on the tier came
-	   from; the padding sets the height now. */
+	/* Override bbPress’s fixed field height; padding now establishes control height. */
 	block-size: auto;
 	min-block-size: 0;
 	font-family: var(--bltn-sans);
@@ -3396,14 +2409,7 @@ a.bltn-compose__open {
 	border: 1px solid var(--bltn-line);
 	border-radius: 10px;
 	padding-block: 10px;
-	/* The inline end is a variable, and that is a specificity fix rather than a taste
-	   one. The select rule below has to reserve room for its chevron, and it cannot do
-	   it with `padding-inline-end`: this selector's `:is()` grants it one more class
-	   than the select's own (its most specific argument is `input[type="text"]`), so the
-	   shorthand here won and the reserved 36px was never applied on any branch — the
-	   chevron sat on top of a long option's last characters. A custom property is not
-	   in the cascade race at all: the select sets it on itself, and this declaration
-	   reads it. */
+	/* A custom property avoids a shorthand specificity conflict with the select’s chevron padding. */
 	padding-inline: 13px var(--bltn-field-inline-end, 13px);
 	margin: 0;
 	box-shadow: none;
@@ -3426,27 +2432,13 @@ a.bltn-compose__open {
 	:is(input, select, textarea):focus-visible {
 	border-color: transparent;
 }
-/* Biographical Info: prose, so it reads at the prose line-height and keeps a
-   handle to grow. bbPress leaves it at the browser's monospace default. */
+/* Restore prose typography and resizing after bbPress’s monospace textarea defaults. */
 .bltn-reskin .bltn-reskin__body #bbpress-forums #bbp-your-profile textarea {
 	min-block-size: 116px;
 	line-height: 1.5;
 	resize: vertical;
 }
-/* A select has to keep saying it is a picker. `appearance: none` is what makes the
-   40px hold across engines, and it takes the native arrow with it, so the chevron is
-   drawn back on — the row chevron's shape, in --bltn-ink-3.
-   ⚠ The colour is a literal, not var(--bltn-ink-3): a data URI cannot read a custom
-   property, and CLAUDE.md trap #1 is iOS Safari silently dropping var() inside SVG
-   anyway. If the token moves, this moves with it.
-   ⚠ Physical `right`, the one place this stylesheet has one. There is no RTL layer
-   here yet; when there is, this is the declaration it has to mirror.
-
-   All THREE branches, including the account forms, which render no select on a stock
-   install. That is exactly why it is stated: the field rule above already strips their
-   arrow, so a select arriving through `do_action( 'login_form' )` or
-   `bbp_user_register_form_fields` would be a flat box with nothing saying it opens.
-   The two rules have to name the same branches or they drift apart silently. */
+/* Custom select appearance removes the native arrow, so restore one with a data URI and reserved padding. */
 .bltn-reskin .bltn-reskin__body #bbpress-forums #bbp-your-profile select,
 .bltn-reskin .bltn-reskin__body #bbpress-forums fieldset.bbp-form select,
 .bltn-reskin .bltn-reskin__body .bbp-login-form select {
@@ -3454,27 +2446,10 @@ a.bltn-compose__open {
 	background-repeat: no-repeat;
 	background-position: right 13px center;
 	background-size: 12px 8px;
-	/* Read by the field rule's `padding-inline` above; see the note there for why this
-	   is not a `padding-inline-end` declaration. */
+
 	--bltn-field-inline-end: 36px;
 }
-/* The forum picker, back to the width of the two selects beneath it. bbPress caps it
-   at `#bbpress-forums fieldset select#bbp_forum_id { max-width: 200px }` — a desktop
-   measure for a column of forum names — and on a 390px screen that left "Forum:" at
-   200px directly above "Topic Type:" and "Topic Status:" at 350px: three pickers on
-   one form at two widths.
-
-   ⚠ **This one is matched on its id, and that is not a style choice.** Every other
-   field rule on this tier reaches its controls through `fieldset.bbp-form`, and that
-   is deliberately narrow (see the three-branch note above). It is not enough here:
-   bbPress spends TWO ids on this single element, so a selector carrying one id and
-   four classes loses to it outright — measured at 200px with the field rule matching
-   and apparently outweighing it. Specificity counts ids first, and no number of
-   classes reaches past a second id.
-
-   So this is a rule about one element by name, which the tier otherwise avoids. It is
-   the only control bbPress singles out this way; if a second appears, they belong in
-   one selector list here rather than in a widened tail above. */
+/* bbPress caps this picker with two IDs, requiring an ID selector to override its max-width. */
 .bltn-reskin
 	.bltn-reskin__body
 	#bbpress-forums
@@ -3483,8 +2458,7 @@ a.bltn-compose__open {
 	max-inline-size: 100%;
 }
 
-/* Username is `disabled` on this form — bbPress will not change a login. Dressed
-   like every editable field it read as one; muted, it reads as the fact it is. */
+
 .bltn-reskin
 	.bltn-reskin__body
 	#bbpress-forums
@@ -3495,39 +2469,7 @@ a.bltn-compose__open {
 	cursor: not-allowed;
 }
 
-/* An in-form notice is not an empty state, and until P4 nothing could tell them
-   apart. The empty-state voice above claims EVERY classless `div.bbp-template-notice`
-   on the tier, on the stated premise that the plain variant "is only ever 'no
-   topics/replies/forums were found here'". That premise expired the moment the edit
-   forms arrived here: form-topic.php and form-reply.php each emit two classless
-   notices of their own — "This forum is marked as closed to new topics, however your
-   posting capabilities still allow you to create a topic", and "Your account has the
-   ability to post unrestricted HTML content" (topics/form-topic.php:58, :68). Both
-   inherited the centred 15px serif meant for an empty screen, which on a form made an
-   administrator's footnote the loudest thing above the fields.
-
-   They take the `.info` voice instead of a third one. That is the same *kind* of
-   statement — a fact about this screen's context, addressed to the person on it — as
-   "This topic has 2 replies, 3 voices", which already reads that way six lines up the
-   same screen. bbPress simply did not give these two a class to say so.
-
-   Scoped to `fieldset.bbp-form` rather than to the message, so a notice a plugin adds
-   to a form lands on the same footing rather than on the empty state's.
-
-   ⚠ **The four severity variants are excluded by `:not()`, and the reason is a
-   regression this rule caused before the exclusion was added.** Written to match every
-   in-form notice, it outweighed `div.bbp-template-notice.error li`'s caution colour —
-   one id and four classes against one id and two — and drained the red out of "This
-   process cannot be undone" on the split screen, the one sentence on this tier whose
-   whole job is to be the colour it is (#101). Excluding the variants rather than
-   restating their colour keeps the severity rules the only place severity is decided;
-   restating it would have made this rule a second source of truth for it.
-
-   ⚠ **This also changes two screens that shipped in P2**, and it changes them for the
-   better rather than incidentally: merge and split each print half their explanation
-   as an `.info` notice and the other half as a classless one, so the same explanation
-   arrived in two voices — a grey sans panel above a centred serif paragraph. Only a
-   moderator ever saw it, which is why it shipped. Both halves now read alike. */
+/* Classless notices inside forms are informational, not empty states; exclude explicit severity variants. */
 .bltn-reskin
 	.bltn-reskin__body
 	#bbpress-forums
@@ -3550,31 +2492,7 @@ a.bltn-compose__open {
 	color: var(--bltn-ink-2);
 }
 
-/* The formatting strip. bbPress asks WordPress for quicktags — `bbp_use_wp_editor()`
-   defaults to 1 and `bbp_get_the_content()` passes `tinymce => false`, so what lands
-   is a textarea with core's eleven-button HTML bar above it, dressed by core's own
-   editor.css and `buttons` CSS. Neither is a theme stylesheet, so reskin suppression
-   leaves both alone (by design: this tier keeps the CSS that makes bbPress legible),
-   and until P4 no screen on this tier rendered the markup they dress.
-
-   What arrived: a grey slab in its own bordered box above a rounded field, its
-   controls 11px Arial with a transparent fill — the one place on the tier where a run
-   of controls says nothing about being controls.
-
-   The slab goes. The bar is part of the field group, not a toolbar over a document,
-   so it sits directly on the page and the field below stays the only box. Each button
-   takes the tier's secondary voice — the profile's Generate Password step, 36px and
-   the wash — because that is exactly what these are: helpers beside a field, not the
-   thing the screen exists to do.
-
-   ⚠ `min-inline-size` is the touch floor (#76's 24px) and not the look: `B` and `I`
-   are one character wide and would otherwise land at 25px of mostly padding. 36px is
-   the secondary control's own step, so the run reads as one scale rather than as
-   eleven different widths.
-
-   Core's own strikethrough on DEL and underline on LINK are kept. They are the button
-   previewing its own effect, which is information a label cannot carry, and this
-   project's rule is to keep what bbPress and WordPress already say well. */
+/* WordPress quicktags use core editor markup, so these selectors integrate them without replacing the controls. */
 .bltn-reskin .bltn-reskin__body #bbpress-forums .wp-editor-container {
 	border: 0;
 	background: none;
@@ -3623,17 +2541,7 @@ a.bltn-compose__open {
 	background: color-mix(in srgb, var(--bltn-accent) 12%, var(--bltn-wash));
 }
 
-/* Buttons, split by the semantics the markup already carries: `type="submit"` is the
-   thing the screen exists to do (Update Profile, Log In, Split, Merge, Delete), and
-   `type="button"` is the password generator's three helpers. So the split needs no
-   class of ours and cannot drift out of step with the markup.
-
-   Primary is the tier's own filled teal — the current tab chip and the search submit
-   are already that, and the profile's Edit pill next to this form is too. It is NOT
-   the password prompt's wash button: that one is on the takeover tier, where teal is
-   spent on links inside a reading column. White on --bltn-accent measures 4.69:1.
-   Full width because at 390px an isolated 100px button floated right is the smallest
-   possible target for the largest possible action. */
+/* Native button types distinguish primary submission from secondary form helpers. */
 .bltn-reskin
 	.bltn-reskin__body
 	#bbpress-forums
@@ -3677,11 +2585,7 @@ a.bltn-compose__open {
 .bltn-reskin .bltn-reskin__body .bbp-login-form button[type="submit"]:hover {
 	background: var(--bltn-accent-ink);
 }
-/* One exception, and it is about weight rather than kind. The topic-tag screen stacks
-   three forms — Rename, Merge, Delete — each with its own submit, so painting all
-   three primary gives a destructive action the same voice as renaming a tag. Delete
-   steps down to the secondary fill. It is still 40px: the floor is not what is being
-   traded here, the loudness is. */
+
 .bltn-reskin
 	.bltn-reskin__body
 	#bbpress-forums
@@ -3700,8 +2604,7 @@ a.bltn-compose__open {
 	background: color-mix(in srgb, var(--bltn-accent) 12%, var(--bltn-wash));
 }
 
-/* Generate Password, Hide, Cancel: secondary, so the control scale's 36px step and
-   the wash fill the password prompt's submit already uses. */
+
 .bltn-reskin
 	.bltn-reskin__body
 	#bbpress-forums
@@ -3733,13 +2636,7 @@ a.bltn-compose__open {
 	background: color-mix(in srgb, var(--bltn-accent) 12%, var(--bltn-wash));
 }
 
-/* Checkboxes and radios — every one on this tier rendered at the browser's 13px.
-   Grown to the floor itself rather than past it: 24px is the smallest thing §2.5.8
-   permits, and these sit in runs of three ("copy subscribers / favoriters / tags"), so
-   anything larger spends rows on a control that is read once. The row is given a 24px
-   line so the label beside it is the same target height as the box.
-   `accent-color` keeps the checked state on the one accent instead of the UA blue —
-   the same fill as the active tab chip. */
+/* Enlarge native checkboxes and radios to the 24px minimum target while retaining their semantics. */
 .bltn-reskin
 	.bltn-reskin__body
 	#bbpress-forums
@@ -3759,10 +2656,7 @@ a.bltn-compose__open {
 	block-size: 24px;
 	min-block-size: 0;
 	flex: none;
-	/* The vertical 4px is doing real work: merge and split put a run of three
-	   checkboxes in ONE div separated by <br>, so the boxes are inline content on
-	   consecutive lines. At the floor exactly they butt edge to edge and read as one
-	   teal column; the margin makes the line box 32px and gives each its own row. */
+
 	margin: 4px 8px 4px 0;
 	padding: 0;
 	vertical-align: middle;
@@ -3783,18 +2677,7 @@ a.bltn-compose__open {
 	cursor: pointer;
 }
 
-/* The password generator, whose whole cluster was still laid out for the desktop
-   form: bbPress gives it `width: 60%; margin-left: 20%` — the old label column — so
-   the field, its two buttons and the strength meter sat indented from every other
-   field on the screen and stopped 40% short of the gutter. Reflowed like the rest
-   (#88's move, on the block that click reveals).
-
-   The strength meter keeps its four colours. They are core WordPress's own signal and
-   the only thing distinguishing "Weak" from "Strong" at a glance; this palette has no
-   token for them and inventing one — see the invalid-password note above, which
-   declined to add a red — would be a palette decision for JT rather than a side effect
-   of a control pass. What it takes here is our geometry: full width, our radius, our
-   type. */
+/* bbPress retains the desktop label-column offset on its revealed password controls. */
 .bltn-reskin
 	.bltn-reskin__body
 	#bbpress-forums
@@ -3837,9 +2720,7 @@ a.bltn-compose__open {
 	color: var(--bltn-ink);
 }
 
-/* Pagination, quietened. Vertical padding only: on the profile it already sits in
-   the tab body's gutter, and on a screen where it doesn't, the archive block below
-   gives it one. */
+
 .bltn-reskin__body #bbpress-forums .bbp-pagination {
 	padding: 12px 0;
 	border: 0;
@@ -3857,62 +2738,16 @@ a.bltn-compose__open {
 	color: var(--bltn-accent-ink);
 	background: var(--bltn-wash);
 	font-weight: 600;
-	/* bbPress fades this one too (`opacity: 0.8`, bbpress.css:692), which took the
-	   current page number to 4.24:1 — the chip that says which page you are on. */
+	/* Reset bbPress’s pagination opacity so the current-page chip retains AA contrast. */
 	opacity: 1;
 }
 
-/* bbPress's own row emphasis, answered in one place: neither stripe nor sticky is a
-   tone on this tier, and every row is the one surface (issue #96).
-
-   ⚠ Neutralised, NOT deleted. bbPress paints .even/.odd itself — #ffffff / #fbfbfb at
-   `#bbpress-forums div.even` (bbpress.css:65) — and the tier re-admits its stylesheet
-   rather than dequeuing it, so removing these rules hands the rows back to bbPress's
-   own striping instead of ending it.
-
-   The striping used to be recoloured into the palette here (#ffffff / #f1f3f0) rather
-   than dropped, reasoned as a card boundary now the rows are full-bleed. Shooting the
-   surfaces at 390 retired that reason on its own terms:
-
-   - The divider was doing the job at half strength, not failing at it. --bltn-line-soft
-     (#eef0ec) is Δ(17,15,20) against white and Δ(3,3,4) against the paper tint, so every
-     divider rendered on its white side and vanished on its tinted one. One surface takes
-     both sides to Δ(17,15,20) — the boundary the stripe was kept for, delivered by the
-     line that was already there, which is how the takeover screens read.
-   - Row banding is a wide-table device: it carries the eye horizontally, from a value in
-     the last column back to its label in the first. This tier's `<ul>`-as-table is
-     already reflowed to a single-column stacked card, so there is no horizontal tracking
-     task left for it to serve.
-   - Tone is wanted for something that means something. Trash / spam / pending / closed
-     are all owed one legible treatment (#36), and they arrive on this same .even/.odd
-     chain — so the meaningless tone was holding the channel the meaningful one needs.
-
-   Pinned is unmarked here for its own reasons, unchanged by the above: "pinned" is a
-   property of a topic *within its forum*, and a reskin list has no forum — its rows come
-   from several, so there is nothing for "first" to be relative to, and a moderator's pin
-   has no claim over a member's own record of what they started. The signal lives where it
-   is true: the takeover's forum screen, which queries its pinned topics separately under a
-   "Pinned" section label. (Reverted, Yoren 2026-07-25: a label here promised a position the
-   list never had, and hoisting to deliver it put housekeeping threads at the top of a
-   member's profile in place of what they'd actually been discussing.)
-
-   Two rules still have to answer bbPress, since it keeps painting pinned rows: parity is
-   `!important` because its yellow is (both important, so specificity decides and ours is
-   the more specific), and the 1.1em bump is reset so "pinned" cannot quietly mean
-   "bigger". Both survive this change — what went is only the tone difference between the
-   two parities.
-
-   The reply loop needed a third rule under striping and does not need one now: bbp_reply_class()
-   classes only div.reply, and a reply's meta band is an unclassed *preceding* sibling, so a
-   :has() rule reached back to tint the pair as one card. With no tint, the pair is bounded by
-   the divider under div.reply the same way every other card is. */
+/* Explicitly neutralize bbPress parity and sticky emphasis; removing this override would restore upstream colors. */
 .bltn-reskin .bltn-reskin__body #bbpress-forums .even,
 .bltn-reskin .bltn-reskin__body #bbpress-forums .odd {
 	background: var(--bltn-surface) !important;
 }
-/* The 1.1em reset. Every card field happens to override it with an explicit size
-   already, so this only guards the ones that don't; the selector matches the card rule's
-   shape so it out-specifies it. */
+
 .bltn-reskin
 	.bltn-reskin__body
 	#bbpress-forums
@@ -3928,34 +2763,7 @@ a.bltn-compose__open {
 	font-size: inherit;
 }
 
-/* Closed rows: undo bbPress's #ccc, which is 1.6:1 on white.
-   `#bbpress-forums ul.status-closed, … a { color: #ccc }` colours the whole row.
-   Our own rules already claim the title, the meta line and the counts, so it
-   looked harmless — but it still reached the four runs nothing else names (the
-   author, the forum link, the freshness link, the freshness author), which
-   rendered a closed row's byline unreadable. Verified by walking the row's text
-   nodes, not by eye.
-
-   `inherit` rather than a colour of our own, so each run lands back on whatever
-   its own context already sets — which is what an open row gets.
-
-   ⚠ That leaves closed UNMARKED on this tier, and it is a suppression, not a
-   decision: bbPress's only signal here IS the dimming, and "quieter" cannot be
-   spent on a phone without going under 4.5:1. So closed joins trash / spam /
-   pending in the status-colour family owed to #36, which wants one legible
-   treatment for all four rather than four dimmings. The takeover states it in a
-   word instead (see DESIGN.md, "Closed is a fact, not a demotion"); the reskin
-   cannot, because it recolours bbPress's markup and does not author its own.
-
-   ⚠ The `a` half of this used to take `inherit` too, and that did NOT deliver
-   what the paragraph above claims. This selector (1 id, 3 classes, 2 types) also
-   outranks `.bltn-reskin__body a`, so a closed row's four unnamed link runs
-   inherited the surrounding grey — rgb(105,113,106) against rgb(10,95,82) on
-   every open row. Closed rows silently lost their link colour: a difference with
-   no meaning, and on a tier where colour is what marks a link, it also removed
-   the only cue that those words were tappable. So the reset is now split — the
-   row goes back to inherit, and the links are put back to the accent explicitly.
-   "Reads exactly like an open one" is a claim this rule now actually keeps. */
+/* Override bbPress’s low-contrast closed-row color; links need an explicit accent because this selector outranks the base link rule. */
 .bltn-reskin .bltn-reskin__body #bbpress-forums ul.status-closed {
 	color: inherit;
 }
@@ -3963,55 +2771,17 @@ a.bltn-compose__open {
 	color: var(--bltn-accent-ink);
 }
 
-/* ==== ARCHIVE LAYER: the topic archive's own furniture (issue #43) ====
-
-   The topic archive (`/topics/`), and the tag archive and registered views that share
-   its shape. The loop is the shared card above; what is particular to these screens
-   is the chrome around it, which arrives as direct children of #bbpress-forums with
-   nothing padding them. Hence `>`: it gives them the 20px gutter the card already
-   has, and cannot reach the profile's nested copies of the same classes.
-
-   The notice joined the list for the tag archive's sake (#33). It is the only screen
-   in this family that renders one at the top level with content in it — a tag's
-   description, which bbPress wraps in `.bbp-template-notice.info` — and its tinted
-   band was reaching the shell edge while the breadcrumb above it sat on the gutter,
-   so the two disagreed by the notice's own 14px of padding. This rule has to stay
-   AFTER the notice block above: `.info` sets `padding` as a shorthand at equal
-   specificity, so only a later `padding-inline` takes the horizontal axis off it
-   while leaving its vertical padding — and the empty state's 30px — alone. */
+/* Archive chrome */
 .bltn-reskin .bltn-reskin__body #bbpress-forums > div.bbp-breadcrumb,
 .bltn-reskin .bltn-reskin__body #bbpress-forums > div.bbp-template-notice,
 .bltn-reskin .bltn-reskin__body #bbpress-forums > div.bbp-pagination {
 	padding-inline: 20px;
 }
-/* The topic archive's own search field is gone, and this retires an interim answer
-   rather than adding a new one.
-
-   bbPress emits the GLOBAL search form first on `content-archive-topic.php`, so the
-   screen opened on an input and a teal button — a navigational control in the most
-   expensive position, on a screen whose job is the list. #46 moved it below the list
-   ("you browse, you page, and only then do you search") and recorded that as a
-   holding position, not a resting place. The finding that resolved it: nothing in
-   bbPress links the topic archive at all, so this field was the visible half of a
-   search that lived only on screens nobody navigates to (#35). The app bar carries
-   the entry point now, from every screen, so a second one here is chrome for a
-   control the reader already has — and the two would compete, being the same glyph's
-   destination and a field for the same query.
-
-   `> div.bbp-search-form` is the global form and only it. The profile's per-tab
-   fields share the class but are nested under #bbp-user-wrapper, so a direct child of
-   #bbpress-forums cannot be one — and they stay, being a filter over the list beneath
-   them rather than a way to reach search. Verified: `form-search.php` is included at
-   top level by exactly three templates, and the other two are takeovers. */
+/* Only the direct-child global search is hidden; nested profile filters remain available. */
 .bltn-reskin .bltn-reskin__body #bbpress-forums > div.bbp-search-form {
 	display: none;
 }
-/* The breadcrumb stays, which is the one piece of bbPress chrome kept for a reason
-   rather than out of thrift: this archive renders no heading, and the reskin app bar
-   carries the site name, so "Topics" here is the only thing naming the screen. Styled
-   as a quiet label line — small sans, our greys, the current segment a shade darker —
-   so it reads as a title with its trail attached, not as navigation competing with the
-   app bar's own back control. */
+
 .bltn-reskin .bltn-reskin__body #bbpress-forums > div.bbp-breadcrumb {
 	float: none;
 	margin: 0;
@@ -4024,12 +2794,7 @@ a.bltn-compose__open {
 }
 .bltn-reskin .bltn-reskin__body #bbpress-forums div.bbp-breadcrumb a {
 	color: var(--bltn-ink-3);
-	/* Underlined, and tinted off this line's own grey rather than the accent so the
-	   trail stays one tone. #43 styled the breadcrumb as a quiet label rather than
-	   navigation — but the same note records its actual job: it is the way OUT for a
-	   reader who arrives cold on a URL nothing links. A way out that gives no sign of
-	   being tappable is not one, and these segments are the same grey as the text
-	   around them, so they have no colour cue either. */
+
 	text-decoration: underline;
 	text-decoration-color: color-mix(
 		in srgb,
@@ -4045,10 +2810,7 @@ a.bltn-compose__open {
 	div.bbp-breadcrumb
 	span.bbp-breadcrumb-sep {
 	margin: 0 5px;
-	/* Was `--bltn-line` (#e6e8e3), a border token used as a text colour: 1.23:1 on
-	   white, so the separator was failing at its own job as well as at AA. It takes
-	   the same grey as the rest of the line, which is what "a quiet label line"
-	   (issue #43) actually asks for — one tone, legible. */
+
 	color: var(--bltn-ink-3);
 }
 .bltn-reskin
@@ -4059,13 +2821,7 @@ a.bltn-compose__open {
 	font-weight: 600;
 	color: var(--bltn-ink-2);
 }
-/* bbPress prints the pager twice, above and below the list. The top copy is dropped:
-   two lines of "Viewing 15 topics - 1 through 15 (of 27 total)" and page chips before
-   any content is exactly the clutter in the most expensive position, and the takeover
-   screens put nothing above their lists either. Paging stays reachable at the end of
-   the list, where you arrive wanting it. :has() picks the copy that leads the loop
-   rather than counting siblings; where it is unsupported both simply show, which is
-   bbPress's own behaviour and not a broken screen. */
+/* :has() removes the duplicate leading pager; unsupported browsers retain bbPress’s usable default. */
 .bltn-reskin
 	.bltn-reskin__body
 	#bbpress-forums
@@ -4073,14 +2829,7 @@ a.bltn-compose__open {
 	display: none;
 }
 
-/* The same doubling, on the profile tabs, which the rule above never reached: its
-   `>` combinator is relative to #bbpress-forums, and a profile's pager is nested a
-   level deeper inside `div.bbp-user-section`. So Topics Started opened on a count
-   line and Replies Created on a count line AND a row of page chips, while the three
-   archive screens — the ones the rule was written for — opened on their content.
-   One screen in a set of five behaving differently is the kind of thing a reader
-   notices without being able to say why.
-   Two loop types here, not one: a profile tab lists topics or replies. */
+/* Profile topic and reply loops nest their duplicate leading pager one level deeper. */
 .bltn-reskin
 	.bltn-reskin__body
 	#bbpress-forums
@@ -4089,18 +2838,8 @@ a.bltn-compose__open {
 	display: none;
 }
 
-/* ---- reduced motion ---- */
-/* Every animation and transition in this stylesheet, answered in one place.
-   Nothing here was guarded before, so a reader who has asked their OS to reduce
-   motion still got the 2.4s reply highlight on every deep link and permalink tap
-   — the one animation in the product that fires without being asked for.
 
-   Duration is collapsed rather than `animation: none`, because the highlight is
-   not decoration: it is what tells a reader WHICH post a link just took them to.
-   `1ms` keeps the final keyframe applied and the animationend event firing (the
-   highlight replays on a second visit to the same anchor, which needs the event),
-   while removing the motion. The transitions are hover/press feedback and lose
-   nothing by being instant. */
+/* Reduced motion keeps the final highlight state and animation event while collapsing motion to 1ms. */
 @media (prefers-reduced-motion: reduce) {
 	.bltn-post--target,
 	.bltn-iconbtn,

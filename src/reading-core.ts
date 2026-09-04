@@ -1,9 +1,4 @@
-/**
- * Pure, DOM-free helpers for the reading view.
- *
- * Kept separate from reading.ts (the DOM entry) so they can be unit-tested
- * without a browser and so the esbuild entry stays export-free.
- */
+/** DOM-free request and response helpers. */
 
 export interface LoadMoreData {
 	html: string;
@@ -15,9 +10,7 @@ export interface LoadMoreData {
 export interface BltnI18n {
 	loading?: string;
 	error?: string;
-	/** Live-region announcement for a single appended row. */
 	loadedOne?: string;
-	/** Live-region announcement for several; carries a `%d` the script fills. */
 	loadedMany?: string;
 }
 
@@ -27,22 +20,8 @@ export interface BltnConfig {
 }
 
 /**
- * Build the form-encoded body for a load-more request.
- *
- * The subject's parameter name is carried by the control rather than fixed here,
- * because the same request shape serves several lists: replies within a topic,
- * threads within a forum, forums within a forum.
- *
- * A control may also have no subject, and then none is sent. The subscribed-forums
- * list on a profile belongs to a user, and which user is already settled by the URL
- * the request goes to — bbPress's AJAX URL is the current page's own. Sending an
- * empty parameter would put a subject in the body that means nothing.
- *
- * @param action bbPress AJAX action name.
- * @param param  Name of the subject parameter ('topic', 'forum'), or '' for none.
- * @param id     Subject ID (as a string, straight from the DOM attribute).
- * @param page   1-based page number.
- * @return URL-encoded request body.
+ * Build a load-more request body. The control supplies the subject parameter;
+ * subject-less lists omit it because their URL identifies the subject.
  */
 export function buildRequestBody(
 	action: string,
@@ -59,15 +38,7 @@ export function buildRequestBody(
 	return body.toString();
 }
 
-/**
- * Validate and normalise a load-more JSON response.
- *
- * Throws when the payload isn't a successful, well-formed response so the caller
- * can surface a retry affordance rather than appending garbage.
- *
- * @param payload Parsed JSON from the endpoint.
- * @return Normalised load-more data.
- */
+/** Reject malformed responses before their HTML reaches the document. */
 export function parseLoadMoreResponse(payload: unknown): LoadMoreData {
 	if (!payload || typeof payload !== 'object') {
 		throw new Error('Unexpected response');

@@ -14,94 +14,25 @@ use JTZL\Bulletin\WordPress\ContextInterface;
  * Binds the corrections and suppressions that apply to the furniture rather than to
  * the content: the admin bar, a title's prefix, an edit record's punctuation, a
  * link's inline handler, a password field's caret, and the editor bbPress hands the
- * composer.
- *
- * ## Why this is a class rather than another method on Bootstrap
- *
- * `Bootstrap` is the composition root and its coupling is exempted on purpose, but
- * its **length** is not — and it had spent three PRs a handful of lines under PHPMD's
- * ceiling, close enough that the next hook was going to be paid for by deleting an
- * explanation somewhere. `Ajax\Endpoints` was the first group lifted out along that
- * seam in PR 5; this is the second, and `Chrome\Namings` the third.
- *
- * ⚠ **The chrome group split in two rather than moving whole**, because nine
- * constructor arguments is itself a size rule (`ExcessiveParameterList`), and taking
- * the container instead is not open to a `Chrome` class — deptrac grants this layer
- * `Screen`, `Unread` and `WordPress`, and `Vendor_DI` to `Root` alone. The seam the
- * two halves were split on is not invented for the limit: three of the filters said
- * "name" in their own comments and went to `Namings`; what is left here is the group
- * that changes or removes something bbPress already renders.
- *
- * Every binding keeps the comment that was written beside it in `Bootstrap`. The
- * reason a hook has a priority is the part that is expensive to rediscover, and it
- * travelled with the hook.
  *
  * @since 0.5.0
  */
 class Furniture {
 
-	/**
-	 * WordPress/bbPress seam.
-	 *
-	 * @var ContextInterface
-	 */
 	private ContextInterface $wp;
 
-	/**
-	 * The admin bar's visibility on a screen we own.
-	 *
-	 * @var AdminBar
-	 */
 	private AdminBar $admin_bar;
 
-	/**
-	 * WordPress's "Protected:" title prefix.
-	 *
-	 * @var ProtectedTitle
-	 */
 	private ProtectedTitle $protected_title;
 
-	/**
-	 * The doubled full stop on an edit record.
-	 *
-	 * @var RevisionLogStop
-	 */
 	private RevisionLogStop $revision_stop;
 
-	/**
-	 * The inline handler bbPress puts on the per-reply "Reply To" link.
-	 *
-	 * @var ReplyToLink
-	 */
 	private ReplyToLink $reply_to;
 
-	/**
-	 * The caret in a mistyped password field.
-	 *
-	 * @var PasswordForm
-	 */
 	private PasswordForm $password_form;
 
-	/**
-	 * The editor bbPress hands the composer.
-	 *
-	 * @var ComposerSettings
-	 */
 	private ComposerSettings $composer;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.5.0
-	 *
-	 * @param ContextInterface $wp              WordPress/bbPress seam.
-	 * @param AdminBar         $admin_bar       Admin-bar visibility.
-	 * @param ProtectedTitle   $protected_title Protected-title prefix.
-	 * @param RevisionLogStop  $revision_stop   Edit-record punctuation.
-	 * @param ReplyToLink      $reply_to        Reply-to link handler.
-	 * @param PasswordForm     $password_form   Password-field focus.
-	 * @param ComposerSettings $composer        Editor settings.
-	 */
 	public function __construct(
 		ContextInterface $wp,
 		AdminBar $admin_bar,

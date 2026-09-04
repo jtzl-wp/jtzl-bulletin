@@ -16,76 +16,18 @@ use JTZL\Bulletin\WordPress\ContextInterface;
  * Keeps WordPress's admin bar off the screens Bulletin owns, for everyone who
  * cannot administrate the site.
  *
- * The bar paints a fixed strip above our app bar, so it is the first thing on the
- * screen — and for the role an ordinary member actually holds (a bbPress
- * participant, i.e. a WordPress subscriber) every link in it leads somewhere they
- * have no capability to use. That is the navigational clutter the brief exists to
- * remove, in the most expensive position on a phone.
- *
- * Two things this deliberately does NOT do:
- *
- * - It never turns the bar *on*. For a user who can administrate, the incoming
- *   value passes through untouched, so their own "Show Toolbar when viewing site"
- *   preference still decides — we suppress a default, we don't override a choice.
- * - It leaves screens we don't own alone (ScreenTier::None): every non-bbPress page,
- *   and forum create/edit, which is precisely where a keymaster is administrating
- *   rather than reading.
- *
- * ⚠ **0.5.0 changed which screens that second clause covers, and the change was
- * decided rather than inherited.** Topic and reply edit used to be excluded too, so
- * they kept the bar; P4 reskins them, so a moderator without `manage_options` now
- * loses it there. That is the right outcome on this class's own stated reasoning —
- * "forum moderation belongs in the shell, in Bulletin's own affordances (issue #36),
- * not in WordPress's chrome" — which already governed merge, split and move, screens
- * of exactly the same kind that have reskinned since #36. An administrator is
- * unaffected either way: `manage_options` passes the incoming value straight through.
- *
  * @since 0.3.0
  * @since 0.5.0 Only forum create/edit is left to the theme, so only it keeps the
  *              default bar for a non-administrator.
  */
 class AdminBar {
 
-	/**
-	 * The capability that earns the bar.
-	 *
-	 * A capability rather than a role name, because roles can be renamed and
-	 * recomposed per site while the capability a decision rests on does not move.
-	 * `manage_options` is the administrator test: it is what the bar's own
-	 * destinations (the dashboard, the customiser, site settings) require.
-	 *
-	 * Note a bbPress keymaster does not qualify on forum powers alone — forum
-	 * moderation belongs in the shell, in Bulletin's own affordances (issue #36),
-	 * not in WordPress's chrome.
-	 *
-	 * @since 0.3.0
-	 *
-	 * @var string
-	 */
 	private const CAPABILITY = 'manage_options';
 
-	/**
-	 * WordPress/bbPress seam.
-	 *
-	 * @var ContextInterface
-	 */
 	private ContextInterface $wp;
 
-	/**
-	 * Screen-tier classifier.
-	 *
-	 * @var ScreenClassifier
-	 */
 	private ScreenClassifier $screen;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.3.0
-	 *
-	 * @param ContextInterface $wp     WordPress/bbPress seam.
-	 * @param ScreenClassifier $screen Screen-tier classifier.
-	 */
 	public function __construct( ContextInterface $wp, ScreenClassifier $screen ) {
 		$this->wp     = $wp;
 		$this->screen = $screen;
@@ -93,19 +35,6 @@ class AdminBar {
 
 	/**
 	 * Decide whether the admin bar shows for this request.
-	 *
-	 * WordPress resolves this once, on `template_redirect` at priority 0 — after the
-	 * main query is parsed, so the tier is knowable — and the answer then governs
-	 * both the bar's markup in `wp_footer()` and the `admin-bar` body class that our
-	 * stylesheet reserves height against. Suppressing it here is therefore enough on
-	 * its own: no bar, no class, no reserved gap.
-	 *
-	 * The incoming value is deliberately untyped. A WordPress filter chain enforces
-	 * nothing: one careless callback with a missing `return` hands the next one
-	 * `null`, and a `bool` parameter would make that a TypeError — a white screen on
-	 * every forum page, caused by somebody else's plugin but blamed on ours. Casting
-	 * is also what WordPress does with the result (`is_admin_bar_showing()`'s callers
-	 * read it as a boolean), so normalising here changes no behaviour.
 	 *
 	 * @since 0.3.0
 	 *

@@ -18,49 +18,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 /**
  * The parts of a response that must be the same on every route.
- *
- * Totals, cache policy and the shape of an error are not per-controller decisions —
- * they are the contract the app was handed. A controller that built its own would be
- * right until the day it was edited, so controllers ask this class and there is one
- * place to read to know what every route does. What a request may *ask* for is
- * Rest\RequestBounds' half of the same job; this class is only what comes back.
- *
- * ## A personalised response is never shared-cacheable
- *
- * Bulletin's public routes return per-reader values — `is_unread`, `is_favorite`,
- * `is_subscribed`, an author's own held reply. The route is public; the *answer* is
- * not. A shared cache that stored one reader's answer under the URL would hand it to
- * the next reader, so every response varies on both authentication channels and every
- * authenticated or mutating one refuses shared storage outright. Stating it here means
- * no route can forget it.
- *
- * @since 0.6.0
  */
 class ResponseFactory {
 
-	/**
-	 * WordPress/bbPress seam.
-	 *
-	 * @var ContextInterface
-	 * @since 0.6.0
-	 */
 	private ContextInterface $wp;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.6.0
-	 *
-	 * @param ContextInterface $wp WordPress/bbPress seam.
-	 */
 	public function __construct( ContextInterface $wp ) {
 		$this->wp = $wp;
 	}
 
 	/**
-	 * A paginated collection: a top-level array, with its totals in headers.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param array<int,array<string,mixed>> $items Serialized rows.
 	 * @param int                            $total Rows after visibility filtering.
@@ -76,9 +44,7 @@ class ResponseFactory {
 	}
 
 	/**
-	 * One entity.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param array<string,mixed> $item     Serialized entity.
 	 * @param int                 $status   HTTP status.
@@ -89,45 +55,12 @@ class ResponseFactory {
 		return $this->isolate( new \WP_REST_Response( $item, $status ), $mutation );
 	}
 
-	/**
-	 * The acknowledgement that names nothing.
-	 *
-	 * Returned when a write ends somewhere the caller is not told about. It carries no
-	 * ID, no `Location`, no status and no reason — deliberately, and identically for
-	 * every such outcome, because the difference between them is exactly what somebody
-	 * probing the spam filter would tune against.
-	 *
-	 * @since 0.6.0
-	 *
-	 * @return \WP_REST_Response
-	 */
 	public function accepted(): \WP_REST_Response {
 		return $this->isolate( new \WP_REST_Response( array( 'accepted' => true ), 202 ), true );
 	}
 
 	/**
-	 * A completed write, as whichever of the two answers the contract has for one.
-	 *
-	 * ## Why this is not written out at each create route
-	 *
-	 * Because it is the *decision*, not the plumbing. "the entity when the author can
-	 * read it back, and the fixed acknowledgement when they cannot" is one rule, and a
-	 * fourth write route spelling it out again is a fourth place for it to drift — a
-	 * create that answered 200, or one that reached for an ID a discarded write never
-	 * had. Rest\MutationResult makes the second of those a type error; this makes the
-	 * first impossible to write.
-	 *
-	 * ⚠ **Only the success code differs between a create and an edit**, which is why it
-	 * is a parameter rather than a second method: 201 says a resource came into
-	 * existence and 200 says one changed, and the *other* answer — the 202 that names
-	 * nothing — has to stay byte-identical across all four routes. Splitting the rule in
-	 * two to vary one integer is how the acknowledgements drift apart.
-	 *
-	 * The serializer arrives as a callable rather than an object so this class stays
-	 * ignorant of what a topic or a reply looks like. It is handed an ID and gives back a
-	 * row; which serializer that is belongs to the controller.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @param MutationResult|\WP_Error $written   What the mutation service reported.
 	 * @param callable                 $serialize Turns the written ID into a row.
@@ -145,12 +78,7 @@ class ResponseFactory {
 	}
 
 	/**
-	 * True when somebody is signed in, and the standard refusal when not.
-	 *
-	 * The code is WordPress's own `rest_not_logged_in`, not a Bulletin invention: a
-	 * client already has to handle it from core routes.
-	 *
-	 * @since 0.6.0
+	 * Data contract.
 	 *
 	 * @return true|\WP_Error
 	 */
@@ -166,18 +94,8 @@ class ResponseFactory {
 		);
 	}
 
-	/**
-	 * Say who a response is for, and whether it may be stored.
-	 *
-	 * @since 0.6.0
-	 *
-	 * @param \WP_REST_Response $response Response to mark.
-	 * @param bool              $mutation Whether this answers a write.
-	 * @return \WP_REST_Response
-	 */
 	private function isolate( \WP_REST_Response $response, bool $mutation ): \WP_REST_Response {
-		// Both channels: a bearer token and a cookie identify different readers of the
-		// same URL, and a cache keyed on only one of them would serve across the other.
+
 		$response->header( 'Vary', 'Authorization, Cookie' );
 
 		if ( $mutation || $this->wp->is_user_logged_in() ) {

@@ -13,11 +13,8 @@ use JTZL\Bulletin\View\ReplyView;
 use JTZL\Bulletin\WordPress\ContextInterface;
 
 /**
- * Extends bbPress's own front-end AJAX router (bbp_get_ajax_url() dispatches to
- * `bbp_ajax_{action}`) rather than a standalone wp_ajax_ handler, so we stay
- * inside bbPress's request lifecycle. Paging matches the reading view exactly:
- * page 1 ships with the document, so load-more starts at page 2, and every page
- * is replies-only (see Query\ReplyQuery).
+ * Continues a topic's replies through bbPress's front-end AJAX router.
+ * Page 1 ships with the document; later pages are replies-only (see ReplyQuery).
  *
  * @since 0.1.0
  */
@@ -51,16 +48,6 @@ class LoadRepliesController {
 	 */
 	private RequestedPage $paging;
 
-	/**
-	 * Constructor.
-	 *
-	 * @since 0.1.0
-	 *
-	 * @param ContextInterface $wp         WordPress/bbPress seam.
-	 * @param ReplyQuery       $query      Shared reply-query builder.
-	 * @param ReplyView        $reply_view Reply renderer.
-	 * @param RequestedPage    $paging     Shared reader and bound for `paged`.
-	 */
 	public function __construct( ContextInterface $wp, ReplyQuery $query, ReplyView $reply_view, RequestedPage $paging ) {
 		$this->wp         = $wp;
 		$this->query      = $query;
@@ -78,12 +65,9 @@ class LoadRepliesController {
 		$topic_id = isset( $_POST['topic'] ) ? (int) $_POST['topic'] : 0;
 		$page     = $this->paging->requested();
 
-		// Refuse the request unless the topic may be read; a passing check falls
-		// through to serving. send_json_error() ends the request from inside.
 		$this->guard_access( $topic_id );
 
-		// Then the page, after access and never before it: a reader who may not
-		// read this thread is told that, whatever page they asked for.
+		// Check access before paging so an inaccessible topic does not disclose range.
 		$this->paging->guard( $page );
 
 		ob_start();
@@ -111,35 +95,20 @@ class LoadRepliesController {
 	/**
 	 * Refuse the request unless this topic's replies may be served.
 	 *
-	 * Each gate ends the request through send_json_error() (which never returns),
-	 * so returning normally is the single "allowed" outcome: the topic is a
-	 * readable topic, its forum is one the reader may view, and no unmet password
-	 * stands in the way. bbPress applies these on its own singular views but not
-	 * on this AJAX route, so the continuation must apply them itself.
+	 * These checks apply on bbPress singular views but not on this AJAX route.
 	 *
 	 * @since 0.3.0
 	 *
 	 * @param int $topic_id Topic ID.
 	 */
 	private function guard_access( int $topic_id ): void {
-		// send_json_error() ends the request, so there is nothing to return to. A
-		// topic in a forum the caller may not view answers exactly like an invalid
-		// or non-readable topic ID — bbPress's own singular views present
-		// inaccessible private/hidden resources as not found, and this route must
-		// not let an anonymous caller distinguish "no such topic" from "a topic you
-		// can't see" (issue #78). Gating on what the *user* may view, not on the
-		// forum's status label, also means a keymaster, moderator, or member of a
-		// private forum must still get their replies, while an unauthorised visitor
-		// is refused — including for a public forum nested under a restricted
-		// ancestor.
+		// Match bbPress by making missing and inaccessible topics indistinguishable.
+		// Use capability checks so authorized private-forum readers retain access.
 		if ( ! $this->request_may_read_topic( $topic_id ) ) {
 			$this->wp->send_json_error( array( 'message' => 'bad_topic' ), 400 );
 		}
 
-		// A password-protected topic masks its content behind the password form on
-		// bbPress's own view, so the reading view declines takeover there (see
-		// ReadingScreen). This continuation refuses the same way rather than stream
-		// the replies bbPress withholds until the password is supplied.
+		// Do not expose replies hidden by the singular view's password form.
 		if ( $this->wp->is_password_required( $topic_id ) ) {
 			$this->wp->send_json_error( array( 'message' => 'protected' ), 403 );
 		}
@@ -149,11 +118,7 @@ class LoadRepliesController {
 	 * Whether the request names a real, readable topic in a forum the caller may
 	 * view.
 	 *
-	 * Deliberately answers a nonexistent/non-readable topic and a readable one
-	 * behind an inaccessible forum the same way, so the caller learns nothing
-	 * about which it was (issue #78). Short-circuits before asking for the
-	 * topic's forum unless the topic itself is readable, since an invalid topic
-	 * ID has no forum worth asking about.
+	 * Missing, non-readable, and inaccessible topics deliberately share one result.
 	 *
 	 * @since 0.3.0
 	 *
@@ -170,10 +135,8 @@ class LoadRepliesController {
 	/**
 	 * Whether a topic exists, is a topic, and is itself publicly readable.
 	 *
-	 * A topic that is private/pending/spam/trashed inside a public forum must not
-	 * leak its replies, so its own status is checked — not just the forum's.
-	 * "Readable" is public OR closed: closed topics are read-only but still
-	 * publicly viewable, matching the thread-navigation query.
+	 * Check the topic's own status, not only its forum. Public and closed topics are
+	 * readable; private, pending, spam, and trashed topics are not.
 	 *
 	 * @since 0.1.0
 	 *
