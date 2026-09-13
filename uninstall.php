@@ -20,10 +20,8 @@ global $wpdb;
 // loaded by WordPress on its own, with no container and no guarantee the autoloader
 // has run, so reaching for a class here is how an uninstall routine fails silently on
 // the one run it gets. A repeated literal drifts, so tests/Integration/UninstallTest.php
-// asserts this one still names the table Database\Schema creates.
-$jtzl_bltn_table = $wpdb->prefix . 'jtzl_bltn_topic_reads';
-
-// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-$wpdb->query( "DROP TABLE IF EXISTS `{$jtzl_bltn_table}`" );
+// asserts this statement still names the table Database\Schema creates.
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange -- an uninstall drops its own table.
+$wpdb->query( "DROP TABLE IF EXISTS `{$wpdb->prefix}jtzl_bltn_topic_reads`" );
 
 delete_option( 'jtzl_bltn_db_version' );

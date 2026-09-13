@@ -51,14 +51,16 @@ class ForumTree {
 	 * @return array<int,array<int,int>> Descendant IDs keyed by forum ID.
 	 */
 	public function descendants_of( array $forum_ids ): array {
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$tree = $this->wpdb->get_results(
-			$this->wpdb->prepare(
-				"SELECT ID, post_parent FROM {$this->wpdb->posts} WHERE post_type = %s",
+		$wpdb = $this->wpdb;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one read of the forum tree per request; see the docblock.
+		$tree = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT ID, post_parent FROM {$wpdb->posts} WHERE post_type = %s",
 				$this->wp->get_forum_post_type()
 			)
 		);
-		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
 		// What this reader may not see never contributes a dot. Without this a topic
 		// inside a hidden or private sub-forum — `publish`, so it passes every filter

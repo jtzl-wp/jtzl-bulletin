@@ -17,10 +17,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 <?php
 ob_start();
 wp_head();
-$bltn_head = preg_replace( '#[\t ]*<meta[^>]*name=(["\'])viewport\1[^>]*>\s*#i', '', (string) ob_get_clean() );
+$jtzl_bltn_head = preg_replace( '#[\t ]*<meta[^>]*name=(["\'])viewport\1[^>]*>\s*#i', '', (string) ob_get_clean() );
 
-if ( false === stripos( (string) $bltn_head, '<title' ) ) {
-	$bltn_head = '<title>' . esc_html( wp_get_document_title() ) . '</title>' . "\n" . $bltn_head;
+if ( false === stripos( (string) $jtzl_bltn_head, '<title' ) ) {
+	$jtzl_bltn_head = '<title>' . esc_html( wp_get_document_title() ) . '</title>' . "\n" . $jtzl_bltn_head;
 }
 
-echo $bltn_head; // phpcs:ignore WordPress.Security.EscapeOutput -- wp_head() output; only viewport metas stripped, title added.
+echo $jtzl_bltn_head; // phpcs:ignore WordPress.Security.EscapeOutput -- wp_head() output; only viewport metas stripped, title added.

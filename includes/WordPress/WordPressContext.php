@@ -299,9 +299,9 @@ class WordPressContext implements ContextInterface {
 	/** {@inheritdoc} */
 	public function get_requested_reply_to(): int {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- presentation only; see the docblock.
-		$raw = $_REQUEST['bbp_reply_to'] ?? 0;
+		$raw = isset( $_REQUEST['bbp_reply_to'] ) ? absint( $_REQUEST['bbp_reply_to'] ) : 0;
 
-		return (int) bbp_validate_reply_to( absint( $raw ) );
+		return (int) bbp_validate_reply_to( $raw );
 	}
 
 	/** {@inheritdoc} */
@@ -792,11 +792,11 @@ class WordPressContext implements ContextInterface {
 		$scope = $this->rank_scope( count( $statuses ) );
 		$where = array_merge( array( $forum_id, bbp_get_topic_post_type() ), array_values( $statuses ) );
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- interpolation is table names and a fixed fragment; values are prepared.
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- interpolation is table names and a fixed fragment; values are prepared; $scope is rank_scope()'s fragment, which the sniff cannot follow.
 		$stamp = $wpdb->get_var( $wpdb->prepare( "SELECT m.meta_value {$scope} AND p.ID = %d LIMIT 1", array_merge( $where, array( $topic_id ) ) ) );
 
 		if ( null === $stamp ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- as above.
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- as above.
 			$rank['total'] = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) {$scope}", $where ) );
 
 			return $rank;
@@ -804,7 +804,7 @@ class WordPressContext implements ContextInterface {
 
 		$counts_args = array_merge( array( $stamp, $stamp, $topic_id, $topic_id ), $where );
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- as above.
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- as above.
 		$counts = (array) $wpdb->get_row( $wpdb->prepare( "SELECT COUNT(*) AS total, SUM( CASE WHEN ( m.meta_value > %s OR ( m.meta_value = %s AND p.ID > %d ) ) AND p.ID <> %d THEN 1 ELSE 0 END ) AS ahead {$scope}", $counts_args ), ARRAY_A );
 
 		$seek = array_merge( $where, array( $stamp, $stamp, $topic_id, $topic_id ) );
@@ -844,7 +844,7 @@ class WordPressContext implements ContextInterface {
 		$cmp = $fresher ? '>' : '<';
 		$dir = $fresher ? 'ASC' : 'DESC';
 
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- interpolation is table names and two fixed keywords; values are prepared.
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter -- interpolation is table names and two fixed keywords; values are prepared; $scope is rank_scope()'s fragment, which the sniff cannot follow.
 		$id = $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT p.ID {$scope}
@@ -855,7 +855,7 @@ class WordPressContext implements ContextInterface {
 				$seek
 			)
 		);
-		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 		return (int) $id;
 	}
@@ -978,13 +978,14 @@ class WordPressContext implements ContextInterface {
 
 	public function sanitize_search_request( string $key ): string {
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- public read-only endpoint; see Asset\AssetManager for why there is no nonce, and LoadSearchController for what does gate the request.
-		$raw = isset( $_POST[ $key ] ) ? wp_unslash( $_POST[ $key ] ) : '';
-
-		return is_scalar( $raw ) ? $this->normalize_search_terms( (string) $raw ) : '';
+		return isset( $_POST[ $key ] ) ? sanitize_text_field( wp_unslash( $_POST[ $key ] ) ) : '';
 	}
 
 	/**
-	 * Normalizes screen and continuation terms identically.
+	 * Normalizes screen terms exactly as sanitize_search_request() normalizes
+	 * continuation terms — the same sanitize_text_field(), which also turns an
+	 * array value into ''. That method spells the call out on the line that reads
+	 * the superglobal so the sanitization sniff can see it.
 	 */
 	private function normalize_search_terms( string $terms ): string {
 		return sanitize_text_field( $terms );

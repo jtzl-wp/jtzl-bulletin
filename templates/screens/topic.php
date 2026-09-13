@@ -12,53 +12,53 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$bltn_container  = \JTZL\Bulletin\Plugin::get_container();
-$bltn_appbar     = $bltn_container->get( \JTZL\Bulletin\View\AppBar::class );
-$bltn_ctx        = $bltn_container->get( \JTZL\Bulletin\WordPress\ContextInterface::class );
-$bltn_query      = $bltn_container->get( \JTZL\Bulletin\Query\ReplyQuery::class );
-$bltn_reply_view = $bltn_container->get( \JTZL\Bulletin\View\ReplyView::class );
-$bltn_navigator  = $bltn_container->get( \JTZL\Bulletin\Navigation\ThreadNavigator::class );
-$bltn_navbar     = $bltn_container->get( \JTZL\Bulletin\View\ThreadNavBar::class );
-$bltn_loadmore   = $bltn_container->get( \JTZL\Bulletin\View\LoadMore::class );
-$bltn_mod        = $bltn_container->get( \JTZL\Bulletin\View\ModerationActions::class );
-$bltn_compose    = $bltn_container->get( \JTZL\Bulletin\View\ComposeSlot::class );
-$bltn_author_edit = $bltn_container->get( \JTZL\Bulletin\View\AuthorEdit::class );
+$jtzl_bltn_container  = \JTZL\Bulletin\Plugin::get_container();
+$jtzl_bltn_appbar     = $jtzl_bltn_container->get( \JTZL\Bulletin\View\AppBar::class );
+$jtzl_bltn_ctx        = $jtzl_bltn_container->get( \JTZL\Bulletin\WordPress\ContextInterface::class );
+$jtzl_bltn_query      = $jtzl_bltn_container->get( \JTZL\Bulletin\Query\ReplyQuery::class );
+$jtzl_bltn_reply_view = $jtzl_bltn_container->get( \JTZL\Bulletin\View\ReplyView::class );
+$jtzl_bltn_navigator  = $jtzl_bltn_container->get( \JTZL\Bulletin\Navigation\ThreadNavigator::class );
+$jtzl_bltn_navbar     = $jtzl_bltn_container->get( \JTZL\Bulletin\View\ThreadNavBar::class );
+$jtzl_bltn_loadmore   = $jtzl_bltn_container->get( \JTZL\Bulletin\View\LoadMore::class );
+$jtzl_bltn_mod        = $jtzl_bltn_container->get( \JTZL\Bulletin\View\ModerationActions::class );
+$jtzl_bltn_compose    = $jtzl_bltn_container->get( \JTZL\Bulletin\View\ComposeSlot::class );
+$jtzl_bltn_author_edit = $jtzl_bltn_container->get( \JTZL\Bulletin\View\AuthorEdit::class );
 
-$bltn_topic_id  = bbp_get_topic_id();
-$bltn_forum_id  = bbp_get_topic_forum_id( $bltn_topic_id );
-$bltn_forum     = bbp_get_forum_title( $bltn_forum_id );
-$bltn_protected = $bltn_ctx->is_password_required( $bltn_topic_id );
-$bltn_closed    = $bltn_ctx->is_topic_closed( $bltn_topic_id );
-$bltn_replies   = (int) bbp_get_topic_reply_count( $bltn_topic_id, true );
-$bltn_moderates = $bltn_mod->available( $bltn_topic_id );
+$jtzl_bltn_topic_id  = bbp_get_topic_id();
+$jtzl_bltn_forum_id  = bbp_get_topic_forum_id( $jtzl_bltn_topic_id );
+$jtzl_bltn_forum     = bbp_get_forum_title( $jtzl_bltn_forum_id );
+$jtzl_bltn_protected = $jtzl_bltn_ctx->is_password_required( $jtzl_bltn_topic_id );
+$jtzl_bltn_closed    = $jtzl_bltn_ctx->is_topic_closed( $jtzl_bltn_topic_id );
+$jtzl_bltn_replies   = (int) bbp_get_topic_reply_count( $jtzl_bltn_topic_id, true );
+$jtzl_bltn_moderates = $jtzl_bltn_mod->available( $jtzl_bltn_topic_id );
 ?>
 <section class="bltn-screen">
 
 	<?php
-	$bltn_appbar->render(
+	$jtzl_bltn_appbar->render(
 		array(
-			'title'      => $bltn_forum,
+			'title'      => $jtzl_bltn_forum,
 			'subtitle'   => __( 'Thread', 'jtzl-bulletin' ),
-			'back_url'   => bbp_get_forum_permalink( $bltn_forum_id ),
+			'back_url'   => bbp_get_forum_permalink( $jtzl_bltn_forum_id ),
 			'back_label' => __( 'Back to threads', 'jtzl-bulletin' ),
 			'heading'    => false, // The thread title below carries the h1.
 		)
 	);
 	?>
 
-	<?php if ( $bltn_protected ) : ?>
+	<?php if ( $jtzl_bltn_protected ) : ?>
 
 		<main class="bltn-scroll" id="bltn-reading">
 			<div class="bltn-protected">
 				<?php
 				// bbPress's title helper echoes filtered text without contextual escaping.
 				?>
-				<h1 class="bltn-protected__title" data-bltn-heading tabindex="-1"><?php echo esc_html( bbp_get_topic_title( $bltn_topic_id ) ); ?></h1>
+				<h1 class="bltn-protected__title" data-bltn-heading tabindex="-1"><?php echo esc_html( bbp_get_topic_title( $jtzl_bltn_topic_id ) ); ?></h1>
 				<?php
 				/*
 				 * Core owns this form's authentication and markup; Bulletin only styles it.
 				 */
-				echo get_the_password_form( $bltn_topic_id ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- WordPress core markup.
+				echo get_the_password_form( $jtzl_bltn_topic_id ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- WordPress core markup.
 				?>
 			</div>
 		</main>
@@ -72,18 +72,18 @@ $bltn_moderates = $bltn_mod->available( $bltn_topic_id );
 				// The app bar links to the index; this link returns to the current forum.
 				?>
 				<p class="bltn-thread__label">
-					<a class="bltn-uplink" href="<?php echo esc_url( bbp_get_forum_permalink( $bltn_forum_id ) ); ?>"><?php echo esc_html( $bltn_forum ); ?></a>
+					<a class="bltn-uplink" href="<?php echo esc_url( bbp_get_forum_permalink( $jtzl_bltn_forum_id ) ); ?>"><?php echo esc_html( $jtzl_bltn_forum ); ?></a>
 				</p>
 				<?php // bbPress's title helper does not contextually escape its output. ?>
-				<h1 class="bltn-thread__title" data-bltn-heading tabindex="-1"><?php echo esc_html( bbp_get_topic_title( $bltn_topic_id ) ); ?></h1>
+				<h1 class="bltn-thread__title" data-bltn-heading tabindex="-1"><?php echo esc_html( bbp_get_topic_title( $jtzl_bltn_topic_id ) ); ?></h1>
 				<p class="bltn-thread__sub">
-					<?php if ( $bltn_closed ) : ?>
+					<?php if ( $jtzl_bltn_closed ) : ?>
 						<span class="bltn-closed"><?php esc_html_e( 'Closed', 'jtzl-bulletin' ); ?></span>
 					<?php endif; ?>
 					<span>
 						<?php
 						/* translators: %s: formatted reply count. */
-						echo esc_html( sprintf( _n( '%s reply', '%s replies', $bltn_replies, 'jtzl-bulletin' ), number_format_i18n( $bltn_replies ) ) );
+						echo esc_html( sprintf( _n( '%s reply', '%s replies', $jtzl_bltn_replies, 'jtzl-bulletin' ), number_format_i18n( $jtzl_bltn_replies ) ) );
 						?>
 					</span>
 					<?php if ( bbp_is_subscriptions_active() && is_user_logged_in() ) : ?>
@@ -94,15 +94,15 @@ $bltn_moderates = $bltn_mod->available( $bltn_topic_id );
 							<?php
 							bbp_topic_subscription_link(
 								array(
-									'topic_id' => $bltn_topic_id,
+									'topic_id' => $jtzl_bltn_topic_id,
 									'before'   => '',
 								)
 							);
 							?>
 						</span>
 					<?php endif; ?>
-					<?php if ( $bltn_moderates ) : ?>
-						<?php $bltn_mod->render_toggle(); ?>
+					<?php if ( $jtzl_bltn_moderates ) : ?>
+						<?php $jtzl_bltn_mod->render_toggle(); ?>
 					<?php endif; ?>
 				</p>
 
@@ -113,7 +113,7 @@ $bltn_moderates = $bltn_mod->available( $bltn_topic_id );
 				 * a space separator keeps the links readable without CSS.
 				 */
 				bbp_topic_tag_list(
-					$bltn_topic_id,
+					$jtzl_bltn_topic_id,
 					array(
 						'before' => '<div class="bltn-tags" role="group" aria-label="' . esc_attr__( 'Thread tags', 'jtzl-bulletin' ) . '">',
 						'sep'    => ' ',
@@ -123,27 +123,27 @@ $bltn_moderates = $bltn_mod->available( $bltn_topic_id );
 				?>
 
 				<?php
-				if ( $bltn_moderates ) {
-					$bltn_mod->render_for_topic( $bltn_topic_id );
+				if ( $jtzl_bltn_moderates ) {
+					$jtzl_bltn_mod->render_for_topic( $jtzl_bltn_topic_id );
 				}
 				?>
 
-				<div class="bltn-post bltn-post--op" id="post-<?php echo esc_attr( (string) $bltn_topic_id ); ?>">
+				<div class="bltn-post bltn-post--op" id="post-<?php echo esc_attr( (string) $jtzl_bltn_topic_id ); ?>">
 					<div class="bltn-byline">
-						<span class="bltn-byline__name"><?php echo esc_html( bbp_get_topic_author_display_name( $bltn_topic_id ) ); ?></span>
-						<span class="bltn-byline__time"><?php echo esc_html( bbp_get_topic_post_date( $bltn_topic_id, true ) ); ?></span>
-						<?php $bltn_author_edit->render_for_topic( $bltn_topic_id ); ?>
+						<span class="bltn-byline__name"><?php echo esc_html( bbp_get_topic_author_display_name( $jtzl_bltn_topic_id ) ); ?></span>
+						<span class="bltn-byline__time"><?php echo esc_html( bbp_get_topic_post_date( $jtzl_bltn_topic_id, true ) ); ?></span>
+						<?php $jtzl_bltn_author_edit->render_for_topic( $jtzl_bltn_topic_id ); ?>
 						<span class="bltn-chip"><?php esc_html_e( 'Original post', 'jtzl-bulletin' ); ?></span>
 					</div>
-					<div class="bltn-post__body"><?php bbp_topic_content( $bltn_topic_id ); ?></div>
+					<div class="bltn-post__body"><?php bbp_topic_content( $jtzl_bltn_topic_id ); ?></div>
 				</div>
 
 				<div class="bltn-replies" id="bltn-replies">
 					<?php
-					if ( $bltn_ctx->has_replies( $bltn_query->args( $bltn_topic_id, 1 ) ) ) :
-						while ( $bltn_ctx->the_replies_loop() ) :
-							$bltn_ctx->the_reply();
-							$bltn_reply_view->render( $bltn_topic_id );
+					if ( $jtzl_bltn_ctx->has_replies( $jtzl_bltn_query->args( $jtzl_bltn_topic_id, 1 ) ) ) :
+						while ( $jtzl_bltn_ctx->the_replies_loop() ) :
+							$jtzl_bltn_ctx->the_reply();
+							$jtzl_bltn_reply_view->render( $jtzl_bltn_topic_id );
 						endwhile;
 					endif;
 					?>
@@ -152,12 +152,12 @@ $bltn_moderates = $bltn_mod->available( $bltn_topic_id );
 				<?php
 				// Threaded paging uses a computed ID slice, so WP_Query cannot report
 				// the full page count; ReplyQuery does.
-				if ( $bltn_query->max_pages( $bltn_topic_id ) > 1 ) {
-					$bltn_loadmore->render(
+				if ( $jtzl_bltn_query->max_pages( $jtzl_bltn_topic_id ) > 1 ) {
+					$jtzl_bltn_loadmore->render(
 						array(
 							'action' => 'bulletin_load_replies',
 							'param'  => 'topic',
-							'id'     => $bltn_topic_id,
+							'id'     => $jtzl_bltn_topic_id,
 							'target' => 'bltn-replies',
 							'next'   => 2,
 							'label'  => __( 'Load more replies', 'jtzl-bulletin' ),
@@ -167,7 +167,7 @@ $bltn_moderates = $bltn_mod->available( $bltn_topic_id );
 				?>
 
 				<?php
-				$bltn_compose->render( $bltn_topic_id, $bltn_forum_id );
+				$jtzl_bltn_compose->render( $jtzl_bltn_topic_id, $jtzl_bltn_forum_id );
 				?>
 
 			</article>
@@ -178,8 +178,8 @@ $bltn_moderates = $bltn_mod->available( $bltn_topic_id );
 		 * Keep navigation after the content so DOM and visual reading order match.
 		 * Its labelled nav landmark remains directly reachable.
 		 */
-		$bltn_nav_model = $bltn_navigator->locate( $bltn_topic_id, $bltn_forum_id );
-		$bltn_navbar->render( $bltn_nav_model );
+		$jtzl_bltn_nav_model = $jtzl_bltn_navigator->locate( $jtzl_bltn_topic_id, $jtzl_bltn_forum_id );
+		$jtzl_bltn_navbar->render( $jtzl_bltn_nav_model );
 		?>
 
 	<?php endif; ?>

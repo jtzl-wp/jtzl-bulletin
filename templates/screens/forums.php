@@ -14,12 +14,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$bltn_container = \JTZL\Bulletin\Plugin::get_container();
-$bltn_appbar    = $bltn_container->get( \JTZL\Bulletin\View\AppBar::class );
-$bltn_ctx       = $bltn_container->get( \JTZL\Bulletin\WordPress\ContextInterface::class );
-$bltn_forums    = $bltn_container->get( \JTZL\Bulletin\View\ForumList::class );
-$bltn_query     = $bltn_container->get( \JTZL\Bulletin\Query\ForumQuery::class );
-$bltn_loadmore  = $bltn_container->get( \JTZL\Bulletin\View\LoadMore::class );
+$jtzl_bltn_container = \JTZL\Bulletin\Plugin::get_container();
+$jtzl_bltn_appbar    = $jtzl_bltn_container->get( \JTZL\Bulletin\View\AppBar::class );
+$jtzl_bltn_ctx       = $jtzl_bltn_container->get( \JTZL\Bulletin\WordPress\ContextInterface::class );
+$jtzl_bltn_forums    = $jtzl_bltn_container->get( \JTZL\Bulletin\View\ForumList::class );
+$jtzl_bltn_query     = $jtzl_bltn_container->get( \JTZL\Bulletin\Query\ForumQuery::class );
+$jtzl_bltn_loadmore  = $jtzl_bltn_container->get( \JTZL\Bulletin\View\LoadMore::class );
 
 /*
  * Root forums, page 1. The page is not read from the URL: /forums/page/2/ is a live
@@ -28,13 +28,13 @@ $bltn_loadmore  = $bltn_container->get( \JTZL\Bulletin\View\LoadMore::class );
  * it has no back control. Load-more grows page 1 instead, which is also how the
  * thread and reply lists continue.
  */
-$bltn_rows = $bltn_forums->capture( $bltn_query->args( 0, 1 ) );
-$bltn_more = 1 < $bltn_ctx->get_max_forum_pages();
+$jtzl_bltn_rows = $jtzl_bltn_forums->capture( $jtzl_bltn_query->args( 0, 1 ) );
+$jtzl_bltn_more = 1 < $jtzl_bltn_ctx->get_max_forum_pages();
 ?>
 <section class="bltn-screen">
 
 	<?php
-	$bltn_appbar->render(
+	$jtzl_bltn_appbar->render(
 		array(
 			'title'    => get_bloginfo( 'name' ),
 			'subtitle' => __( 'Forums', 'jtzl-bulletin' ),
@@ -43,7 +43,7 @@ $bltn_more = 1 < $bltn_ctx->get_max_forum_pages();
 	?>
 
 	<main class="bltn-scroll bltn-list" id="bltn-forums">
-		<?php if ( '' !== $bltn_rows ) : ?>
+		<?php if ( '' !== $jtzl_bltn_rows ) : ?>
 
 			<?php
 			/*
@@ -54,13 +54,13 @@ $bltn_more = 1 < $bltn_ctx->get_max_forum_pages();
 			<div id="bltn-forums-list">
 				<?php
 				// Rows are built by View\ForumRow, which escapes every field.
-				echo $bltn_rows; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				echo $jtzl_bltn_rows; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 				?>
 			</div>
 
 			<?php
-			if ( $bltn_more ) {
-				$bltn_loadmore->render(
+			if ( $jtzl_bltn_more ) {
+				$jtzl_bltn_loadmore->render(
 					array(
 						'action' => 'bulletin_load_forums',
 						'param'  => 'forum',

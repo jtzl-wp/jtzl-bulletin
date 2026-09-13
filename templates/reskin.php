@@ -12,9 +12,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$bltn_container = \JTZL\Bulletin\Plugin::get_container();
-$bltn_appbar    = $bltn_container->get( \JTZL\Bulletin\View\AppBar::class );
-$bltn_heading   = $bltn_container->get( \JTZL\Bulletin\View\ScreenHeading::class );
+$jtzl_bltn_container = \JTZL\Bulletin\Plugin::get_container();
+$jtzl_bltn_appbar    = $jtzl_bltn_container->get( \JTZL\Bulletin\View\AppBar::class );
+$jtzl_bltn_heading   = $jtzl_bltn_container->get( \JTZL\Bulletin\View\ScreenHeading::class );
 ?>
 <!doctype html>
 <html <?php language_attributes(); ?>>
@@ -28,11 +28,11 @@ $bltn_heading   = $bltn_container->get( \JTZL\Bulletin\View\ScreenHeading::class
 	 * The content region owns the screen heading. Edit screens return to the edited
 	 * object; other reskin screens return to the forums index.
 	 */
-	$bltn_exit = $bltn_container->get( \JTZL\Bulletin\Chrome\EditExit::class )->destination();
-	$bltn_appbar->render(
+	$jtzl_bltn_exit = $jtzl_bltn_container->get( \JTZL\Bulletin\Chrome\EditExit::class )->destination();
+	$jtzl_bltn_appbar->render(
 		array(
-			'back_url'   => $bltn_exit['url'],
-			'back_label' => $bltn_exit['label'],
+			'back_url'   => $jtzl_bltn_exit['url'],
+			'back_label' => $jtzl_bltn_exit['label'],
 			'heading'    => false,
 		)
 	);
@@ -43,7 +43,7 @@ $bltn_heading   = $bltn_container->get( \JTZL\Bulletin\View\ScreenHeading::class
 		 * Render the accessible heading before the loop. Calling the title seam inside
 		 * a running loop can re-enter `the_title`.
 		 */
-		$bltn_heading->render();
+		$jtzl_bltn_heading->render();
 
 		while ( have_posts() ) {
 			the_post();

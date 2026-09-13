@@ -147,6 +147,8 @@ class RestContext implements RestContextInterface {
 
 	/** {@inheritdoc} */
 	public function visible_tag_counts( array $term_ids, array $topic_query_args ): array {
+		$wpdb = $this->wpdb;
+
 		$term_ids = array_values( array_unique( array_filter( array_map( 'intval', $term_ids ) ) ) );
 		$counts   = array_fill_keys( $term_ids, 0 );
 		$forums   = $this->readable_forum_ids();
@@ -160,14 +162,14 @@ class RestContext implements RestContextInterface {
 		$forum_slots  = implode( ',', array_fill( 0, count( $forums ), '%d' ) );
 		$status_slots = implode( ',', array_fill( 0, count( $statuses ), '%s' ) );
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Dynamic placeholder lists match the merged values.
-		$rows = $this->wpdb->get_results(
-			$this->wpdb->prepare(
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- the IN () placeholder lists are built from the value counts
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
 				"SELECT tt.term_id AS term_id, COUNT( DISTINCT p.ID ) AS visible
-				   FROM {$this->wpdb->term_relationships} tr
-				   JOIN {$this->wpdb->term_taxonomy} tt
+				   FROM {$wpdb->term_relationships} tr
+				   JOIN {$wpdb->term_taxonomy} tt
 				     ON tt.term_taxonomy_id = tr.term_taxonomy_id
-				   JOIN {$this->wpdb->posts} p
+				   JOIN {$wpdb->posts} p
 				     ON p.ID = tr.object_id
 				  WHERE tt.taxonomy = %s
 				    AND tt.term_id IN ( {$term_slots} )
@@ -186,7 +188,7 @@ class RestContext implements RestContextInterface {
 			),
 			ARRAY_A
 		);
-		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		foreach ( (array) $rows as $row ) {
 			$counts[ (int) $row['term_id'] ] = (int) $row['visible'];
@@ -242,17 +244,19 @@ class RestContext implements RestContextInterface {
 	 * @param string[] $statuses Topic statuses the reader may see.
 	 */
 	private function visible_tag_where( array $forums, array $statuses ): string {
+		$wpdb = $this->wpdb;
+
 		$forum_slots  = implode( ',', array_fill( 0, count( $forums ), '%d' ) );
 		$status_slots = implode( ',', array_fill( 0, count( $statuses ), '%s' ) );
 
-		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Dynamic placeholder lists match the merged values.
-		return (string) $this->wpdb->prepare(
-			"FROM {$this->wpdb->term_relationships} tr
-			   JOIN {$this->wpdb->term_taxonomy} tt
+		// phpcs:disable WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- the IN () placeholder lists are built from the value counts
+		return (string) $wpdb->prepare(
+			"FROM {$wpdb->term_relationships} tr
+			   JOIN {$wpdb->term_taxonomy} tt
 			     ON tt.term_taxonomy_id = tr.term_taxonomy_id
-			   JOIN {$this->wpdb->terms} t
+			   JOIN {$wpdb->terms} t
 			     ON t.term_id = tt.term_id
-			   JOIN {$this->wpdb->posts} p
+			   JOIN {$wpdb->posts} p
 			     ON p.ID = tr.object_id
 			  WHERE tt.taxonomy = %s
 			    AND p.post_type = %s
@@ -265,23 +269,27 @@ class RestContext implements RestContextInterface {
 				$forums
 			)
 		);
-		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+		// phpcs:enable WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 	}
 
 
 	private function visible_tag_total( string $where ): int {
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		return (int) $this->wpdb->get_var( "SELECT COUNT( DISTINCT tt.term_id ) {$where}" );
-		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$wpdb = $this->wpdb;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $where is the prepare()d fragment visible_tag_where() returns
+		return (int) $wpdb->get_var( "SELECT COUNT( DISTINCT tt.term_id ) {$where}" );
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 	}
 
 	/**
 	 * @return array<int,int> Counts keyed by term ID, in name order.
 	 */
 	private function visible_tag_page( string $where, int $page, int $per_page ): array {
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$rows = $this->wpdb->get_results(
-			$this->wpdb->prepare(
+		$wpdb = $this->wpdb;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- $where is the prepare()d fragment visible_tag_where() returns; the page bounds are prepared here
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
 				"SELECT tt.term_id AS term_id, COUNT( DISTINCT p.ID ) AS visible
 				 {$where}
 			   GROUP BY tt.term_id
@@ -292,7 +300,7 @@ class RestContext implements RestContextInterface {
 			),
 			ARRAY_A
 		);
-		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 		$counts = array();
 		foreach ( (array) $rows as $row ) {
@@ -405,7 +413,7 @@ class RestContext implements RestContextInterface {
 	}
 
 	/** {@inheritdoc} */
-	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Interpolation is the posts table name.
+	// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- {$posts} is $wpdb->posts under a local name, and the IN () placeholder lists are built from the value counts.
 	public function collection_where_clause(
 		string $where,
 		array $forum_ids,
@@ -413,26 +421,28 @@ class RestContext implements RestContextInterface {
 		string $topic_type,
 		string $reply_type
 	): string {
+		$wpdb = $this->wpdb;
+
 		if ( 1 !== preg_match( '/^\s*AND\s/i', $where ) ) {
 			return $where;
 		}
 
-		$posts     = $this->wpdb->posts;
+		$posts     = $wpdb->posts;
 		$forum_ids = array_values( array_filter( array_map( 'intval', $forum_ids ) ) );
 		$types     = array( $forum_type, $topic_type, $reply_type );
 
 		if ( array() === $forum_ids ) {
-			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Values are supplied as a three-item array.
-			$clause = (string) $this->wpdb->prepare( "{$posts}.post_type NOT IN ( %s, %s, %s )", $types );
-			// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+			// phpcs:disable WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Values are supplied as a three-item array.
+			$clause = (string) $wpdb->prepare( "{$posts}.post_type NOT IN ( %s, %s, %s )", $types );
+			// phpcs:enable WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 
 			return " AND ( 1=1 {$where} ) AND ( {$clause} )";
 		}
 
 		$slots = implode( ',', array_fill( 0, count( $forum_ids ), '%d' ) );
 
-		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Dynamic placeholder lists match the merged values.
-		$clause = (string) $this->wpdb->prepare(
+		// phpcs:disable WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Dynamic placeholder lists match the merged values.
+		$clause = (string) $wpdb->prepare(
 			"( {$posts}.post_type = %s AND {$posts}.ID IN ( {$slots} ) )
 			 OR ( {$posts}.post_type = %s AND {$posts}.post_password = '' AND {$posts}.post_parent IN ( {$slots} ) )
 			 OR ( {$posts}.post_type = %s AND EXISTS (
@@ -453,7 +463,7 @@ class RestContext implements RestContextInterface {
 				$types
 			)
 		);
-		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+		// phpcs:enable WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
 
 		return " AND ( 1=1 {$where} ) AND ( {$clause} )";
 	}
@@ -494,17 +504,18 @@ class RestContext implements RestContextInterface {
 	 * @return array<int,int>
 	 */
 	private function subforum_counts( array $forum_ids ): array {
+		$wpdb = $this->wpdb;
 
 		$readable = $this->readable_forum_ids();
 
 		$parent_slots   = implode( ',', array_fill( 0, count( $forum_ids ), '%d' ) );
 		$readable_slots = implode( ',', array_fill( 0, count( $readable ), '%d' ) );
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$rows = $this->wpdb->get_results(
-			$this->wpdb->prepare(
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- the IN () placeholder lists are built from the value counts
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
 				"SELECT post_parent AS forum_id, COUNT( ID ) AS total
-				   FROM {$this->wpdb->posts}
+				   FROM {$wpdb->posts}
 				  WHERE post_type = %s
 				    AND post_parent IN ( {$parent_slots} )
 				    AND ID IN ( {$readable_slots} )
@@ -513,7 +524,7 @@ class RestContext implements RestContextInterface {
 			),
 			ARRAY_A
 		);
-		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		$counts = array();
 		foreach ( (array) $rows as $row ) {
@@ -529,17 +540,19 @@ class RestContext implements RestContextInterface {
 	 * @return array<int,array{topics:int,replies:int}>
 	 */
 	private function topic_counts( array $forum_ids, array $statuses ): array {
+		$wpdb = $this->wpdb;
+
 		$forum_slots  = implode( ',', array_fill( 0, count( $forum_ids ), '%d' ) );
 		$status_slots = implode( ',', array_fill( 0, count( $statuses ), '%s' ) );
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Dynamic placeholder lists match the merged values.
-		$rows = $this->wpdb->get_results(
-			$this->wpdb->prepare(
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- the IN () placeholder lists are built from the value counts
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
 				"SELECT t.post_parent AS forum_id,
 				        COUNT( DISTINCT t.ID ) AS topics,
 				        COUNT( r.ID ) AS replies
-				   FROM {$this->wpdb->posts} t
-			  LEFT JOIN {$this->wpdb->posts} r
+				   FROM {$wpdb->posts} t
+			  LEFT JOIN {$wpdb->posts} r
 				     ON r.post_parent = t.ID
 				    AND r.post_type = %s
 				    AND r.post_status IN ( {$status_slots} )
@@ -558,7 +571,7 @@ class RestContext implements RestContextInterface {
 			),
 			ARRAY_A
 		);
-		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		$counts = array();
 		foreach ( (array) $rows as $row ) {
@@ -668,6 +681,8 @@ class RestContext implements RestContextInterface {
 	 * @return array<int,array{parent:int,password:bool}>
 	 */
 	private function forum_map(): array {
+		$wpdb = $this->wpdb;
+
 		if ( null !== $this->forum_map ) {
 			return $this->forum_map;
 		}
@@ -675,18 +690,18 @@ class RestContext implements RestContextInterface {
 		$statuses     = $this->forum_post_statuses();
 		$status_slots = implode( ',', array_fill( 0, count( $statuses ), '%s' ) );
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$rows = $this->wpdb->get_results(
-			$this->wpdb->prepare(
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- the IN () placeholder lists are built from the value counts
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
 				"SELECT ID, post_parent, post_password
-				   FROM {$this->wpdb->posts}
+				   FROM {$wpdb->posts}
 				  WHERE post_type = %s
 				    AND post_status IN ( {$status_slots} )",
 				array_merge( array( bbp_get_forum_post_type() ), $statuses )
 			),
 			ARRAY_A
 		);
-		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		$map = array();
 		foreach ( (array) $rows as $row ) {
@@ -774,26 +789,12 @@ class RestContext implements RestContextInterface {
 
 	/** {@inheritdoc} */
 	public function swap_handler_globals( array $values ): array {
-		$server_keys = array(
-			'REQUEST_METHOD',
-			'HTTP_HOST',
-			'REQUEST_URI',
-			'HTTP_REFERER',
-			'SERVER_PORT',
-			'HTTPS',
-		);
-		$server      = array();
-		foreach ( $server_keys as $key ) {
-			$server[ $key ] = array(
-				'exists' => array_key_exists( $key, $_SERVER ),
-				'value'  => $_SERVER[ $key ] ?? null,
-			);
-		}
-
+		// Whole arrays, taken to be put back whole: a key the request never had
+		// stays absent on restore because the copy never had it either.
 		$previous = array(
 			'post'    => $_POST,    // phpcs:ignore WordPress.Security.NonceVerification.Missing
 			'request' => $_REQUEST, // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			'server'  => $server,
+			'server'  => $_SERVER,
 		);
 		$home     = wp_parse_url( home_url( '/' ) );
 		$home     = is_array( $home ) ? $home : array();
@@ -818,14 +819,7 @@ class RestContext implements RestContextInterface {
 	public function restore_handler_globals( array $previous ): void {
 		$_POST    = $previous['post'];    // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$_REQUEST = $previous['request'];
-
-		foreach ( $previous['server'] as $key => $state ) {
-			if ( $state['exists'] ) {
-				$_SERVER[ $key ] = $state['value'];
-			} else {
-				unset( $_SERVER[ $key ] );
-			}
-		}
+		$_SERVER  = $previous['server'];
 	}
 
 

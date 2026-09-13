@@ -53,6 +53,8 @@ class ReadState {
 	 * @return array<int,bool> Keyed by topic ID. Every input ID is present.
 	 */
 	public function unread_topics( array $topic_ids, int $user_id ): array {
+		$wpdb = $this->wpdb;
+
 		$topic_ids = $this->clean_ids( $topic_ids );
 		$answer    = array_fill_keys( $topic_ids, false );
 
@@ -63,14 +65,14 @@ class ReadState {
 		$reads        = $this->schema->topic_reads_table();
 		$placeholders = implode( ',', array_fill( 0, count( $topic_ids ), '%d' ) );
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$rows = $this->wpdb->get_col(
-			$this->wpdb->prepare(
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- {$reads} is the table Database\Schema creates; the placeholder list and the comparison fragment carry no input
+		$rows = $wpdb->get_col(
+			$wpdb->prepare(
 				"SELECT p.ID
-				   FROM {$this->wpdb->posts} p
-			  LEFT JOIN {$this->wpdb->postmeta} m
+				   FROM {$wpdb->posts} p
+			  LEFT JOIN {$wpdb->postmeta} m
 				     ON m.post_id = p.ID AND m.meta_key = '_bbp_last_active_time'
-			  LEFT JOIN {$this->wpdb->postmeta} i
+			  LEFT JOIN {$wpdb->postmeta} i
 				     ON i.post_id = p.ID AND i.meta_key = '_bbp_last_active_id'
 			  LEFT JOIN {$reads} r
 				     ON r.topic_id = p.ID AND r.user_id = %d
@@ -79,7 +81,7 @@ class ReadState {
 				array_merge( array( $user_id ), $topic_ids )
 			)
 		);
-		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 		foreach ( $rows as $id ) {
 			$answer[ (int) $id ] = true;
@@ -152,13 +154,15 @@ class ReadState {
 	 * @param int    $read_id   ID of the post that activity was; 0 only for a legacy row.
 	 */
 	public function mark_topic_read( int $topic_id, int $user_id, string $read_time, int $read_id ): void {
+		$wpdb = $this->wpdb;
+
 		if ( $topic_id <= 0 || $user_id <= 0 || '' === $read_time || $read_id < 0 ) {
 			return;
 		}
 
 		$reads = $this->schema->topic_reads_table();
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- {$reads} is the table Database\Schema creates
 		//
 		// The primary key already states one row per member per topic, so the database
 		// can enforce it in one statement and two concurrent requests cannot race into
@@ -168,8 +172,8 @@ class ReadState {
 		// UPDATE run in order and see each other's results, so comparing against
 		// read_time after GREATEST() had already advanced it would compare the new
 		// value against itself and drop the tiebreak.
-		$this->wpdb->query(
-			$this->wpdb->prepare(
+		$wpdb->query(
+			$wpdb->prepare(
 				"INSERT INTO {$reads} ( user_id, topic_id, read_time, read_id )
 				 VALUES ( %d, %d, %s, %d )
 				 ON DUPLICATE KEY UPDATE
@@ -186,7 +190,7 @@ class ReadState {
 				$read_id
 			)
 		);
-		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 	}
 
 	/**
@@ -232,6 +236,8 @@ class ReadState {
 	 * @return array<int,bool> Keyed by forum ID; present only when it holds unread.
 	 */
 	private function forums_holding_unread( array $forum_ids, int $user_id ): array {
+		$wpdb = $this->wpdb;
+
 		$reads        = $this->schema->topic_reads_table();
 		$placeholders = implode( ',', array_fill( 0, count( $forum_ids ), '%d' ) );
 		// Not the two public statuses: bbPress lets a moderator see `private` topics
@@ -243,14 +249,14 @@ class ReadState {
 		$statuses     = $this->wp->get_readable_topic_statuses();
 		$status_slots = implode( ',', array_fill( 0, count( $statuses ), '%s' ) );
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$rows = $this->wpdb->get_col(
-			$this->wpdb->prepare(
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- {$reads} is the table Database\Schema creates; the IN () placeholder lists are built from the value counts
+		$rows = $wpdb->get_col(
+			$wpdb->prepare(
 				"SELECT DISTINCT t.post_parent
-				   FROM {$this->wpdb->posts} t
-			  LEFT JOIN {$this->wpdb->postmeta} m
+				   FROM {$wpdb->posts} t
+			  LEFT JOIN {$wpdb->postmeta} m
 				     ON m.post_id = t.ID AND m.meta_key = '_bbp_last_active_time'
-			  LEFT JOIN {$this->wpdb->postmeta} i
+			  LEFT JOIN {$wpdb->postmeta} i
 				     ON i.post_id = t.ID AND i.meta_key = '_bbp_last_active_id'
 			  LEFT JOIN {$reads} r
 				     ON r.topic_id = t.ID AND r.user_id = %d
@@ -262,7 +268,7 @@ class ReadState {
 				array_merge( array( $user_id, $this->wp->get_topic_post_type() ), $statuses, $forum_ids )
 			)
 		);
-		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 		return array_fill_keys( array_map( 'intval', $rows ), true );
 	}

@@ -42,7 +42,7 @@ class TopicQuery {
 			'post_parent'    => $forum_id,
 			'posts_per_page' => $this->wp->get_topics_per_page(),
 			'paged'          => max( 1, $page ),
-			'post__not_in'   => $this->wp->get_sticky_topic_ids( $forum_id ),
+			'post__not_in'   => $this->wp->get_sticky_topic_ids( $forum_id ), // phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- the forum's few pinned topics, which the screen lists above this query.
 		);
 	}
 
@@ -170,7 +170,7 @@ class TopicQuery {
 			'meta_key'      => '_bbp_last_active_time', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- bbPress's own topic ordering key.
 			'meta_type'     => 'DATETIME',
 			'orderby'       => array(
-				'meta_value' => 'DESC',
+				'meta_value' => 'DESC', // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- bbp_has_topics() orders by this same key.
 				'ID'         => 'DESC',
 			),
 		);

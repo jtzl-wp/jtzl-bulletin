@@ -81,22 +81,24 @@ class Migrator {
 	 * @return bool Whether the backfill statement completed.
 	 */
 	private function backfill_read_ids(): bool {
+		$wpdb = $this->wpdb;
+
 		$reads = $this->schema->topic_reads_table();
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$result = $this->wpdb->query(
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- {$reads} is the table Database\Schema creates
+		$result = $wpdb->query(
 			"UPDATE {$reads} r
-			   JOIN {$this->wpdb->posts} p
+			   JOIN {$wpdb->posts} p
 			     ON p.ID = r.topic_id
-		  LEFT JOIN {$this->wpdb->postmeta} m
+		  LEFT JOIN {$wpdb->postmeta} m
 			     ON m.post_id = p.ID AND m.meta_key = '_bbp_last_active_time'
-		  LEFT JOIN {$this->wpdb->postmeta} i
+		  LEFT JOIN {$wpdb->postmeta} i
 			     ON i.post_id = p.ID AND i.meta_key = '_bbp_last_active_id'
 			    SET r.read_id = CAST( COALESCE( NULLIF( i.meta_value, '' ), p.ID ) AS UNSIGNED )
 			  WHERE r.read_id = 0
 			    AND COALESCE( NULLIF( m.meta_value, '' ), p.post_date ) = r.read_time"
 		);
-		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 		return false !== $result;
 	}

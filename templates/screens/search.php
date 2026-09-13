@@ -11,35 +11,35 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$bltn_container = \JTZL\Bulletin\Plugin::get_container();
-$bltn_appbar    = $bltn_container->get( \JTZL\Bulletin\View\AppBar::class );
-$bltn_ctx       = $bltn_container->get( \JTZL\Bulletin\WordPress\ContextInterface::class );
-$bltn_results   = $bltn_container->get( \JTZL\Bulletin\View\SearchList::class );
-$bltn_query     = $bltn_container->get( \JTZL\Bulletin\Query\SearchQuery::class );
-$bltn_loadmore  = $bltn_container->get( \JTZL\Bulletin\View\LoadMore::class );
+$jtzl_bltn_container = \JTZL\Bulletin\Plugin::get_container();
+$jtzl_bltn_appbar    = $jtzl_bltn_container->get( \JTZL\Bulletin\View\AppBar::class );
+$jtzl_bltn_ctx       = $jtzl_bltn_container->get( \JTZL\Bulletin\WordPress\ContextInterface::class );
+$jtzl_bltn_results   = $jtzl_bltn_container->get( \JTZL\Bulletin\View\SearchList::class );
+$jtzl_bltn_query     = $jtzl_bltn_container->get( \JTZL\Bulletin\Query\SearchQuery::class );
+$jtzl_bltn_loadmore  = $jtzl_bltn_container->get( \JTZL\Bulletin\View\LoadMore::class );
 
-$bltn_terms = $bltn_ctx->get_search_terms();
-$bltn_page  = $bltn_ctx->get_paged();
+$jtzl_bltn_terms = $jtzl_bltn_ctx->get_search_terms();
+$jtzl_bltn_page  = $jtzl_bltn_ctx->get_paged();
 
 /*
  * Base the screen state on the query count. Unsupported result types may produce no
  * markup, but later pages must remain reachable.
  */
-$bltn_rows  = '';
-$bltn_found = 0;
-$bltn_more  = false;
+$jtzl_bltn_rows  = '';
+$jtzl_bltn_found = 0;
+$jtzl_bltn_more  = false;
 
-if ( $bltn_query->is_runnable( $bltn_terms ) ) {
-	$bltn_rows  = $bltn_results->capture( $bltn_query->args( $bltn_terms, $bltn_page ) );
-	$bltn_found = $bltn_ctx->get_search_result_count();
-	$bltn_more  = $bltn_page < $bltn_query->max_pages();
+if ( $jtzl_bltn_query->is_runnable( $jtzl_bltn_terms ) ) {
+	$jtzl_bltn_rows  = $jtzl_bltn_results->capture( $jtzl_bltn_query->args( $jtzl_bltn_terms, $jtzl_bltn_page ) );
+	$jtzl_bltn_found = $jtzl_bltn_ctx->get_search_result_count();
+	$jtzl_bltn_more  = $jtzl_bltn_page < $jtzl_bltn_query->max_pages();
 	wp_reset_postdata();
 }
 ?>
 <section class="bltn-screen">
 
 	<?php
-	$bltn_appbar->render(
+	$jtzl_bltn_appbar->render(
 		array(
 			'title'      => __( 'Search', 'jtzl-bulletin' ),
 			'back_url'   => bbp_get_forums_url(),
@@ -65,12 +65,12 @@ if ( $bltn_query->is_runnable( $bltn_terms ) ) {
 				type="search"
 				id="bltn-search-field"
 				name="bbp_search"
-				value="<?php echo esc_attr( $bltn_terms ); ?>"
+				value="<?php echo esc_attr( $jtzl_bltn_terms ); ?>"
 				placeholder="<?php esc_attr_e( 'Search forums', 'jtzl-bulletin' ); ?>"
 				autocomplete="off"
 				<?php
 				// Avoid raising the keyboard over an existing results list.
-				echo '' === $bltn_terms ? ' autofocus' : '';
+				echo '' === $jtzl_bltn_terms ? ' autofocus' : '';
 				?>
 			/>
 			<button class="bltn-search__go" type="submit" aria-label="<?php esc_attr_e( 'Search', 'jtzl-bulletin' ); ?>">
@@ -80,15 +80,15 @@ if ( $bltn_query->is_runnable( $bltn_terms ) ) {
 			</button>
 		</form>
 
-		<?php if ( $bltn_found > 0 ) : ?>
+		<?php if ( $jtzl_bltn_found > 0 ) : ?>
 
 			<p class="bltn-section-label">
 				<?php
 				echo esc_html(
 					sprintf(
 						/* translators: %s: formatted number of search results. */
-						_n( '%s result', '%s results', $bltn_found, 'jtzl-bulletin' ),
-						number_format_i18n( $bltn_found )
+						_n( '%s result', '%s results', $jtzl_bltn_found, 'jtzl-bulletin' ),
+						number_format_i18n( $jtzl_bltn_found )
 					)
 				);
 				?>
@@ -99,26 +99,26 @@ if ( $bltn_query->is_runnable( $bltn_terms ) ) {
 			?>
 			<div id="bltn-search-list">
 				<?php
-				echo $bltn_rows; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				echo $jtzl_bltn_rows; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 				?>
 			</div>
 
 			<?php
-			if ( $bltn_more ) {
-				$bltn_loadmore->render(
+			if ( $jtzl_bltn_more ) {
+				$jtzl_bltn_loadmore->render(
 					array(
 						'action' => 'bulletin_load_search',
 						'param'  => 'bbp_search',
-						'id'     => $bltn_terms,
+						'id'     => $jtzl_bltn_terms,
 						'target' => 'bltn-search-list',
-						'next'   => $bltn_page + 1,
+						'next'   => $jtzl_bltn_page + 1,
 						'label'  => __( 'Load more results', 'jtzl-bulletin' ),
 					)
 				);
 			}
 			?>
 
-		<?php elseif ( '' !== $bltn_terms ) : ?>
+		<?php elseif ( '' !== $jtzl_bltn_terms ) : ?>
 
 			<div class="bltn-empty">
 				<p class="bltn-empty__title"><?php esc_html_e( 'No results', 'jtzl-bulletin' ); ?></p>
