@@ -5,7 +5,7 @@ Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 8.2
 Requires Plugins: bbpress
-Stable tag: 0.6.1
+Stable tag: 0.6.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -78,6 +78,13 @@ By design, quite a lot. There is no delete route for a member's own topic or rep
 Yes. Bulletin defers to bbPress's own access control, including forums nested under a restricted parent.
 
 == Changelog ==
+
+= 0.6.2 =
+
+One field the app team asked for, and a release zip WordPress.org's own checker passes clean.
+
+* Added: A forum now says whether the member reading it is subscribed to it, the way a thread already did. An app that subscribes a member to a forum can read that state back when it next loads the forum, instead of remembering it. Nothing about the website changes.
+* Changed: The release zip passes WordPress.org's Plugin Check with no errors and no warnings — template variable names, database query annotations and a plugin header that pointed at a folder that never existed. Nothing a reader or an app can see.
 
 = 0.6.1 =
 
