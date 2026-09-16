@@ -60,6 +60,10 @@ final class BbpErrorTranslator {
 		'bbp_new_topic_forum_hidden'    => array( 'not_found', 404 ),
 		'bbp_new_reply_forum_private'   => array( 'not_found', 404 ),
 		'bbp_new_reply_forum_hidden'    => array( 'not_found', 404 ),
+		// bbPress 2.6.17 folds the two rows above into one, and asks `read_topic`
+		// before anything else; ≤2.6.16 never raises either code.
+		'bbp_new_reply_forum_read'      => array( 'not_found', 404 ),
+		'bbp_new_reply_topic_public'    => array( 'forbidden', 403 ),
 		'bbp_edit_topic_forum_private'  => array( 'not_found', 404 ),
 		'bbp_edit_topic_forum_hidden'   => array( 'not_found', 404 ),
 		'bbp_edit_reply_forum_private'  => array( 'not_found', 404 ),

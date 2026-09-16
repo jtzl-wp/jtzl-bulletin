@@ -66,6 +66,18 @@ class ReplyMutationService {
 			return $allowed;
 		}
 
+		// bbPress's own rule, asked here so the contract's answer does not depend on
+		// which of bbPress's checks fires first: 2.6.17 asks `read_topic` before the
+		// closed check, and a closed thread fails that for a member, so the handler
+		// would report "cannot read" where the contract promises "closed".
+		if ( $this->wp->is_topic_closed( $topic_id ) && ! $this->wp->current_user_can_moderate( $topic_id ) ) {
+			return new \WP_Error(
+				'forbidden',
+				__( 'This thread is closed.', 'jtzl-bulletin' ),
+				array( 'status' => 403 )
+			);
+		}
+
 		if ( $reply_to > 0 ) {
 			$allowed = $this->access->reply_to( $reply_to, $topic_id );
 
