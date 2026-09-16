@@ -71,7 +71,7 @@ Yes. Public reads are available under `/wp-json/jtzl-bulletin/v1/`. Personal sta
 
 = What can the API not do? =
 
-By design, quite a lot. There is no delete route for a member's own topic or reply, no image or file upload, no way to unlock a password-protected forum from an app, no push notifications, no anonymous posting, and no moderation actions. Editing is authorship only: a member may edit their own post inside bbPress's edit window, and their own display name, and moderators use the website. A member cannot change their email address or password over Bulletin's API — those are account credentials, and Bulletin deliberately does not offer a route that changes them. The API applies exactly the same forum visibility, status, password and capability rules as your site does — it is a second way in, not a second set of permissions.
+By design, quite a lot. There is no delete route for a member's own topic or reply, no image or file upload, no way to unlock a password-protected forum from an app, no push notifications, no anonymous posting, and no moderation actions. Editing is authorship only: a member may edit their own post inside bbPress's edit window, and their own display name; a moderator may edit their own posts too, and nobody else's — moderation itself stays on the website. A member cannot change their email address or password over Bulletin's API — those are account credentials, and Bulletin deliberately does not offer a route that changes them. The API applies exactly the same forum visibility, status, password and capability rules as your site does — it is a second way in, not a second set of permissions.
 
 = Does it work with my forum's private or hidden forums? =
 

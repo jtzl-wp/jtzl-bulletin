@@ -131,30 +131,46 @@ class AccessPolicy {
 		return true;
 	}
 
+	/**
+	 * Authorship, then bbPress's own answer.
+	 *
+	 * @since 0.6.3 A moderator's own post is editable; the role no longer refuses it.
+	 *
+	 * @param int $id Topic ID.
+	 * @return bool
+	 */
 	public function can_edit_topic( int $id ): bool {
-		return $this->author_may_edit( $id, $id, $this->wp->get_public_topic_statuses() )
+		return $this->author_may_edit( $id, $this->wp->get_public_topic_statuses() )
 			&& '' !== $this->wp->get_topic_edit_link( $id );
 	}
 
+	/**
+	 * Authorship, then bbPress's own answer.
+	 *
+	 * @since 0.6.3 A moderator's own post is editable; the role no longer refuses it.
+	 *
+	 * @param int $id Reply ID.
+	 * @return bool
+	 */
 	public function can_edit_reply( int $id ): bool {
-		return $this->author_may_edit( $this->wp->get_reply_topic_id( $id ), $id, $this->wp->get_public_reply_statuses() )
+		return $this->author_may_edit( $id, $this->wp->get_public_reply_statuses() )
 			&& '' !== $this->wp->get_reply_edit_link( $id );
 	}
 
 	/**
-	 * Data contract.
+	 * The author check is load-bearing for a moderator: bbPress's edit-link
+	 * function skips its own guards for anyone holding `edit_others_*`, so this
+	 * is what keeps a keymaster off other people's posts and off IDs nobody holds.
 	 *
-	 * @param int      $topic_id Thread, for the moderation test.
 	 * @param int      $post_id  Post whose authorship and status are tested.
 	 * @param string[] $statuses Public statuses for that kind of post.
 	 * @return bool
 	 */
-	private function author_may_edit( int $topic_id, int $post_id, array $statuses ): bool {
+	private function author_may_edit( int $post_id, array $statuses ): bool {
 		$user_id = $this->wp->get_current_user_id();
 
 		return $user_id > 0
 			&& $user_id === $this->wp->get_post_author( $post_id )
-			&& ! $this->wp->current_user_can_moderate( $topic_id )
 			&& in_array( $this->wp->get_post_status( $post_id ), $statuses, true );
 	}
 
