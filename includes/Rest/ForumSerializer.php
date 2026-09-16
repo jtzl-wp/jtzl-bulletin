@@ -42,13 +42,19 @@ class ForumSerializer {
 	 * @return array<int,array<string,mixed>>
 	 */
 	public function forums( array $forum_ids ): array {
-		$forum_ids = array_values( array_map( 'intval', $forum_ids ) );
-		$counts    = $this->rest->forum_counts( $forum_ids, $this->wp->get_readable_topic_statuses() );
-		$unread    = $this->unread( $forum_ids );
+		$forum_ids  = array_values( array_map( 'intval', $forum_ids ) );
+		$counts     = $this->rest->forum_counts( $forum_ids, $this->wp->get_readable_topic_statuses() );
+		$unread     = $this->unread( $forum_ids );
+		$subscribed = $this->subscribed( $forum_ids );
 
 		$rows = array();
 		foreach ( $forum_ids as $forum_id ) {
-			$rows[] = $this->forum_data( $forum_id, $counts[ $forum_id ] ?? array(), $unread[ $forum_id ] ?? null );
+			$rows[] = $this->forum_data(
+				$forum_id,
+				$counts[ $forum_id ] ?? array(),
+				$unread[ $forum_id ] ?? null,
+				$subscribed[ $forum_id ] ?? null
+			);
 		}
 
 		return $rows;
@@ -69,12 +75,13 @@ class ForumSerializer {
 	/**
 	 * Data contract.
 	 *
-	 * @param int               $forum_id Forum ID.
-	 * @param array<string,int> $counts   Reader-visible counts.
-	 * @param bool|null         $unread   Unread state, or null when logged out.
+	 * @param int               $forum_id   Forum ID.
+	 * @param array<string,int> $counts     Reader-visible counts.
+	 * @param bool|null         $unread     Unread state, or null when logged out.
+	 * @param bool|null         $subscribed Subscription state, or null when logged out.
 	 * @return array<string,mixed>
 	 */
-	private function forum_data( int $forum_id, array $counts, ?bool $unread ): array {
+	private function forum_data( int $forum_id, array $counts, ?bool $unread, ?bool $subscribed ): array {
 		return array(
 			'id'             => $forum_id,
 			'title'          => $this->wp->get_forum_title( $forum_id ),
@@ -87,6 +94,7 @@ class ForumSerializer {
 			'last_active'    => $this->rest->last_active_rfc3339( $forum_id ),
 			'link'           => $this->wp->get_forum_permalink( $forum_id ),
 			'is_unread'      => $unread,
+			'is_subscribed'  => $subscribed,
 		);
 	}
 
@@ -105,5 +113,30 @@ class ForumSerializer {
 		}
 
 		return $this->reads->unread_forums( $forum_ids, $user_id, $this->rest->readable_forum_ids() );
+	}
+
+	/**
+	 * The topic convention: null for a reader nobody has identified, a bool otherwise.
+	 *
+	 * @since 0.6.2
+	 *
+	 * @param int[] $forum_ids Forums.
+	 * @return array<int,bool|null>
+	 */
+	private function subscribed( array $forum_ids ): array {
+		$user_id = $this->wp->get_current_user_id();
+
+		if ( $user_id < 1 ) {
+			return array_fill_keys( $forum_ids, null );
+		}
+
+		$lookup = array_flip( $this->wp->get_subscribed_forum_ids( $user_id ) );
+		$flags  = array();
+
+		foreach ( $forum_ids as $forum_id ) {
+			$flags[ $forum_id ] = isset( $lookup[ $forum_id ] );
+		}
+
+		return $flags;
 	}
 }
