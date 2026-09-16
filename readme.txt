@@ -5,7 +5,7 @@ Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 8.2
 Requires Plugins: bbpress
-Stable tag: 0.6.3
+Stable tag: 0.6.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -78,6 +78,13 @@ By design, quite a lot. There is no delete route for a member's own topic or rep
 Yes. Bulletin defers to bbPress's own access control, including forums nested under a restricted parent.
 
 == Changelog ==
+
+= 0.6.4 =
+
+One fix for the current bbPress, and nothing an app has to change.
+
+* Fixed: On bbPress 2.6.17, replying to a closed thread over the API answered with a generic 400 instead of the documented 403 `forbidden`. bbPress 2.6.17 checks whether you can read the thread before it checks whether the thread is closed, and a closed thread fails the first check for a member — so its handler reported "cannot read" where the contract promises "closed". Bulletin now asks the closed rule itself, ahead of bbPress, so the answer is the same on every bbPress version.
+* Changed: Bulletin is now tested against bbPress 2.6.17, the current stable release. Two of its changes show through as bbPress's own rules: a public forum beneath a hidden forum is now closed to members (it always should have been), and bbPress no longer triggers WordPress's `seems_utf8` deprecation notice.
 
 = 0.6.3 =
 
