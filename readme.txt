@@ -5,7 +5,7 @@ Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 8.2
 Requires Plugins: bbpress
-Stable tag: 0.6.2
+Stable tag: 0.6.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -78,6 +78,12 @@ By design, quite a lot. There is no delete route for a member's own topic or rep
 Yes. Bulletin defers to bbPress's own access control, including forums nested under a restricted parent.
 
 == Changelog ==
+
+= 0.6.3 =
+
+One rule corrected in the API. Nothing about the website changes.
+
+* Changed: A moderator or keymaster can now edit their own topics and replies from an app, the way any member can. Until now the API refused them on every post, their own included, because editing was meant for members and moderation for the website — which left the forum's own staff as the one group unable to fix a typo from a phone. Editing somebody else's post is still not something an app can do; that remains a moderation action, and moderation stays on the website. As on the website, bbPress does not close the edit window on a moderator's own posts.
 
 = 0.6.2 =
 
