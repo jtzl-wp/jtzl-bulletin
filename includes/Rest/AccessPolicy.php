@@ -131,27 +131,11 @@ class AccessPolicy {
 		return true;
 	}
 
-	/**
-	 * Authorship, then bbPress's own answer.
-	 *
-	 * @since 0.6.3 A moderator's own post is editable; the role no longer refuses it.
-	 *
-	 * @param int $id Topic ID.
-	 * @return bool
-	 */
 	public function can_edit_topic( int $id ): bool {
 		return $this->author_may_edit( $id, $this->wp->get_public_topic_statuses() )
 			&& '' !== $this->wp->get_topic_edit_link( $id );
 	}
 
-	/**
-	 * Authorship, then bbPress's own answer.
-	 *
-	 * @since 0.6.3 A moderator's own post is editable; the role no longer refuses it.
-	 *
-	 * @param int $id Reply ID.
-	 * @return bool
-	 */
 	public function can_edit_reply( int $id ): bool {
 		return $this->author_may_edit( $id, $this->wp->get_public_reply_statuses() )
 			&& '' !== $this->wp->get_reply_edit_link( $id );

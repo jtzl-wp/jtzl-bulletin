@@ -116,9 +116,7 @@ class ForumSerializer {
 	}
 
 	/**
-	 * The topic convention: null for a reader nobody has identified, a bool otherwise.
-	 *
-	 * @since 0.6.2
+	 * Null when logged out; otherwise the reader's subscription state.
 	 *
 	 * @param int[] $forum_ids Forums.
 	 * @return array<int,bool|null>
