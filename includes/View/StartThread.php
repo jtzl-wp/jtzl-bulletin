@@ -34,8 +34,8 @@ class StartThread {
 		if ( $this->may_start( $forum_id ) ) {
 			printf(
 				'<div class="bltn-composebar"><a class="bltn-composebar__btn" href="#new-post" aria-controls="new-post" data-bltn-compose-open data-bltn-cancel="%s">%s</a></div>',
-				esc_attr__( 'Cancel', 'jtzl-bulletin' ),
-				esc_html__( 'Start a thread', 'jtzl-bulletin' )
+				esc_attr__( 'Cancel', 'jtzls-bulletin-for-bbpress' ),
+				esc_html__( 'Start a thread', 'jtzls-bulletin-for-bbpress' )
 			);
 			return;
 		}
@@ -52,7 +52,7 @@ class StartThread {
 			printf(
 				'<div class="bltn-composebar"><a class="bltn-composebar__btn" href="%s">%s</a></div>',
 				esc_url( $this->wp->get_login_url( $this->wp->get_current_url() ) ),
-				esc_html__( 'Sign in to start a thread', 'jtzl-bulletin' )
+				esc_html__( 'Sign in to start a thread', 'jtzls-bulletin-for-bbpress' )
 			);
 		}
 	}
@@ -76,7 +76,7 @@ class StartThread {
 		if ( $this->wp->is_forum_closed( $forum_id ) ) {
 			printf(
 				'<div class="bltn-compose"><p class="bltn-compose__note">%s</p></div>',
-				esc_html__( 'This forum is closed to new topics.', 'jtzl-bulletin' )
+				esc_html__( 'This forum is closed to new topics.', 'jtzls-bulletin-for-bbpress' )
 			);
 		}
 	}

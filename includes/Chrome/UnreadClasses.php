@@ -142,7 +142,7 @@ class UnreadClasses {
 
 		printf(
 			'<span class="bltn-sr-only">%s </span>',
-			esc_html__( 'Unread — new posts.', 'jtzl-bulletin' )
+			esc_html__( 'Unread — new posts.', 'jtzls-bulletin-for-bbpress' )
 		);
 	}
 

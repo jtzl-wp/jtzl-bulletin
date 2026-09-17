@@ -36,8 +36,8 @@ class RowActionLabels {
 		return $this->name_glyphs(
 			$args,
 			array(
-				'subscribe'   => __( 'Subscribe', 'jtzl-bulletin' ),
-				'unsubscribe' => __( 'Unsubscribe', 'jtzl-bulletin' ),
+				'subscribe'   => __( 'Subscribe', 'jtzls-bulletin-for-bbpress' ),
+				'unsubscribe' => __( 'Unsubscribe', 'jtzls-bulletin-for-bbpress' ),
 			)
 		);
 	}
@@ -54,8 +54,8 @@ class RowActionLabels {
 		return $this->name_glyphs(
 			$args,
 			array(
-				'favorite'  => __( 'Add to favourites', 'jtzl-bulletin' ),
-				'favorited' => __( 'Remove from favourites', 'jtzl-bulletin' ),
+				'favorite'  => __( 'Add to favourites', 'jtzls-bulletin-for-bbpress' ),
+				'favorited' => __( 'Remove from favourites', 'jtzls-bulletin-for-bbpress' ),
 			)
 		);
 	}
@@ -72,8 +72,8 @@ class RowActionLabels {
 		return $this->name_glyphs(
 			$args,
 			array(
-				'prev_text' => __( 'Previous page', 'jtzl-bulletin' ),
-				'next_text' => __( 'Next page', 'jtzl-bulletin' ),
+				'prev_text' => __( 'Previous page', 'jtzls-bulletin-for-bbpress' ),
+				'next_text' => __( 'Next page', 'jtzls-bulletin-for-bbpress' ),
 			)
 		);
 	}

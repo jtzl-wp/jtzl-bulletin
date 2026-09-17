@@ -113,7 +113,7 @@ class TopicController implements ControllerInterface {
 			? true
 			: new \WP_Error(
 				'forbidden',
-				__( 'You cannot edit this thread.', 'jtzl-bulletin' ),
+				__( 'You cannot edit this thread.', 'jtzls-bulletin-for-bbpress' ),
 				array( 'status' => 403 )
 			);
 	}

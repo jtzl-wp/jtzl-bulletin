@@ -69,7 +69,7 @@ class SearchRow {
 		if ( (bool) ( $row['closed'] ?? false ) ) {
 			printf(
 				' &middot; <span class="bltn-closed">%s</span>',
-				esc_html__( 'Closed', 'jtzl-bulletin' )
+				esc_html__( 'Closed', 'jtzls-bulletin-for-bbpress' )
 			);
 		}
 		if ( '' !== $author ) {

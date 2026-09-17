@@ -104,7 +104,7 @@ final class BbpErrorTranslator {
 		if ( ! isset( self::MAPPING[ $native_code ] ) ) {
 			return new \WP_Error(
 				'write_rejected',
-				'' === $message ? __( 'This post was rejected.', 'jtzl-bulletin' ) : $message,
+				'' === $message ? __( 'This post was rejected.', 'jtzls-bulletin-for-bbpress' ) : $message,
 				array( 'status' => 400 )
 			);
 		}
@@ -112,7 +112,7 @@ final class BbpErrorTranslator {
 		list( $rest_code, $status ) = self::MAPPING[ $native_code ];
 
 		if ( 'moderation_rejected' === $rest_code ) {
-			$message = __( 'This post cannot be submitted at this time.', 'jtzl-bulletin' );
+			$message = __( 'This post cannot be submitted at this time.', 'jtzls-bulletin-for-bbpress' );
 		}
 
 		return new \WP_Error( $rest_code, $message, array( 'status' => $status ) );

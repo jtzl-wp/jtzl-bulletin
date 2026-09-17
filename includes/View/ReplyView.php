@@ -59,14 +59,14 @@ class ReplyView {
 			// date with a useful accessible name.
 			'<span class="bltn-byline__time"><a class="bltn-permalink" href="%1$s"><span class="bltn-sr-only">%2$s </span>%3$s</a></span>',
 			esc_url( $this->wp->get_reply_url( $reply_id ) ),
-			esc_html__( 'Permalink to reply', 'jtzl-bulletin' ),
+			esc_html__( 'Permalink to reply', 'jtzls-bulletin-for-bbpress' ),
 			esc_html( $this->wp->get_reply_post_date( $reply_id, true ) )
 		);
 		// Only the author can see a held reply; the chip explains its distinct state.
 		if ( $held ) {
 			printf(
 				'<span class="bltn-chip bltn-chip--pending">%s</span>',
-				esc_html__( 'Awaiting review', 'jtzl-bulletin' )
+				esc_html__( 'Awaiting review', 'jtzls-bulletin-for-bbpress' )
 			);
 		}
 
@@ -113,7 +113,7 @@ class ReplyView {
 			esc_html(
 				sprintf(
 					/* translators: %s: display name of the member being replied to. */
-					__( 'In reply to %s', 'jtzl-bulletin' ),
+					__( 'In reply to %s', 'jtzls-bulletin-for-bbpress' ),
 					$this->wp->get_reply_author_display_name( $parent )
 				)
 			)

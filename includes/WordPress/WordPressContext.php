@@ -145,9 +145,9 @@ class WordPressContext implements ContextInterface {
 					'id'           => $topic_id,
 					'sep'          => '',
 
-					'stick_text'   => __( 'Pin', 'jtzl-bulletin' ),
-					'unstick_text' => __( 'Unpin', 'jtzl-bulletin' ),
-					'super_text'   => __( 'Pin everywhere', 'jtzl-bulletin' ),
+					'stick_text'   => __( 'Pin', 'jtzls-bulletin-for-bbpress' ),
+					'unstick_text' => __( 'Unpin', 'jtzls-bulletin-for-bbpress' ),
+					'super_text'   => __( 'Pin everywhere', 'jtzls-bulletin-for-bbpress' ),
 				)
 			)
 		);

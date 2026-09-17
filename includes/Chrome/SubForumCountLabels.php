@@ -51,9 +51,9 @@ class SubForumCountLabels {
 			return $args;
 		}
 
-		$reply_label = $this->bind( esc_html__( 'Replies', 'jtzl-bulletin' ) );
+		$reply_label = $this->bind( esc_html__( 'Replies', 'jtzls-bulletin-for-bbpress' ) );
 		$opening     = $topics
-			? $this->bind( esc_html__( 'Topics', 'jtzl-bulletin' ) )
+			? $this->bind( esc_html__( 'Topics', 'jtzls-bulletin-for-bbpress' ) )
 			: $reply_label;
 
 		$args['count_before'] = ' (' . $opening . self::BIND;

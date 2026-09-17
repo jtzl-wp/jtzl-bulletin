@@ -67,7 +67,7 @@ class StateService {
 		if ( null === $position ) {
 			return new \WP_Error(
 				'invalid_read_cursor',
-				__( 'The read cursor is invalid.', 'jtzl-bulletin' ),
+				__( 'The read cursor is invalid.', 'jtzls-bulletin-for-bbpress' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -180,7 +180,7 @@ class StateService {
 	private function write_failed(): \WP_Error {
 		return new \WP_Error(
 			'write_failed',
-			__( 'That change could not be saved.', 'jtzl-bulletin' ),
+			__( 'That change could not be saved.', 'jtzls-bulletin-for-bbpress' ),
 			array( 'status' => 500 )
 		);
 	}

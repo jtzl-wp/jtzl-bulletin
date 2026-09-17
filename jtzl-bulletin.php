@@ -9,7 +9,7 @@
  * Requires Plugins:  bbpress
  * Author:            JTZL
  * Author URI:        https://github.com/jtzl-wp
- * Text Domain:       jtzl-bulletin
+ * Text Domain:       jtzls-bulletin-for-bbpress
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  *
@@ -83,7 +83,7 @@ register_activation_hook( __FILE__, 'jtzl_bltn_activate' );
  * @since 0.1.0
  */
 function jtzl_bltn_notice_missing_bbpress() {
-	$message = __( '<strong>JTZL\'s Bulletin for bbPress</strong> needs bbPress to be installed and active. It has no effect on its own.', 'jtzl-bulletin' );
+	$message = __( '<strong>JTZL\'s Bulletin for bbPress</strong> needs bbPress to be installed and active. It has no effect on its own.', 'jtzls-bulletin-for-bbpress' );
 	printf(
 		'<div class="notice notice-warning"><p>%s</p></div>',
 		wp_kses( $message, array( 'strong' => array() ) )

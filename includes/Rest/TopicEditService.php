@@ -103,7 +103,7 @@ class TopicEditService {
 	 */
 	private function may_edit( int $topic_id, array $changes ) {
 		if ( array() === $changes ) {
-			return $this->refuse( 'invalid_request', __( 'An edit has to change something.', 'jtzl-bulletin' ), 400 );
+			return $this->refuse( 'invalid_request', __( 'An edit has to change something.', 'jtzls-bulletin-for-bbpress' ), 400 );
 		}
 
 		if ( ! array_key_exists( 'tags', $changes ) ) {
@@ -118,7 +118,7 @@ class TopicEditService {
 
 		return $this->rest->current_user_can_for( 'assign_topic_tags', $topic_id )
 			? true
-			: $this->refuse( 'forbidden', __( 'You cannot change the tags on this thread.', 'jtzl-bulletin' ), 403 );
+			: $this->refuse( 'forbidden', __( 'You cannot change the tags on this thread.', 'jtzls-bulletin-for-bbpress' ), 403 );
 	}
 
 	/**

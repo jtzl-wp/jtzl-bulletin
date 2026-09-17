@@ -55,7 +55,7 @@ class ReplyMutationService {
 		if ( ! $this->wp->current_user_can( 'publish_replies' ) ) {
 			return new \WP_Error(
 				'forbidden',
-				__( 'You cannot post replies.', 'jtzl-bulletin' ),
+				__( 'You cannot post replies.', 'jtzls-bulletin-for-bbpress' ),
 				array( 'status' => 403 )
 			);
 		}
@@ -73,7 +73,7 @@ class ReplyMutationService {
 		if ( $this->wp->is_topic_closed( $topic_id ) && ! $this->wp->current_user_can_moderate( $topic_id ) ) {
 			return new \WP_Error(
 				'forbidden',
-				__( 'This thread is closed.', 'jtzl-bulletin' ),
+				__( 'This thread is closed.', 'jtzls-bulletin-for-bbpress' ),
 				array( 'status' => 403 )
 			);
 		}

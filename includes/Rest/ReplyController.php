@@ -111,7 +111,7 @@ class ReplyController implements ControllerInterface {
 			? true
 			: new \WP_Error(
 				'forbidden',
-				__( 'You cannot edit this reply.', 'jtzl-bulletin' ),
+				__( 'You cannot edit this reply.', 'jtzls-bulletin-for-bbpress' ),
 				array( 'status' => 403 )
 			);
 	}

@@ -37,7 +37,7 @@ class TopicTagValidator {
 			if ( '' === $name || mb_strlen( $name, '8bit' ) > self::MAX_NAME_LENGTH ) {
 				return new \WP_Error(
 					'invalid_tags',
-					__( 'One of those tags cannot be used.', 'jtzl-bulletin' ),
+					__( 'One of those tags cannot be used.', 'jtzls-bulletin-for-bbpress' ),
 					array( 'status' => 400 )
 				);
 			}

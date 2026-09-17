@@ -50,7 +50,7 @@ class ReplyEditService {
 		if ( ! array_key_exists( 'content', $changes ) ) {
 			return new \WP_Error(
 				'invalid_request',
-				__( 'An edit has to change something.', 'jtzl-bulletin' ),
+				__( 'An edit has to change something.', 'jtzls-bulletin-for-bbpress' ),
 				array( 'status' => 400 )
 			);
 		}

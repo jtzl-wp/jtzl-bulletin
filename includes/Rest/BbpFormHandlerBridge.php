@@ -227,7 +227,7 @@ final class BbpFormHandlerBridge {
 	private function failed(): \WP_Error {
 		return new \WP_Error(
 			'write_failed',
-			__( 'The post could not be saved.', 'jtzl-bulletin' ),
+			__( 'The post could not be saved.', 'jtzls-bulletin-for-bbpress' ),
 			array( 'status' => 500 )
 		);
 	}

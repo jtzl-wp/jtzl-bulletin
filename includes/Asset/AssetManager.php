@@ -105,12 +105,12 @@ class AssetManager {
 				array(
 					'ajaxUrl' => $this->wp->get_ajax_url(),
 					'i18n'    => array(
-						'loading'    => __( 'Loading…', 'jtzl-bulletin' ),
-						'error'      => __( 'Could not load more. Tap to retry.', 'jtzl-bulletin' ),
+						'loading'    => __( 'Loading…', 'jtzls-bulletin-for-bbpress' ),
+						'error'      => __( 'Could not load more. Tap to retry.', 'jtzls-bulletin-for-bbpress' ),
 						// The browser selects singular or plural for the live region.
-						'loadedOne'  => __( '1 more loaded.', 'jtzl-bulletin' ),
+						'loadedOne'  => __( '1 more loaded.', 'jtzls-bulletin-for-bbpress' ),
 						/* translators: %d: number of items just loaded. */
-						'loadedMany' => __( '%d more loaded.', 'jtzl-bulletin' ),
+						'loadedMany' => __( '%d more loaded.', 'jtzls-bulletin-for-bbpress' ),
 					),
 				)
 			);
