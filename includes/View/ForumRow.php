@@ -61,7 +61,7 @@ class ForumRow {
 
 		printf(
 			'<span class="bltn-row__dot"><span class="bltn-sr-only">%s</span></span>',
-			esc_html__( 'New posts', 'jtzls-bulletin-for-bbpress' )
+			esc_html__( 'New posts', 'jtzl-bulletin' )
 		);
 	}
 
@@ -79,13 +79,13 @@ class ForumRow {
 		if ( (bool) ( $row['closed'] ?? false ) ) {
 			printf(
 				'<span class="bltn-closed">%s</span> &middot; ',
-				esc_html__( 'Closed', 'jtzls-bulletin-for-bbpress' )
+				esc_html__( 'Closed', 'jtzl-bulletin' )
 			);
 		}
 		echo esc_html(
 			sprintf(
 				/* translators: %s: formatted thread count. */
-				_n( '%s thread', '%s threads', $topics, 'jtzls-bulletin-for-bbpress' ),
+				_n( '%s thread', '%s threads', $topics, 'jtzl-bulletin' ),
 				number_format_i18n( $topics )
 			)
 		);

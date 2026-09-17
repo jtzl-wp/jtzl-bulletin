@@ -43,7 +43,7 @@ class AppBar {
 				'title'      => $this->wp->get_bloginfo( 'name' ),
 				'subtitle'   => '',
 				'back_url'   => '',
-				'back_label' => __( 'Back', 'jtzls-bulletin-for-bbpress' ),
+				'back_label' => __( 'Back', 'jtzl-bulletin' ),
 				'heading'    => true,
 			)
 		);
@@ -96,7 +96,7 @@ class AppBar {
 			$out[] = sprintf(
 				'<a class="bltn-iconbtn" href="%s" aria-label="%s">%s</a>',
 				esc_url( $this->wp->get_forums_url() ),
-				esc_attr__( 'Forums home', 'jtzls-bulletin-for-bbpress' ),
+				esc_attr__( 'Forums home', 'jtzl-bulletin' ),
 				Icons::home()
 			);
 		}
@@ -164,7 +164,7 @@ class AppBar {
 		return sprintf(
 			'<a class="bltn-iconbtn" href="%s" aria-label="%s">%s</a>',
 			esc_url( $this->wp->get_search_url() ),
-			esc_attr__( 'Search', 'jtzls-bulletin-for-bbpress' ),
+			esc_attr__( 'Search', 'jtzl-bulletin' ),
 			Icons::search()
 		);
 	}
@@ -205,7 +205,7 @@ class AppBar {
 	 */
 	private function account_label(): string {
 		return $this->wp->is_user_logged_in()
-			? __( 'Your account', 'jtzls-bulletin-for-bbpress' )
-			: __( 'Sign in', 'jtzls-bulletin-for-bbpress' );
+			? __( 'Your account', 'jtzl-bulletin' )
+			: __( 'Sign in', 'jtzl-bulletin' );
 	}
 }

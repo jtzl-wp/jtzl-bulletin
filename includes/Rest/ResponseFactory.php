@@ -89,7 +89,7 @@ class ResponseFactory {
 
 		return new \WP_Error(
 			'rest_not_logged_in',
-			__( 'You are not currently logged in.', 'jtzls-bulletin-for-bbpress' ),
+			__( 'You are not currently logged in.', 'jtzl-bulletin' ),
 			array( 'status' => 401 )
 		);
 	}

@@ -95,7 +95,7 @@ class SearchController implements ControllerInterface {
 		return new \WP_Error(
 			'rest_missing_callback_param',
 			/* translators: %s: name of the missing request parameter. */
-			sprintf( __( 'Missing parameter(s): %s', 'jtzls-bulletin-for-bbpress' ), 'q' ),
+			sprintf( __( 'Missing parameter(s): %s', 'jtzl-bulletin' ), 'q' ),
 			array(
 				'status' => 400,
 				'params' => array( 'q' ),

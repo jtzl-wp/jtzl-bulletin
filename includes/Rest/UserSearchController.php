@@ -88,13 +88,13 @@ class UserSearchController implements ControllerInterface {
 		return new \WP_Error(
 			'rest_invalid_param',
 			/* translators: %s: name of the invalid request parameter. */
-			sprintf( __( 'Invalid parameter(s): %s', 'jtzls-bulletin-for-bbpress' ), 'q' ),
+			sprintf( __( 'Invalid parameter(s): %s', 'jtzl-bulletin' ), 'q' ),
 			array(
 				'status' => 400,
 				'params' => array(
 					'q' => sprintf(
 						/* translators: %d: minimum number of characters a search term must have. */
-						__( 'A search term must be at least %d characters.', 'jtzls-bulletin-for-bbpress' ),
+						__( 'A search term must be at least %d characters.', 'jtzl-bulletin' ),
 						self::MIN_TERM_LENGTH
 					),
 				),

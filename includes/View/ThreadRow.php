@@ -48,7 +48,7 @@ class ThreadRow {
 
 		printf(
 			'<div class="bltn-row__top"><span class="bltn-row__dot"><span class="bltn-sr-only">%s</span></span></div>',
-			esc_html__( 'Unread — new posts', 'jtzls-bulletin-for-bbpress' )
+			esc_html__( 'Unread — new posts', 'jtzl-bulletin' )
 		);
 	}
 
@@ -66,7 +66,7 @@ class ThreadRow {
 		if ( (bool) ( $row['closed'] ?? false ) ) {
 			printf(
 				'<span class="bltn-closed">%s</span> &middot; ',
-				esc_html__( 'Closed', 'jtzls-bulletin-for-bbpress' )
+				esc_html__( 'Closed', 'jtzl-bulletin' )
 			);
 		}
 		if ( '' !== $author ) {
@@ -78,7 +78,7 @@ class ThreadRow {
 		echo esc_html(
 			sprintf(
 				/* translators: %s: formatted reply count. */
-				_n( '%s reply', '%s replies', $replies, 'jtzls-bulletin-for-bbpress' ),
+				_n( '%s reply', '%s replies', $replies, 'jtzl-bulletin' ),
 				number_format_i18n( $replies )
 			)
 		);

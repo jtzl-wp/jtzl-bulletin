@@ -44,12 +44,12 @@ class ComposeSlot {
 
 		if ( ! $this->wp->current_user_can_moderate( $topic_id ) ) {
 			if ( $this->wp->is_forum_closed( $forum_id ) ) {
-				$this->note( __( 'This forum is closed to new posts.', 'jtzls-bulletin-for-bbpress' ) );
+				$this->note( __( 'This forum is closed to new posts.', 'jtzl-bulletin' ) );
 				return;
 			}
 
 			if ( $this->wp->is_topic_closed( $topic_id ) ) {
-				$this->note( __( 'This thread is closed to new replies.', 'jtzls-bulletin-for-bbpress' ) );
+				$this->note( __( 'This thread is closed to new replies.', 'jtzl-bulletin' ) );
 				return;
 			}
 		}
@@ -84,8 +84,8 @@ class ComposeSlot {
 		 */
 		printf(
 			'<button type="button" class="bltn-compose__open" aria-expanded="true" aria-controls="new-post" data-bltn-compose-open data-bltn-cancel="%s">%s</button>',
-			esc_attr__( 'Cancel', 'jtzls-bulletin-for-bbpress' ),
-			esc_html__( 'Write a reply', 'jtzls-bulletin-for-bbpress' )
+			esc_attr__( 'Cancel', 'jtzl-bulletin' ),
+			esc_html__( 'Write a reply', 'jtzl-bulletin' )
 		);
 
 		echo '<div class="bltn-compose__form">';
@@ -131,7 +131,7 @@ class ComposeSlot {
 		printf(
 			'<div class="bltn-compose"><a class="bltn-compose__open" href="%s">%s</a></div>',
 			esc_url( $this->wp->get_login_url( $here ) ),
-			esc_html__( 'Sign in to reply', 'jtzls-bulletin-for-bbpress' )
+			esc_html__( 'Sign in to reply', 'jtzl-bulletin' )
 		);
 	}
 }

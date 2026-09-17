@@ -48,7 +48,7 @@ class ModerationActions {
 	public function render_for_topic( int $topic_id ): void {
 		$this->render_group(
 			$this->wp->get_topic_moderation_links( $topic_id ),
-			__( 'Thread actions', 'jtzls-bulletin-for-bbpress' )
+			__( 'Thread actions', 'jtzl-bulletin' )
 		);
 	}
 
@@ -62,7 +62,7 @@ class ModerationActions {
 	public function render_for_reply( int $reply_id ): void {
 		$this->render_group(
 			$this->wp->get_reply_moderation_links( $reply_id ),
-			__( 'Reply actions', 'jtzls-bulletin-for-bbpress' )
+			__( 'Reply actions', 'jtzl-bulletin' )
 		);
 	}
 
@@ -77,8 +77,8 @@ class ModerationActions {
 	public function render_toggle(): void {
 		printf(
 			'<button type="button" class="bltn-modtoggle" aria-expanded="false" data-bltn-modtoggle data-bltn-label-on="%1$s">%2$s</button>',
-			esc_attr__( 'Done', 'jtzls-bulletin-for-bbpress' ),
-			esc_html__( 'Moderate', 'jtzls-bulletin-for-bbpress' )
+			esc_attr__( 'Done', 'jtzl-bulletin' ),
+			esc_html__( 'Moderate', 'jtzl-bulletin' )
 		);
 	}
 

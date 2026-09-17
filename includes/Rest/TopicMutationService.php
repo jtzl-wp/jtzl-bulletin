@@ -111,7 +111,7 @@ class TopicMutationService {
 	 */
 	private function may_start( int $forum_id, array $tag_names ) {
 		if ( ! $this->wp->current_user_can( 'publish_topics' ) ) {
-			return $this->refuse( 'forbidden', __( 'You cannot start threads.', 'jtzls-bulletin-for-bbpress' ), 403 );
+			return $this->refuse( 'forbidden', __( 'You cannot start threads.', 'jtzl-bulletin' ), 403 );
 		}
 
 		$allowed = $this->access->forum( $forum_id );
@@ -121,11 +121,11 @@ class TopicMutationService {
 		}
 
 		if ( $this->wp->is_forum_category( $forum_id ) ) {
-			return $this->refuse( 'forbidden', __( 'This forum is a category; threads cannot be started in it.', 'jtzls-bulletin-for-bbpress' ), 403 );
+			return $this->refuse( 'forbidden', __( 'This forum is a category; threads cannot be started in it.', 'jtzl-bulletin' ), 403 );
 		}
 
 		if ( $this->wp->is_forum_closed( $forum_id ) && ! $this->rest->current_user_can_for( 'edit_forum', $forum_id ) ) {
-			return $this->refuse( 'forbidden', __( 'This forum is closed to new threads.', 'jtzls-bulletin-for-bbpress' ), 403 );
+			return $this->refuse( 'forbidden', __( 'This forum is closed to new threads.', 'jtzl-bulletin' ), 403 );
 		}
 
 		return array() === $tag_names ? true : $this->features->topic_tags();

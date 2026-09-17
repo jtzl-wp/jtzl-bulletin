@@ -37,7 +37,7 @@ $jtzl_bltn_more = 1 < $jtzl_bltn_ctx->get_max_forum_pages();
 	$jtzl_bltn_appbar->render(
 		array(
 			'title'    => get_bloginfo( 'name' ),
-			'subtitle' => __( 'Forums', 'jtzls-bulletin-for-bbpress' ),
+			'subtitle' => __( 'Forums', 'jtzl-bulletin' ),
 		)
 	);
 	?>
@@ -67,7 +67,7 @@ $jtzl_bltn_more = 1 < $jtzl_bltn_ctx->get_max_forum_pages();
 						'id'     => 0,
 						'target' => 'bltn-forums-list',
 						'next'   => 2,
-						'label'  => __( 'Load more forums', 'jtzls-bulletin-for-bbpress' ),
+						'label'  => __( 'Load more forums', 'jtzl-bulletin' ),
 					)
 				);
 			}
@@ -76,8 +76,8 @@ $jtzl_bltn_more = 1 < $jtzl_bltn_ctx->get_max_forum_pages();
 		<?php else : ?>
 
 			<div class="bltn-empty">
-				<p class="bltn-empty__title"><?php esc_html_e( 'No forums yet', 'jtzls-bulletin-for-bbpress' ); ?></p>
-				<p class="bltn-empty__body"><?php esc_html_e( 'When forums are added, they will appear here.', 'jtzls-bulletin-for-bbpress' ); ?></p>
+				<p class="bltn-empty__title"><?php esc_html_e( 'No forums yet', 'jtzl-bulletin' ); ?></p>
+				<p class="bltn-empty__body"><?php esc_html_e( 'When forums are added, they will appear here.', 'jtzl-bulletin' ); ?></p>
 			</div>
 
 		<?php endif; ?>

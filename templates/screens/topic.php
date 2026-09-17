@@ -38,9 +38,9 @@ $jtzl_bltn_moderates = $jtzl_bltn_mod->available( $jtzl_bltn_topic_id );
 	$jtzl_bltn_appbar->render(
 		array(
 			'title'      => $jtzl_bltn_forum,
-			'subtitle'   => __( 'Thread', 'jtzls-bulletin-for-bbpress' ),
+			'subtitle'   => __( 'Thread', 'jtzl-bulletin' ),
 			'back_url'   => bbp_get_forum_permalink( $jtzl_bltn_forum_id ),
-			'back_label' => __( 'Back to threads', 'jtzls-bulletin-for-bbpress' ),
+			'back_label' => __( 'Back to threads', 'jtzl-bulletin' ),
 			'heading'    => false, // The thread title below carries the h1.
 		)
 	);
@@ -78,12 +78,12 @@ $jtzl_bltn_moderates = $jtzl_bltn_mod->available( $jtzl_bltn_topic_id );
 				<h1 class="bltn-thread__title" data-bltn-heading tabindex="-1"><?php echo esc_html( bbp_get_topic_title( $jtzl_bltn_topic_id ) ); ?></h1>
 				<p class="bltn-thread__sub">
 					<?php if ( $jtzl_bltn_closed ) : ?>
-						<span class="bltn-closed"><?php esc_html_e( 'Closed', 'jtzls-bulletin-for-bbpress' ); ?></span>
+						<span class="bltn-closed"><?php esc_html_e( 'Closed', 'jtzl-bulletin' ); ?></span>
 					<?php endif; ?>
 					<span>
 						<?php
 						/* translators: %s: formatted reply count. */
-						echo esc_html( sprintf( _n( '%s reply', '%s replies', $jtzl_bltn_replies, 'jtzls-bulletin-for-bbpress' ), number_format_i18n( $jtzl_bltn_replies ) ) );
+						echo esc_html( sprintf( _n( '%s reply', '%s replies', $jtzl_bltn_replies, 'jtzl-bulletin' ), number_format_i18n( $jtzl_bltn_replies ) ) );
 						?>
 					</span>
 					<?php if ( bbp_is_subscriptions_active() && is_user_logged_in() ) : ?>
@@ -115,7 +115,7 @@ $jtzl_bltn_moderates = $jtzl_bltn_mod->available( $jtzl_bltn_topic_id );
 				bbp_topic_tag_list(
 					$jtzl_bltn_topic_id,
 					array(
-						'before' => '<div class="bltn-tags" role="group" aria-label="' . esc_attr__( 'Thread tags', 'jtzls-bulletin-for-bbpress' ) . '">',
+						'before' => '<div class="bltn-tags" role="group" aria-label="' . esc_attr__( 'Thread tags', 'jtzl-bulletin' ) . '">',
 						'sep'    => ' ',
 						'after'  => '</div>',
 					)
@@ -133,7 +133,7 @@ $jtzl_bltn_moderates = $jtzl_bltn_mod->available( $jtzl_bltn_topic_id );
 						<span class="bltn-byline__name"><?php echo esc_html( bbp_get_topic_author_display_name( $jtzl_bltn_topic_id ) ); ?></span>
 						<span class="bltn-byline__time"><?php echo esc_html( bbp_get_topic_post_date( $jtzl_bltn_topic_id, true ) ); ?></span>
 						<?php $jtzl_bltn_author_edit->render_for_topic( $jtzl_bltn_topic_id ); ?>
-						<span class="bltn-chip"><?php esc_html_e( 'Original post', 'jtzls-bulletin-for-bbpress' ); ?></span>
+						<span class="bltn-chip"><?php esc_html_e( 'Original post', 'jtzl-bulletin' ); ?></span>
 					</div>
 					<div class="bltn-post__body"><?php bbp_topic_content( $jtzl_bltn_topic_id ); ?></div>
 				</div>
@@ -160,7 +160,7 @@ $jtzl_bltn_moderates = $jtzl_bltn_mod->available( $jtzl_bltn_topic_id );
 							'id'     => $jtzl_bltn_topic_id,
 							'target' => 'bltn-replies',
 							'next'   => 2,
-							'label'  => __( 'Load more replies', 'jtzls-bulletin-for-bbpress' ),
+							'label'  => __( 'Load more replies', 'jtzl-bulletin' ),
 						)
 					);
 				}

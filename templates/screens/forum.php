@@ -86,8 +86,8 @@ $jtzl_bltn_parent_id = (int) bbp_get_forum_parent_id( $jtzl_bltn_forum_id );
 $jtzl_bltn_back_url  = $jtzl_bltn_parent_id ? bbp_get_forum_permalink( $jtzl_bltn_parent_id ) : bbp_get_forums_url();
 $jtzl_bltn_back_label = $jtzl_bltn_parent_id
 	/* translators: %s: parent forum name. */
-	? sprintf( __( 'Back to %s', 'jtzls-bulletin-for-bbpress' ), bbp_get_forum_title( $jtzl_bltn_parent_id ) )
-	: __( 'Back to forums', 'jtzls-bulletin-for-bbpress' );
+	? sprintf( __( 'Back to %s', 'jtzl-bulletin' ), bbp_get_forum_title( $jtzl_bltn_parent_id ) )
+	: __( 'Back to forums', 'jtzl-bulletin' );
 ?>
 <section class="bltn-screen">
 
@@ -95,7 +95,7 @@ $jtzl_bltn_back_label = $jtzl_bltn_parent_id
 	$jtzl_bltn_appbar->render(
 		array(
 			'title'      => bbp_get_forum_title( $jtzl_bltn_forum_id ),
-			'subtitle'   => __( 'Forum', 'jtzls-bulletin-for-bbpress' ),
+			'subtitle'   => __( 'Forum', 'jtzl-bulletin' ),
 			'back_url'   => $jtzl_bltn_back_url,
 			'back_label' => $jtzl_bltn_back_label,
 			'heading'    => false, // The forum header (or the protected heading) below carries the h1.
@@ -138,19 +138,19 @@ $jtzl_bltn_back_label = $jtzl_bltn_parent_id
 
 				<div class="bltn-fhead__meta">
 					<?php if ( $jtzl_bltn_closed ) : ?>
-						<span class="bltn-closed"><?php esc_html_e( 'Closed', 'jtzls-bulletin-for-bbpress' ); ?></span>
+						<span class="bltn-closed"><?php esc_html_e( 'Closed', 'jtzl-bulletin' ); ?></span>
 					<?php endif; ?>
 					<?php $jtzl_bltn_tcount = (int) bbp_get_forum_topic_count( $jtzl_bltn_forum_id, true, true ); ?>
 					<span>
 						<?php
 						/* translators: %s: formatted thread count. */
-						echo esc_html( sprintf( _n( '%s thread', '%s threads', $jtzl_bltn_tcount, 'jtzls-bulletin-for-bbpress' ), number_format_i18n( $jtzl_bltn_tcount ) ) );
+						echo esc_html( sprintf( _n( '%s thread', '%s threads', $jtzl_bltn_tcount, 'jtzl-bulletin' ), number_format_i18n( $jtzl_bltn_tcount ) ) );
 						?>
 					</span>
 					<?php $jtzl_bltn_factive = bbp_get_forum_last_active_time( $jtzl_bltn_forum_id ); ?>
 					<?php if ( '' !== $jtzl_bltn_factive ) : ?>
 						<?php /* translators: %s: human time, e.g. "2 days ago". */ ?>
-						<span><?php echo esc_html( sprintf( __( 'Active %s', 'jtzls-bulletin-for-bbpress' ), $jtzl_bltn_factive ) ); ?></span>
+						<span><?php echo esc_html( sprintf( __( 'Active %s', 'jtzl-bulletin' ), $jtzl_bltn_factive ) ); ?></span>
 					<?php endif; ?>
 
 					<?php if ( bbp_is_subscriptions_active() && is_user_logged_in() ) : ?>
@@ -160,7 +160,7 @@ $jtzl_bltn_back_label = $jtzl_bltn_parent_id
 			</div>
 
 			<?php if ( '' !== $jtzl_bltn_subforums ) : ?>
-				<p class="bltn-section-label"><?php esc_html_e( 'Forums', 'jtzls-bulletin-for-bbpress' ); ?></p>
+				<p class="bltn-section-label"><?php esc_html_e( 'Forums', 'jtzl-bulletin' ); ?></p>
 				<div id="bltn-subforums-list">
 					<?php
 					// Rows are built by View\ForumRow, which escapes every field.
@@ -177,7 +177,7 @@ $jtzl_bltn_back_label = $jtzl_bltn_parent_id
 							'id'     => $jtzl_bltn_forum_id,
 							'target' => 'bltn-subforums-list',
 							'next'   => 2,
-							'label'  => __( 'Load more forums', 'jtzls-bulletin-for-bbpress' ),
+							'label'  => __( 'Load more forums', 'jtzl-bulletin' ),
 						)
 					);
 				}
@@ -185,7 +185,7 @@ $jtzl_bltn_back_label = $jtzl_bltn_parent_id
 			<?php endif; ?>
 
 			<?php if ( '' !== $jtzl_bltn_pinned ) : ?>
-				<p class="bltn-section-label"><?php esc_html_e( 'Pinned', 'jtzls-bulletin-for-bbpress' ); ?></p>
+				<p class="bltn-section-label"><?php esc_html_e( 'Pinned', 'jtzl-bulletin' ); ?></p>
 				<?php
 				// Rows are built by View\ThreadRow, which escapes every field.
 				echo $jtzl_bltn_pinned; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -194,7 +194,7 @@ $jtzl_bltn_back_label = $jtzl_bltn_parent_id
 
 			<?php if ( '' !== $jtzl_bltn_rest ) : ?>
 				<p class="bltn-section-label">
-					<?php echo '' === $jtzl_bltn_pinned ? esc_html__( 'Threads', 'jtzls-bulletin-for-bbpress' ) : esc_html__( 'All threads', 'jtzls-bulletin-for-bbpress' ); ?>
+					<?php echo '' === $jtzl_bltn_pinned ? esc_html__( 'Threads', 'jtzl-bulletin' ) : esc_html__( 'All threads', 'jtzl-bulletin' ); ?>
 				</p>
 				<div id="bltn-threads-list">
 					<?php
@@ -212,7 +212,7 @@ $jtzl_bltn_back_label = $jtzl_bltn_parent_id
 							'id'     => $jtzl_bltn_forum_id,
 							'target' => 'bltn-threads-list',
 							'next'   => $jtzl_bltn_page + 1,
-							'label'  => __( 'Load more threads', 'jtzls-bulletin-for-bbpress' ),
+							'label'  => __( 'Load more threads', 'jtzl-bulletin' ),
 						)
 					);
 				}
@@ -228,11 +228,11 @@ $jtzl_bltn_back_label = $jtzl_bltn_parent_id
 			<?php if ( '' === $jtzl_bltn_subforums && '' === $jtzl_bltn_own_pinned && '' === $jtzl_bltn_rest ) : ?>
 
 				<div class="bltn-empty">
-					<p class="bltn-empty__title"><?php esc_html_e( 'No threads yet', 'jtzls-bulletin-for-bbpress' ); ?></p>
+					<p class="bltn-empty__title"><?php esc_html_e( 'No threads yet', 'jtzl-bulletin' ); ?></p>
 					<?php if ( $jtzl_bltn_may_start ) : ?>
-						<p class="bltn-empty__body"><?php esc_html_e( 'Be the first to start one.', 'jtzls-bulletin-for-bbpress' ); ?></p>
+						<p class="bltn-empty__body"><?php esc_html_e( 'Be the first to start one.', 'jtzl-bulletin' ); ?></p>
 					<?php else : ?>
-						<p class="bltn-empty__body"><?php esc_html_e( 'Nothing has been posted in this forum.', 'jtzls-bulletin-for-bbpress' ); ?></p>
+						<p class="bltn-empty__body"><?php esc_html_e( 'Nothing has been posted in this forum.', 'jtzl-bulletin' ); ?></p>
 					<?php endif; ?>
 				</div>
 

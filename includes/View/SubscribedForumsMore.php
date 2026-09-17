@@ -49,7 +49,7 @@ class SubscribedForumsMore {
 				'action' => 'bulletin_load_subscribed_forums',
 				'target' => self::TARGET,
 				'next'   => 2,
-				'label'  => __( 'Load more forums', 'jtzls-bulletin-for-bbpress' ),
+				'label'  => __( 'Load more forums', 'jtzl-bulletin' ),
 			)
 		);
 	}

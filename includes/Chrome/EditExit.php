@@ -46,7 +46,7 @@ class EditExit {
 			if ( $this->usable( $url ) ) {
 				return array(
 					'url'   => $url,
-					'label' => __( 'Back to the reply', 'jtzls-bulletin-for-bbpress' ),
+					'label' => __( 'Back to the reply', 'jtzl-bulletin' ),
 				);
 			}
 		}
@@ -56,14 +56,14 @@ class EditExit {
 			if ( $this->usable( $url ) ) {
 				return array(
 					'url'   => $url,
-					'label' => __( 'Back to the thread', 'jtzls-bulletin-for-bbpress' ),
+					'label' => __( 'Back to the thread', 'jtzl-bulletin' ),
 				);
 			}
 		}
 
 		return array(
 			'url'   => $this->wp->get_forums_url(),
-			'label' => __( 'Back to forums', 'jtzls-bulletin-for-bbpress' ),
+			'label' => __( 'Back to forums', 'jtzl-bulletin' ),
 		);
 	}
 
@@ -101,7 +101,7 @@ class EditExit {
 		printf(
 			'<a class="bltn-compose__cancel" href="%s">%s</a>',
 			esc_url( $exit['url'] ),
-			esc_html__( 'Cancel', 'jtzls-bulletin-for-bbpress' )
+			esc_html__( 'Cancel', 'jtzl-bulletin' )
 		);
 	}
 }

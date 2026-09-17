@@ -70,7 +70,7 @@ class ReplyPresenter {
 		return null === $page
 			? new \WP_Error(
 				'invalid_around',
-				__( 'That reply cannot be paged to.', 'jtzls-bulletin-for-bbpress' ),
+				__( 'That reply cannot be paged to.', 'jtzl-bulletin' ),
 				array( 'status' => 400 )
 			)
 			: $page;

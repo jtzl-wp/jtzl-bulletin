@@ -123,7 +123,7 @@ class AccessPolicy {
 		if ( ! $same_topic || $target_id === $self_id || true !== $this->reply( $target_id ) ) {
 			return new \WP_Error(
 				'invalid_reply_to',
-				__( 'That reply cannot be answered.', 'jtzls-bulletin-for-bbpress' ),
+				__( 'That reply cannot be answered.', 'jtzl-bulletin' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -191,7 +191,7 @@ class AccessPolicy {
 	private function not_found(): \WP_Error {
 		return new \WP_Error(
 			'not_found',
-			__( 'No such resource.', 'jtzls-bulletin-for-bbpress' ),
+			__( 'No such resource.', 'jtzl-bulletin' ),
 			array( 'status' => 404 )
 		);
 	}
@@ -199,7 +199,7 @@ class AccessPolicy {
 	private function password_required(): \WP_Error {
 		return new \WP_Error(
 			'password_required',
-			__( 'A password is required to read this content.', 'jtzls-bulletin-for-bbpress' ),
+			__( 'A password is required to read this content.', 'jtzl-bulletin' ),
 			array( 'status' => 403 )
 		);
 	}

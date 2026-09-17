@@ -40,7 +40,7 @@ class FeatureGate {
 	public function topic_tags() {
 		return $this->rest->topic_tags_enabled()
 			? true
-			: $this->disabled( 'tags_disabled', __( 'Topic tags are not enabled on this forum.', 'jtzls-bulletin-for-bbpress' ) );
+			: $this->disabled( 'tags_disabled', __( 'Topic tags are not enabled on this forum.', 'jtzl-bulletin' ) );
 	}
 
 	/**
@@ -51,7 +51,7 @@ class FeatureGate {
 	public function search() {
 		return $this->wp->allow_search()
 			? true
-			: $this->disabled( 'search_disabled', __( 'Search is not enabled on this forum.', 'jtzls-bulletin-for-bbpress' ) );
+			: $this->disabled( 'search_disabled', __( 'Search is not enabled on this forum.', 'jtzl-bulletin' ) );
 	}
 
 	/**
@@ -62,7 +62,7 @@ class FeatureGate {
 	public function favorites() {
 		return $this->rest->favorites_enabled()
 			? true
-			: $this->disabled( 'favorites_disabled', __( 'Favourites are not enabled on this forum.', 'jtzls-bulletin-for-bbpress' ) );
+			: $this->disabled( 'favorites_disabled', __( 'Favourites are not enabled on this forum.', 'jtzl-bulletin' ) );
 	}
 
 	/**
@@ -73,7 +73,7 @@ class FeatureGate {
 	public function subscriptions() {
 		return $this->wp->is_subscriptions_active()
 			? true
-			: $this->disabled( 'subscriptions_disabled', __( 'Subscriptions are not enabled on this forum.', 'jtzls-bulletin-for-bbpress' ) );
+			: $this->disabled( 'subscriptions_disabled', __( 'Subscriptions are not enabled on this forum.', 'jtzl-bulletin' ) );
 	}
 
 	private function disabled( string $code, string $message ): \WP_Error {

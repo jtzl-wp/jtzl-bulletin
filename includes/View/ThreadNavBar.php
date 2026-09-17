@@ -35,12 +35,12 @@ class ThreadNavBar {
 
 		$count = $position > 0 && ! $pinned
 			/* translators: 1: current thread number, 2: total threads in the forum. */
-			? sprintf( __( 'Thread %1$d of %2$d', 'jtzls-bulletin-for-bbpress' ), $position, $total )
+			? sprintf( __( 'Thread %1$d of %2$d', 'jtzl-bulletin' ), $position, $total )
 			: '';
 
 		printf(
 			'<nav class="bltn-navbar" aria-label="%s">',
-			esc_attr__( 'Threads in this forum', 'jtzls-bulletin-for-bbpress' )
+			esc_attr__( 'Threads in this forum', 'jtzl-bulletin' )
 		);
 
 		if ( '' !== $prev_url ) {
@@ -48,13 +48,13 @@ class ThreadNavBar {
 				'<a class="bltn-navbtn bltn-navbtn--prev" href="%s" rel="prev">%s%s</a>',
 				esc_url( $prev_url ),
 				Icons::nav_prev(), // phpcs:ignore WordPress.Security.EscapeOutput -- static SVG.
-				esc_html__( 'Prev', 'jtzls-bulletin-for-bbpress' )
+				esc_html__( 'Prev', 'jtzl-bulletin' )
 			);
 		} else {
 			printf(
 				'<span class="bltn-navbtn bltn-navbtn--prev" aria-disabled="true">%s%s</span>',
 				Icons::nav_prev(), // phpcs:ignore WordPress.Security.EscapeOutput -- static SVG.
-				esc_html__( 'Prev', 'jtzls-bulletin-for-bbpress' )
+				esc_html__( 'Prev', 'jtzl-bulletin' )
 			);
 		}
 
@@ -64,13 +64,13 @@ class ThreadNavBar {
 			printf(
 				'<a class="bltn-navbtn bltn-navbtn--next" href="%s" rel="next">%s%s</a>',
 				esc_url( $next_url ),
-				esc_html__( 'Next', 'jtzls-bulletin-for-bbpress' ),
+				esc_html__( 'Next', 'jtzl-bulletin' ),
 				Icons::nav_next() // phpcs:ignore WordPress.Security.EscapeOutput -- static SVG.
 			);
 		} else {
 			printf(
 				'<span class="bltn-navbtn bltn-navbtn--next" aria-disabled="true">%s%s</span>',
-				esc_html__( 'Next', 'jtzls-bulletin-for-bbpress' ),
+				esc_html__( 'Next', 'jtzl-bulletin' ),
 				Icons::nav_next() // phpcs:ignore WordPress.Security.EscapeOutput -- static SVG.
 			);
 		}

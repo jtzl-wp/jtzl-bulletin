@@ -44,7 +44,7 @@ class ProfileEditService {
 		if ( ! array_key_exists( 'name', $changes ) ) {
 			return $this->refuse(
 				'invalid_request',
-				__( 'An edit has to change something.', 'jtzls-bulletin-for-bbpress' ),
+				__( 'An edit has to change something.', 'jtzl-bulletin' ),
 				400
 			);
 		}
@@ -54,7 +54,7 @@ class ProfileEditService {
 		if ( '' === $name ) {
 			return $this->refuse(
 				'invalid_name',
-				__( 'A display name cannot be empty.', 'jtzls-bulletin-for-bbpress' ),
+				__( 'A display name cannot be empty.', 'jtzl-bulletin' ),
 				400
 			);
 		}
@@ -62,7 +62,7 @@ class ProfileEditService {
 		if ( mb_strlen( $name, 'utf-8' ) > self::NAME_MAX_LENGTH ) {
 			return $this->refuse(
 				'invalid_name',
-				__( 'That display name is too long.', 'jtzls-bulletin-for-bbpress' ),
+				__( 'That display name is too long.', 'jtzl-bulletin' ),
 				400
 			);
 		}
@@ -71,7 +71,7 @@ class ProfileEditService {
 
 			return $this->refuse(
 				'write_failed',
-				__( 'The profile could not be saved.', 'jtzls-bulletin-for-bbpress' ),
+				__( 'The profile could not be saved.', 'jtzl-bulletin' ),
 				500
 			);
 		}

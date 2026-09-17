@@ -108,7 +108,7 @@ class HeldNotice {
 		printf(
 			'<p id="%1$s" class="bltn-compose__note bltn-compose__note--held" role="status" tabindex="-1">%2$s</p>',
 			esc_attr( self::ANCHOR ),
-			esc_html__( 'Your reply is awaiting review.', 'jtzls-bulletin-for-bbpress' )
+			esc_html__( 'Your reply is awaiting review.', 'jtzl-bulletin' )
 		);
 	}
 }

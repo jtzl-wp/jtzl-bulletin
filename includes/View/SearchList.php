@@ -98,11 +98,11 @@ class SearchList {
 		return array(
 			'permalink' => $this->wp->get_forum_permalink( $forum_id ),
 			'title'     => $this->wp->get_forum_title( $forum_id ),
-			'kind'      => __( 'Forum', 'jtzls-bulletin-for-bbpress' ),
+			'kind'      => __( 'Forum', 'jtzl-bulletin' ),
 			'closed'    => $this->wp->is_forum_closed( $forum_id ),
 			'author'    => '',
 			/* translators: %s: formatted thread count. */
-			'date'      => sprintf( _n( '%s thread', '%s threads', $topics, 'jtzls-bulletin-for-bbpress' ), number_format_i18n( $topics ) ),
+			'date'      => sprintf( _n( '%s thread', '%s threads', $topics, 'jtzl-bulletin' ), number_format_i18n( $topics ) ),
 			'sub'       => $this->wp->get_forum_excerpt( $forum_id, self::EXCERPT_LENGTH ),
 		);
 	}
@@ -119,7 +119,7 @@ class SearchList {
 		return array(
 			'permalink' => $this->wp->get_topic_permalink( $topic_id ),
 			'title'     => $this->wp->get_topic_title( $topic_id ),
-			'kind'      => __( 'Thread', 'jtzls-bulletin-for-bbpress' ),
+			'kind'      => __( 'Thread', 'jtzl-bulletin' ),
 			'closed'    => $this->wp->is_topic_closed( $topic_id ),
 			'author'    => $this->wp->get_topic_author_name( $topic_id ),
 			'date'      => $this->wp->get_topic_post_date( $topic_id ),
@@ -148,11 +148,11 @@ class SearchList {
 		return array(
 			'permalink' => $this->wp->get_reply_url( $reply_id ),
 			'title'     => '' !== $words ? $words : $named,
-			'kind'      => __( 'Reply', 'jtzls-bulletin-for-bbpress' ),
+			'kind'      => __( 'Reply', 'jtzl-bulletin' ),
 			'author'    => $this->wp->get_reply_author_display_name( $reply_id ),
 			'date'      => $this->wp->get_reply_post_date( $reply_id ),
 			/* translators: %s: the thread a reply was posted in. */
-			'sub'       => '' !== $words && '' !== $thread ? sprintf( __( 'in %s', 'jtzls-bulletin-for-bbpress' ), $thread ) : '',
+			'sub'       => '' !== $words && '' !== $thread ? sprintf( __( 'in %s', 'jtzl-bulletin' ), $thread ) : '',
 		);
 	}
 }
