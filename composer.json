@@ -1,6 +1,6 @@
 {
 	"name": "jtzl/bulletin",
-	"description": "Bulletin for bbPress - a mobile-first, decluttered reading layer for bbPress",
+	"description": "JTZL's Bulletin for bbPress - a mobile-first, decluttered reading layer for bbPress",
 	"type": "wordpress-plugin",
 	"license": "GPL-2.0-or-later",
 	"require": {

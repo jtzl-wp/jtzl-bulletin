@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name:       Bulletin for bbPress
+ * Plugin Name:       JTZL's Bulletin for bbPress
  * Plugin URI:        https://github.com/jtzl-wp/jtzl-bulletin
  * Description:       A mobile-first reading layer for bbPress.
  * Version:           0.6.4
@@ -83,7 +83,7 @@ register_activation_hook( __FILE__, 'jtzl_bltn_activate' );
  * @since 0.1.0
  */
 function jtzl_bltn_notice_missing_bbpress() {
-	$message = __( '<strong>Bulletin for bbPress</strong> needs bbPress to be installed and active. It has no effect on its own.', 'jtzl-bulletin' );
+	$message = __( '<strong>JTZL\'s Bulletin for bbPress</strong> needs bbPress to be installed and active. It has no effect on its own.', 'jtzl-bulletin' );
 	printf(
 		'<div class="notice notice-warning"><p>%s</p></div>',
 		wp_kses( $message, array( 'strong' => array() ) )

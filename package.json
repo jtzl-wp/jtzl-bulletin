@@ -1,7 +1,7 @@
 {
 	"name": "jtzl-bulletin-assets",
 	"version": "0.6.4",
-	"description": "Bulletin for bbPress plugin assets - reading-view build system",
+	"description": "JTZL's Bulletin for bbPress plugin assets - reading-view build system",
 	"private": true,
 	"type": "module",
 	"scripts": {

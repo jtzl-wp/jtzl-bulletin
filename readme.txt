@@ -1,4 +1,4 @@
-=== Bulletin for bbPress ===
+=== JTZL's Bulletin for bbPress ===
 Contributors: jtzl, yoren
 Tags: bbpress, forum, mobile, responsive, reading
 Requires at least: 6.0
