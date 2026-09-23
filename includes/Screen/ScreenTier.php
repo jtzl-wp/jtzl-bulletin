@@ -9,8 +9,7 @@
 namespace JTZL\Bulletin\Screen;
 
 /**
- * The screen inventory has exactly two treatments for the pages we own, plus a
- * default for everything else (see docs/p2-screen-inventory.md):
+ * Bulletin's two treatments for the pages it owns, and a default for everything else.
  *
  * @since 0.3.0
  */
