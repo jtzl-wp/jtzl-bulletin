@@ -17,6 +17,11 @@ namespace JTZL\Bulletin\View;
  */
 class SearchRow {
 
+	/**
+	 * The highlighter escapes the text and adds only `<mark>`.
+	 */
+	private const MARKS = array( 'mark' => array() );
+
 	private TermHighlighter $marks;
 
 	public function __construct( TermHighlighter $marks ) {
@@ -43,11 +48,10 @@ class SearchRow {
 		$terms = (string) ( $row['terms'] ?? '' );
 
 		printf( '<a class="bltn-row bltn-result" href="%s">', esc_url( (string) ( $row['permalink'] ?? '' ) ) );
-		// Escaped by the highlighter, which has to do it itself — see its docblock.
-		printf( '<h2 class="bltn-row__title">%s</h2>', $this->marks->highlight( $title, $terms ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		printf( '<h2 class="bltn-row__title">%s</h2>', wp_kses( $this->marks->highlight( $title, $terms ), self::MARKS ) );
 		$this->render_meta( $row );
 		if ( '' !== $sub ) {
-			printf( '<p class="bltn-result__sub">%s</p>', $this->marks->highlight( $sub, $terms ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			printf( '<p class="bltn-result__sub">%s</p>', wp_kses( $this->marks->highlight( $sub, $terms ), self::MARKS ) );
 		}
 		echo '</a>';
 	}

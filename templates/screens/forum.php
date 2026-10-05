@@ -27,12 +27,12 @@ $jtzl_bltn_forum_id  = bbp_get_forum_id();
 $jtzl_bltn_protected = $jtzl_bltn_ctx->is_password_required( $jtzl_bltn_forum_id );
 $jtzl_bltn_closed    = $jtzl_bltn_ctx->is_forum_closed( $jtzl_bltn_forum_id );
 
-$jtzl_bltn_subforums = '';
+$jtzl_bltn_subforums = array();
 $jtzl_bltn_sub_more  = false;
-$jtzl_bltn_pinned    = '';
+$jtzl_bltn_pinned    = array();
 // Super stickies do not count as content belonging to this forum.
-$jtzl_bltn_own_pinned = '';
-$jtzl_bltn_rest       = '';
+$jtzl_bltn_own_pinned = array();
+$jtzl_bltn_rest       = array();
 $jtzl_bltn_more       = false;
 $jtzl_bltn_page       = $jtzl_bltn_ctx->get_paged();
 
@@ -41,7 +41,7 @@ if ( ! $jtzl_bltn_protected ) {
 	 * Pass the parent explicitly because bbPress loops mutate the ambient forum ID.
 	 * Sub-forums paginate independently; the URL page belongs to the topic list.
 	 */
-	$jtzl_bltn_subforums = $jtzl_bltn_forums->capture( $jtzl_bltn_subquery->args( $jtzl_bltn_forum_id, 1 ) );
+	$jtzl_bltn_subforums = $jtzl_bltn_forums->rows( $jtzl_bltn_subquery->args( $jtzl_bltn_forum_id, 1 ) );
 	$jtzl_bltn_sub_more  = 1 < $jtzl_bltn_ctx->get_max_forum_pages();
 
 	/*
@@ -55,7 +55,7 @@ if ( ! $jtzl_bltn_protected ) {
 		 */
 		$jtzl_bltn_super_args = $jtzl_bltn_query->super_pinned_args();
 		if ( array() !== $jtzl_bltn_super_args['post__in'] ) {
-			$jtzl_bltn_pinned .= $jtzl_bltn_threads->capture( $jtzl_bltn_super_args );
+			$jtzl_bltn_pinned = $jtzl_bltn_threads->rows( $jtzl_bltn_super_args );
 		}
 
 		/*
@@ -64,13 +64,13 @@ if ( ! $jtzl_bltn_protected ) {
 		 */
 		$jtzl_bltn_own_pinned_args = $jtzl_bltn_query->forum_pinned_args( $jtzl_bltn_forum_id );
 		if ( array() !== $jtzl_bltn_own_pinned_args['post__in'] ) {
-			$jtzl_bltn_own_pinned = $jtzl_bltn_threads->capture( $jtzl_bltn_own_pinned_args );
-			$jtzl_bltn_pinned    .= $jtzl_bltn_own_pinned;
+			$jtzl_bltn_own_pinned = $jtzl_bltn_threads->rows( $jtzl_bltn_own_pinned_args );
+			$jtzl_bltn_pinned     = array_merge( $jtzl_bltn_pinned, $jtzl_bltn_own_pinned );
 		}
 		wp_reset_postdata();
 	}
 
-	$jtzl_bltn_rest = $jtzl_bltn_threads->capture( $jtzl_bltn_query->args( $jtzl_bltn_forum_id, $jtzl_bltn_page ) );
+	$jtzl_bltn_rest = $jtzl_bltn_threads->rows( $jtzl_bltn_query->args( $jtzl_bltn_forum_id, $jtzl_bltn_page ) );
 	$jtzl_bltn_more = $jtzl_bltn_page < $jtzl_bltn_ctx->get_max_topic_pages();
 	wp_reset_postdata();
 }
@@ -116,7 +116,7 @@ $jtzl_bltn_back_label = $jtzl_bltn_parent_id
 				/*
 				 * Core owns this form's authentication and markup; Bulletin only styles it.
 				 */
-				echo get_the_password_form( $jtzl_bltn_forum_id ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- WordPress core markup.
+				echo wp_kses( get_the_password_form( $jtzl_bltn_forum_id ), \JTZL\Bulletin\Support\AllowedHtml::password_form() );
 				?>
 			</div>
 
@@ -159,12 +159,11 @@ $jtzl_bltn_back_label = $jtzl_bltn_parent_id
 				</div>
 			</div>
 
-			<?php if ( '' !== $jtzl_bltn_subforums ) : ?>
+			<?php if ( array() !== $jtzl_bltn_subforums ) : ?>
 				<p class="bltn-section-label"><?php esc_html_e( 'Forums', 'jtzl-bulletin' ); ?></p>
 				<div id="bltn-subforums-list">
 					<?php
-					// Rows are built by View\ForumRow, which escapes every field.
-					echo $jtzl_bltn_subforums; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+					$jtzl_bltn_forums->render( $jtzl_bltn_subforums );
 					?>
 				</div>
 
@@ -184,22 +183,20 @@ $jtzl_bltn_back_label = $jtzl_bltn_parent_id
 				?>
 			<?php endif; ?>
 
-			<?php if ( '' !== $jtzl_bltn_pinned ) : ?>
+			<?php if ( array() !== $jtzl_bltn_pinned ) : ?>
 				<p class="bltn-section-label"><?php esc_html_e( 'Pinned', 'jtzl-bulletin' ); ?></p>
 				<?php
-				// Rows are built by View\ThreadRow, which escapes every field.
-				echo $jtzl_bltn_pinned; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				$jtzl_bltn_threads->render( $jtzl_bltn_pinned );
 				?>
 			<?php endif; ?>
 
-			<?php if ( '' !== $jtzl_bltn_rest ) : ?>
+			<?php if ( array() !== $jtzl_bltn_rest ) : ?>
 				<p class="bltn-section-label">
-					<?php echo '' === $jtzl_bltn_pinned ? esc_html__( 'Threads', 'jtzl-bulletin' ) : esc_html__( 'All threads', 'jtzl-bulletin' ); ?>
+					<?php echo array() === $jtzl_bltn_pinned ? esc_html__( 'Threads', 'jtzl-bulletin' ) : esc_html__( 'All threads', 'jtzl-bulletin' ); ?>
 				</p>
 				<div id="bltn-threads-list">
 					<?php
-					// Rows are built by View\ThreadRow, which escapes every field.
-					echo $jtzl_bltn_rest; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+					$jtzl_bltn_threads->render( $jtzl_bltn_rest );
 					?>
 				</div>
 
@@ -225,7 +222,7 @@ $jtzl_bltn_back_label = $jtzl_bltn_parent_id
 			 * super stickies are excluded because they do not belong to this forum.
 			 */
 			?>
-			<?php if ( '' === $jtzl_bltn_subforums && '' === $jtzl_bltn_own_pinned && '' === $jtzl_bltn_rest ) : ?>
+			<?php if ( array() === $jtzl_bltn_subforums && array() === $jtzl_bltn_own_pinned && array() === $jtzl_bltn_rest ) : ?>
 
 				<div class="bltn-empty">
 					<p class="bltn-empty__title"><?php esc_html_e( 'No threads yet', 'jtzl-bulletin' ); ?></p>

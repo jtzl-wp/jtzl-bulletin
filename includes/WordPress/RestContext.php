@@ -18,6 +18,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class RestContext implements RestContextInterface {
 
+	private const HANDLER_SERVER_KEYS = array( 'REQUEST_METHOD', 'HTTP_HOST', 'REQUEST_URI', 'HTTP_REFERER', 'SERVER_PORT', 'HTTPS' );
+
 	private \wpdb $wpdb;
 
 
@@ -789,12 +791,13 @@ class RestContext implements RestContextInterface {
 
 	/** {@inheritdoc} */
 	public function swap_handler_globals( array $values ): array {
-		// Whole arrays, taken to be put back whole: a key the request never had
-		// stays absent on restore because the copy never had it either.
+		// The form arrays are replaced whole, so they are saved whole. Of $_SERVER only
+		// the keys written below are saved; they go back verbatim and are never read as
+		// input, so sanitizing them would only corrupt what is restored.
 		$previous = array(
 			'post'    => $_POST,    // phpcs:ignore WordPress.Security.NonceVerification.Missing
 			'request' => $_REQUEST, // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			'server'  => $_SERVER,
+			'server'  => array_intersect_key( $_SERVER, array_flip( self::HANDLER_SERVER_KEYS ) ),
 		);
 		$home     = wp_parse_url( home_url( '/' ) );
 		$home     = is_array( $home ) ? $home : array();
@@ -819,7 +822,15 @@ class RestContext implements RestContextInterface {
 	public function restore_handler_globals( array $previous ): void {
 		$_POST    = $previous['post'];    // phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$_REQUEST = $previous['request'];
-		$_SERVER  = $previous['server'];
+
+		// A key the request never had is removed again rather than left as the swap set it.
+		foreach ( self::HANDLER_SERVER_KEYS as $key ) {
+			if ( array_key_exists( $key, $previous['server'] ) ) {
+				$_SERVER[ $key ] = $previous['server'][ $key ];
+			} else {
+				unset( $_SERVER[ $key ] );
+			}
+		}
 	}
 
 

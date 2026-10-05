@@ -140,16 +140,18 @@ class WordPressContext implements ContextInterface {
 		return $this->moderation_links(
 			true,
 			'bbp_topic_admin_links',
-			static fn(): string => (string) bbp_get_topic_admin_links(
-				array(
-					'id'           => $topic_id,
-					'sep'          => '',
+			static fn(): string => (string) bbp_get_topic_admin_links( self::topic_admin_link_args( $topic_id ) )
+		);
+	}
 
-					'stick_text'   => __( 'Pin', 'jtzl-bulletin' ),
-					'unstick_text' => __( 'Unpin', 'jtzl-bulletin' ),
-					'super_text'   => __( 'Pin everywhere', 'jtzl-bulletin' ),
-				)
-			)
+	/** {@inheritdoc} */
+	public function print_topic_moderation_links( int $topic_id ): void {
+		$this->without_composer_link(
+			true,
+			'bbp_topic_admin_links',
+			static function () use ( $topic_id ): void {
+				bbp_topic_admin_links( self::topic_admin_link_args( $topic_id ) );
+			}
 		);
 	}
 
@@ -158,12 +160,18 @@ class WordPressContext implements ContextInterface {
 		return $this->moderation_links(
 			! bbp_thread_replies(),
 			'bbp_reply_admin_links',
-			static fn(): string => (string) bbp_get_reply_admin_links(
-				array(
-					'id'  => $reply_id,
-					'sep' => '',
-				)
-			)
+			static fn(): string => (string) bbp_get_reply_admin_links( self::reply_admin_link_args( $reply_id ) )
+		);
+	}
+
+	/** {@inheritdoc} */
+	public function print_reply_moderation_links( int $reply_id ): void {
+		$this->without_composer_link(
+			! bbp_thread_replies(),
+			'bbp_reply_admin_links',
+			static function () use ( $reply_id ): void {
+				bbp_reply_admin_links( self::reply_admin_link_args( $reply_id ) );
+			}
 		);
 	}
 
@@ -173,9 +181,19 @@ class WordPressContext implements ContextInterface {
 		return (string) bbp_get_topic_edit_link( array( 'id' => $topic_id ) );
 	}
 
+	/** {@inheritdoc} */
+	public function print_topic_edit_link( int $topic_id ): void {
+		bbp_topic_edit_link( array( 'id' => $topic_id ) );
+	}
+
 
 	public function get_reply_edit_link( int $reply_id ): string {
 		return (string) bbp_get_reply_edit_link( array( 'id' => $reply_id ) );
+	}
+
+	/** {@inheritdoc} */
+	public function print_reply_edit_link( int $reply_id ): void {
+		bbp_reply_edit_link( array( 'id' => $reply_id ) );
 	}
 
 	/** {@inheritdoc} */
@@ -227,11 +245,23 @@ class WordPressContext implements ContextInterface {
 	}
 
 	/**
-	 * Temporarily filters one bbPress link set and always restores global filter state.
+	 * One bbPress link set as markup, or '' when it holds no link.
 	 *
-	 * @param callable():string $render     Produces the markup with the filter in place.
+	 * @param callable():string $render Produces the markup with the filter in place.
 	 */
 	private function moderation_links( bool $drop_reply, string $filter, callable $render ): string {
+		$markup = (string) $this->without_composer_link( $drop_reply, $filter, $render );
+
+		return '' === trim( wp_strip_all_tags( $markup ) ) ? '' : $markup;
+	}
+
+	/**
+	 * Temporarily filters one bbPress link set and always restores global filter state.
+	 *
+	 * @param callable():mixed $call Builds or echoes the set with the filter in place.
+	 * @return mixed What $call returns.
+	 */
+	private function without_composer_link( bool $drop_reply, string $filter, callable $call ) {
 		$without_composer = static function ( $links ) {
 			if ( is_array( $links ) ) {
 				unset( $links['reply'] );
@@ -245,13 +275,38 @@ class WordPressContext implements ContextInterface {
 		}
 
 		try {
-			$markup = $render();
+			return $call();
 		} finally {
-
 			remove_filter( $filter, $without_composer );
 		}
+	}
 
-		return '' === trim( wp_strip_all_tags( $markup ) ) ? '' : $markup;
+	/**
+	 * Arguments for a topic's admin links, whichever of bbPress's two calls takes them.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private static function topic_admin_link_args( int $topic_id ): array {
+		return array(
+			'id'           => $topic_id,
+			'sep'          => '',
+
+			'stick_text'   => __( 'Pin', 'jtzl-bulletin' ),
+			'unstick_text' => __( 'Unpin', 'jtzl-bulletin' ),
+			'super_text'   => __( 'Pin everywhere', 'jtzl-bulletin' ),
+		);
+	}
+
+	/**
+	 * Arguments for a reply's admin links, whichever of bbPress's two calls takes them.
+	 *
+	 * @return array<string,mixed>
+	 */
+	private static function reply_admin_link_args( int $reply_id ): array {
+		return array(
+			'id'  => $reply_id,
+			'sep' => '',
+		);
 	}
 
 

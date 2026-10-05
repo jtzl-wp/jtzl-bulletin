@@ -58,7 +58,7 @@ $jtzl_bltn_moderates = $jtzl_bltn_mod->available( $jtzl_bltn_topic_id );
 				/*
 				 * Core owns this form's authentication and markup; Bulletin only styles it.
 				 */
-				echo get_the_password_form( $jtzl_bltn_topic_id ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- WordPress core markup.
+				echo wp_kses( get_the_password_form( $jtzl_bltn_topic_id ), \JTZL\Bulletin\Support\AllowedHtml::password_form() );
 				?>
 			</div>
 		</main>

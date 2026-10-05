@@ -29,7 +29,7 @@ class SearchList {
 	}
 
 	/**
-	 * Render a search query's rows and return them as markup.
+	 * Render a search query's rows and return them as markup, for the load-more endpoint.
 	 *
 	 * @since 0.3.0
 	 *
@@ -37,12 +37,39 @@ class SearchList {
 	 * @return string Markup, or '' when the query matched nothing.
 	 */
 	public function capture( array $args ): string {
+		ob_start();
+		$this->render( $this->rows( $args ) );
+
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * Echo rows from rows().
+	 *
+	 * @since 0.6.5
+	 *
+	 * @param list<array<string,mixed>> $rows Row fields.
+	 */
+	public function render( array $rows ): void {
+		foreach ( $rows as $row ) {
+			$this->row->render( $row );
+		}
+	}
+
+	/**
+	 * Run a search query and return its row fields.
+	 *
+	 * @since 0.6.5
+	 *
+	 * @param array<string,mixed> $args Search query args (see Query\SearchQuery).
+	 * @return list<array<string,mixed>> Empty when nothing matched that this renders.
+	 */
+	public function rows( array $args ): array {
 		// Use the query's actual terms. WordPress accepts array-valued `s`, which must
 		// not be cast to the visible string "Array" and highlighted in every row.
 		$raw   = $args['s'] ?? '';
 		$terms = is_scalar( $raw ) ? (string) $raw : '';
-
-		ob_start();
+		$rows  = array();
 
 		if ( $this->wp->has_search_results( $args ) ) {
 			while ( $this->wp->the_search_results_loop() ) {
@@ -51,12 +78,12 @@ class SearchList {
 				$row = $this->row_for( $this->wp->get_search_result_post_type(), $this->wp->get_search_result_id() );
 				if ( array() !== $row ) {
 					$row['terms'] = $terms;
-					$this->row->render( $row );
+					$rows[]       = $row;
 				}
 			}
 		}
 
-		return (string) ob_get_clean();
+		return $rows;
 	}
 
 	/**

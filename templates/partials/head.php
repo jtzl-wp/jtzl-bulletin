@@ -2,8 +2,10 @@
 /**
  * Shared head markup for Bulletin's takeover and reskin documents.
  *
- * Emit charset first. Buffer `wp_head()` to remove competing viewport tags and
- * guarantee one viewport and one title across classic and block themes.
+ * Charset comes first and Bulletin's viewport last: a browser applies the last
+ * viewport meta it reads, so `viewport-fit=cover` holds even under a theme that
+ * hooks its own into `wp_head()`. The two printers known to add one, core's for
+ * block themes and GeneratePress's, are unhooked so the usual page has one tag.
  *
  * @package JTZL\Bulletin
  */
@@ -11,16 +13,16 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+remove_action( 'wp_head', '_block_template_viewport_meta_tag', 0 );
+remove_action( 'wp_head', 'generate_add_viewport', 1 );
 ?>
 <meta charset="<?php bloginfo( 'charset' ); ?>">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <?php
-ob_start();
-wp_head();
-$jtzl_bltn_head = preg_replace( '#[\t ]*<meta[^>]*name=(["\'])viewport\1[^>]*>\s*#i', '', (string) ob_get_clean() );
-
-if ( false === stripos( (string) $jtzl_bltn_head, '<title' ) ) {
-	$jtzl_bltn_head = '<title>' . esc_html( wp_get_document_title() ) . '</title>' . "\n" . $jtzl_bltn_head;
-}
-
-echo $jtzl_bltn_head; // phpcs:ignore WordPress.Security.EscapeOutput -- wp_head() output; only viewport metas stripped, title added.
+// Without title-tag support core prints no title, and the theme header that would is never loaded here.
+if ( ! current_theme_supports( 'title-tag' ) ) :
+	?>
+<title><?php echo esc_html( wp_get_document_title() ); ?></title>
+<?php endif; ?>
+<?php wp_head(); ?>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">

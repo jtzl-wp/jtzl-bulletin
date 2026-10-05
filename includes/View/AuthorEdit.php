@@ -37,7 +37,13 @@ class AuthorEdit {
 			return;
 		}
 
-		$this->render( $this->wp->get_topic_edit_link( $topic_id ) );
+		if ( '' === $this->wp->get_topic_edit_link( $topic_id ) ) {
+			return;
+		}
+
+		echo '<span class="bltn-byline__edit">';
+		$this->wp->print_topic_edit_link( $topic_id );
+		echo '</span>';
 	}
 
 	/**
@@ -51,7 +57,13 @@ class AuthorEdit {
 			return;
 		}
 
-		$this->render( $this->wp->get_reply_edit_link( $reply_id ) );
+		if ( '' === $this->wp->get_reply_edit_link( $reply_id ) ) {
+			return;
+		}
+
+		echo '<span class="bltn-byline__edit">';
+		$this->wp->print_reply_edit_link( $reply_id );
+		echo '</span>';
 	}
 
 	/**
@@ -71,23 +83,5 @@ class AuthorEdit {
 		}
 
 		return in_array( $this->wp->get_post_status( $post_id ), $statuses, true );
-	}
-
-	/**
-	 * Wrap bbPress's answer, or drop it.
-	 *
-	 * @since 0.5.0
-	 *
-	 * @param string $markup bbPress's anchor, or '' when it declined.
-	 */
-	private function render( string $markup ): void {
-		if ( '' === $markup ) {
-			return;
-		}
-
-		printf(
-			'<span class="bltn-byline__edit">%s</span>',
-			$markup // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- bbPress-generated anchor; esc_url on the href and esc_html__ on the label, both at source.
-		);
 	}
 }

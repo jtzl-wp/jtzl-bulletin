@@ -81,11 +81,23 @@ interface ContextInterface {
 
 	public function get_topic_moderation_links( int $topic_id ): string;
 
+	/** Echoes the get_topic_moderation_links() set through bbPress's echo function. */
+	public function print_topic_moderation_links( int $topic_id ): void;
+
 	public function get_reply_moderation_links( int $reply_id ): string;
+
+	/** Echoes the get_reply_moderation_links() set through bbPress's echo function. */
+	public function print_reply_moderation_links( int $reply_id ): void;
 
 	public function get_topic_edit_link( int $topic_id ): string;
 
+	/** Echoes the get_topic_edit_link() anchor through bbPress's echo function. */
+	public function print_topic_edit_link( int $topic_id ): void;
+
 	public function get_reply_edit_link( int $reply_id ): string;
+
+	/** Echoes the get_reply_edit_link() anchor through bbPress's echo function. */
+	public function print_reply_edit_link( int $reply_id ): void;
 
 	/**
 	 * @return array<int,string>

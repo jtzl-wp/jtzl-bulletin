@@ -33,9 +33,7 @@ class ThreadList {
 	}
 
 	/**
-	 * Render a topics query's rows and return them as markup.
-	 *
-	 * Gather IDs before rendering so unread state is resolved once for the page.
+	 * Render a topics query's rows and return them as markup, for the load-more endpoint.
 	 *
 	 * @since 0.1.0
 	 *
@@ -43,6 +41,36 @@ class ThreadList {
 	 * @return string Markup, or '' when the query matched nothing.
 	 */
 	public function capture( array $args ): string {
+		ob_start();
+		$this->render( $this->rows( $args ) );
+
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * Echo rows from rows().
+	 *
+	 * @since 0.6.5
+	 *
+	 * @param list<array<string,mixed>> $rows Row fields.
+	 */
+	public function render( array $rows ): void {
+		foreach ( $rows as $row ) {
+			$this->row->render( $row );
+		}
+	}
+
+	/**
+	 * Run a topics query and return its row fields.
+	 *
+	 * Gather IDs first so unread state is resolved once for the page.
+	 *
+	 * @since 0.6.5
+	 *
+	 * @param array<string,mixed> $args Topic query args (see Query\TopicQuery).
+	 * @return list<array<string,mixed>> Empty when the query matched nothing.
+	 */
+	public function rows( array $args ): array {
 		$rows = array();
 
 		if ( $this->wp->has_topics( $args ) ) {
@@ -70,12 +98,10 @@ class ThreadList {
 			$this->wp->is_user_logged_in() ? $this->wp->get_current_user_id() : 0
 		);
 
-		ob_start();
-		foreach ( $rows as $row ) {
-			$row['unread'] = $unread[ $row['id'] ] ?? false;
-			$this->row->render( $row );
+		foreach ( $rows as $i => $row ) {
+			$rows[ $i ]['unread'] = $unread[ $row['id'] ] ?? false;
 		}
 
-		return (string) ob_get_clean();
+		return $rows;
 	}
 }

@@ -35,8 +35,7 @@ class ForumList {
 	}
 
 	/**
-	 * Render a forums query's rows and return them as markup, and leave the global
-	 * post as it was found.
+	 * Render a forums query's rows and return them as markup, for the load-more endpoint.
 	 *
 	 * @since 0.3.0
 	 *
@@ -44,6 +43,35 @@ class ForumList {
 	 * @return string Markup, or '' when the query matched nothing.
 	 */
 	public function capture( array $args ): string {
+		ob_start();
+		$this->render( $this->rows( $args ) );
+
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * Echo rows from rows().
+	 *
+	 * @since 0.6.5
+	 *
+	 * @param list<array<string,mixed>> $rows Row fields.
+	 */
+	public function render( array $rows ): void {
+		foreach ( $rows as $row ) {
+			$this->row->render( $row );
+		}
+	}
+
+	/**
+	 * Run a forums query and return its row fields, and leave the global post as it
+	 * was found.
+	 *
+	 * @since 0.6.5
+	 *
+	 * @param array<string,mixed> $args Forum query args (see Query\ForumQuery).
+	 * @return list<array<string,mixed>> Empty when the query matched nothing.
+	 */
+	public function rows( array $args ): array {
 		$rows = array();
 
 		if ( $this->wp->has_forums( $args ) ) {
@@ -59,13 +87,11 @@ class ForumList {
 			$this->wp->is_user_logged_in() ? $this->wp->get_current_user_id() : 0
 		);
 
-		ob_start();
-		foreach ( $rows as $row ) {
-			$row['unread'] = $unread[ $row['id'] ] ?? false;
-			$this->row->render( $row );
+		foreach ( $rows as $i => $row ) {
+			$rows[ $i ]['unread'] = $unread[ $row['id'] ] ?? false;
 		}
 
-		return (string) ob_get_clean();
+		return $rows;
 	}
 
 	/**

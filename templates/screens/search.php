@@ -25,12 +25,12 @@ $jtzl_bltn_page  = $jtzl_bltn_ctx->get_paged();
  * Base the screen state on the query count. Unsupported result types may produce no
  * markup, but later pages must remain reachable.
  */
-$jtzl_bltn_rows  = '';
+$jtzl_bltn_rows  = array();
 $jtzl_bltn_found = 0;
 $jtzl_bltn_more  = false;
 
 if ( $jtzl_bltn_query->is_runnable( $jtzl_bltn_terms ) ) {
-	$jtzl_bltn_rows  = $jtzl_bltn_results->capture( $jtzl_bltn_query->args( $jtzl_bltn_terms, $jtzl_bltn_page ) );
+	$jtzl_bltn_rows  = $jtzl_bltn_results->rows( $jtzl_bltn_query->args( $jtzl_bltn_terms, $jtzl_bltn_page ) );
 	$jtzl_bltn_found = $jtzl_bltn_ctx->get_search_result_count();
 	$jtzl_bltn_more  = $jtzl_bltn_page < $jtzl_bltn_query->max_pages();
 	wp_reset_postdata();
@@ -75,7 +75,7 @@ if ( $jtzl_bltn_query->is_runnable( $jtzl_bltn_terms ) ) {
 			/>
 			<button class="bltn-search__go" type="submit" aria-label="<?php esc_attr_e( 'Search', 'jtzl-bulletin' ); ?>">
 				<?php
-				echo \JTZL\Bulletin\Support\Icons::search(); // phpcs:ignore WordPress.Security.EscapeOutput -- static SVG.
+				echo wp_kses( \JTZL\Bulletin\Support\Icons::search(), \JTZL\Bulletin\Support\AllowedHtml::icon() );
 				?>
 			</button>
 		</form>
@@ -94,12 +94,9 @@ if ( $jtzl_bltn_query->is_runnable( $jtzl_bltn_terms ) ) {
 				?>
 			</p>
 
-			<?php
-				// Rows are built by View\SearchRow, which escapes every field.
-			?>
 			<div id="bltn-search-list">
 				<?php
-				echo $jtzl_bltn_rows; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				$jtzl_bltn_results->render( $jtzl_bltn_rows );
 				?>
 			</div>
 

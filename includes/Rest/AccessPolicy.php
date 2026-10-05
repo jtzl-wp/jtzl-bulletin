@@ -131,6 +131,16 @@ class AccessPolicy {
 		return true;
 	}
 
+	/**
+	 * The check bbPress's own profile form makes before it saves.
+	 *
+	 * @param int $user_id Member whose profile would change.
+	 * @return bool
+	 */
+	public function can_edit_profile( int $user_id ): bool {
+		return $user_id > 0 && $this->wp->current_user_can_edit_user( $user_id );
+	}
+
 	public function can_edit_topic( int $id ): bool {
 		return $this->author_may_edit( $id, $this->wp->get_public_topic_statuses() )
 			&& '' !== $this->wp->get_topic_edit_link( $id );

@@ -8,6 +8,7 @@
 
 namespace JTZL\Bulletin\View;
 
+use JTZL\Bulletin\Support\AllowedHtml;
 use JTZL\Bulletin\Support\Icons;
 
 /**
@@ -47,13 +48,13 @@ class ThreadNavBar {
 			printf(
 				'<a class="bltn-navbtn bltn-navbtn--prev" href="%s" rel="prev">%s%s</a>',
 				esc_url( $prev_url ),
-				Icons::nav_prev(), // phpcs:ignore WordPress.Security.EscapeOutput -- static SVG.
+				wp_kses( Icons::nav_prev(), AllowedHtml::icon() ),
 				esc_html__( 'Prev', 'jtzl-bulletin' )
 			);
 		} else {
 			printf(
 				'<span class="bltn-navbtn bltn-navbtn--prev" aria-disabled="true">%s%s</span>',
-				Icons::nav_prev(), // phpcs:ignore WordPress.Security.EscapeOutput -- static SVG.
+				wp_kses( Icons::nav_prev(), AllowedHtml::icon() ),
 				esc_html__( 'Prev', 'jtzl-bulletin' )
 			);
 		}
@@ -65,13 +66,13 @@ class ThreadNavBar {
 				'<a class="bltn-navbtn bltn-navbtn--next" href="%s" rel="next">%s%s</a>',
 				esc_url( $next_url ),
 				esc_html__( 'Next', 'jtzl-bulletin' ),
-				Icons::nav_next() // phpcs:ignore WordPress.Security.EscapeOutput -- static SVG.
+				wp_kses( Icons::nav_next(), AllowedHtml::icon() )
 			);
 		} else {
 			printf(
 				'<span class="bltn-navbtn bltn-navbtn--next" aria-disabled="true">%s%s</span>',
 				esc_html__( 'Next', 'jtzl-bulletin' ),
-				Icons::nav_next() // phpcs:ignore WordPress.Security.EscapeOutput -- static SVG.
+				wp_kses( Icons::nav_next(), AllowedHtml::icon() )
 			);
 		}
 

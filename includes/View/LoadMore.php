@@ -38,22 +38,11 @@ class LoadMore {
 		$next   = (int) ( $control['next'] ?? 2 );
 		$label  = (string) ( $control['label'] ?? '' );
 
-		$subject = '';
+		printf( '<div class="bltn-loadmore" data-action="%s"', esc_attr( $action ) );
 		if ( '' !== $param ) {
-			$subject = sprintf(
-				' data-param="%s" data-id="%s"',
-				esc_attr( $param ),
-				esc_attr( $id )
-			);
+			printf( ' data-param="%s" data-id="%s"', esc_attr( $param ), esc_attr( $id ) );
 		}
-
-		printf(
-			'<div class="bltn-loadmore" data-action="%s"%s data-target="%s" data-next="%s">',
-			esc_attr( $action ),
-			$subject, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- assembled above from escaped parts.
-			esc_attr( $target ),
-			esc_attr( (string) $next )
-		);
+		printf( ' data-target="%s" data-next="%s">', esc_attr( $target ), esc_attr( (string) $next ) );
 		printf(
 			'<button type="button" class="bltn-loadmore__btn">%s</button>',
 			esc_html( $label )

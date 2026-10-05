@@ -8,6 +8,7 @@
 
 namespace JTZL\Bulletin\View;
 
+use JTZL\Bulletin\Support\AllowedHtml;
 use JTZL\Bulletin\Support\Icons;
 use JTZL\Bulletin\WordPress\ContextInterface;
 
@@ -65,17 +66,32 @@ class AppBar {
 			(int) ( count( $trailing ) * 40 + 8 )
 		);
 
-		echo $this->leading( $back_url, $back_label ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- assembled from escaped parts.
+		if ( '' === $back_url ) {
+			// A 40px hole the width of an icon button, keeping the title centered.
+			echo '<span class="bltn-appbar__spacer" aria-hidden="true"></span>';
+		} else {
+			$this->icon_link( 'bltn-iconbtn bltn-iconbtn--back', $back_url, $back_label, Icons::chevron_left() );
+		}
 
-		$tag        = $heading ? 'h1' : 'span';
-		$focus_attr = $heading ? ' data-bltn-heading tabindex="-1"' : '';
-		printf( '<%1$s class="bltn-appbar__title"%2$s>%3$s', $tag, $focus_attr, esc_html( $title ) ); // phpcs:ignore WordPress.Security.EscapeOutput -- tag + attr are internal literals.
+		if ( $heading ) {
+			printf( '<h1 class="bltn-appbar__title" data-bltn-heading tabindex="-1">%s', esc_html( $title ) );
+		} else {
+			printf( '<span class="bltn-appbar__title">%s', esc_html( $title ) );
+		}
 		if ( '' !== $subtitle ) {
 			printf( '<small>%s</small>', esc_html( $subtitle ) );
 		}
-		printf( '</%s>', $tag ); // phpcs:ignore WordPress.Security.EscapeOutput -- internal literal.
+		if ( $heading ) {
+			echo '</h1>';
+		} else {
+			echo '</span>';
+		}
 
-		printf( '<div class="bltn-appbar__actions">%s</div>', implode( '', $trailing ) ); // phpcs:ignore WordPress.Security.EscapeOutput -- each part assembled from escaped values.
+		echo '<div class="bltn-appbar__actions">';
+		foreach ( $trailing as $link ) {
+			$this->icon_link( 'bltn-iconbtn', $link['url'], $link['label'], $link['icon'] );
+		}
+		echo '</div>';
 
 		echo '</header>';
 	}
@@ -84,88 +100,57 @@ class AppBar {
 	 * The trailing group, in reading order: home, search, account.
 	 *
 	 * Home is omitted on the index; elsewhere it differs from the one-level back control.
+	 * Search is omitted where there is nowhere for it to go.
 	 *
 	 * @since 0.3.0
 	 *
-	 * @return list<string>
+	 * @return list<array{url:string,label:string,icon:string}>
 	 */
 	private function trailing(): array {
 		$out = array();
 
 		if ( ! $this->wp->is_forum_archive() ) {
-			$out[] = sprintf(
-				'<a class="bltn-iconbtn" href="%s" aria-label="%s">%s</a>',
-				esc_url( $this->wp->get_forums_url() ),
-				esc_attr__( 'Forums home', 'jtzl-bulletin' ),
-				Icons::home()
+			$out[] = array(
+				'url'   => $this->wp->get_forums_url(),
+				'label' => __( 'Forums home', 'jtzl-bulletin' ),
+				'icon'  => Icons::home(),
 			);
 		}
 
-		$search = $this->search_link();
-		if ( '' !== $search ) {
-			$out[] = $search;
+		if ( $this->wp->allow_search() && ! $this->wp->is_search() ) {
+			$out[] = array(
+				'url'   => $this->wp->get_search_url(),
+				'label' => __( 'Search', 'jtzl-bulletin' ),
+				'icon'  => Icons::search(),
+			);
 		}
 
-		$out[] = sprintf(
-			'<a class="bltn-iconbtn" href="%s" aria-label="%s">%s</a>',
-			esc_url( $this->account_url() ),
-			esc_attr( $this->account_label() ),
-			Icons::account()
+		$out[] = array(
+			'url'   => $this->account_url(),
+			'label' => $this->account_label(),
+			'icon'  => Icons::account(),
 		);
 
 		return $out;
 	}
 
 	/**
-	 * The leading control: one level up, or a spacer holding its place.
+	 * Echo one icon-only link, named by its label.
 	 *
-	 * @since 0.3.0
+	 * @since 0.6.5
 	 *
-	 * @param string $url   Destination, or '' for no control.
+	 * @param string $class CSS classes.
+	 * @param string $url   Destination.
 	 * @param string $label Accessible name.
-	 * @return string
+	 * @param string $icon  One of the Icons glyphs.
 	 */
-	private function leading( string $url, string $label ): string {
-		if ( '' === $url ) {
-			return $this->spacer();
-		}
-
-		return sprintf(
-			'<a class="bltn-iconbtn bltn-iconbtn--back" href="%s" aria-label="%s">%s</a>',
+	private function icon_link( string $class, string $url, string $label, string $icon ): void {
+		printf(
+			'<a class="%s" href="%s" aria-label="%s">%s</a>',
+			esc_attr( $class ),
 			esc_url( $url ),
 			esc_attr( $label ),
-			Icons::chevron_left()
-		);
-	}
-
-	/**
-	 * A 40px hole the width of an icon button, keeping the title centered.
-	 *
-	 * @since 0.3.0
-	 *
-	 * @return string
-	 */
-	private function spacer(): string {
-		return '<span class="bltn-appbar__spacer" aria-hidden="true"></span>';
-	}
-
-	/**
-	 * The search entry point, or '' when there is nowhere for it to go.
-	 *
-	 * @since 0.3.0
-	 *
-	 * @return string
-	 */
-	private function search_link(): string {
-		if ( ! $this->wp->allow_search() || $this->wp->is_search() ) {
-			return '';
-		}
-
-		return sprintf(
-			'<a class="bltn-iconbtn" href="%s" aria-label="%s">%s</a>',
-			esc_url( $this->wp->get_search_url() ),
-			esc_attr__( 'Search', 'jtzl-bulletin' ),
-			Icons::search()
+			wp_kses( $icon, AllowedHtml::icon() )
 		);
 	}
 

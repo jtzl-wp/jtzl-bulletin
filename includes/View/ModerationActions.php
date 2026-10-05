@@ -46,10 +46,13 @@ class ModerationActions {
 	 * @param int $topic_id Topic being read.
 	 */
 	public function render_for_topic( int $topic_id ): void {
-		$this->render_group(
-			$this->wp->get_topic_moderation_links( $topic_id ),
-			__( 'Thread actions', 'jtzl-bulletin' )
-		);
+		if ( '' === $this->wp->get_topic_moderation_links( $topic_id ) ) {
+			return;
+		}
+
+		$this->open_group( __( 'Thread actions', 'jtzl-bulletin' ) );
+		$this->wp->print_topic_moderation_links( $topic_id );
+		echo '</div>';
 	}
 
 	/**
@@ -60,10 +63,13 @@ class ModerationActions {
 	 * @param int $reply_id Reply being rendered.
 	 */
 	public function render_for_reply( int $reply_id ): void {
-		$this->render_group(
-			$this->wp->get_reply_moderation_links( $reply_id ),
-			__( 'Reply actions', 'jtzl-bulletin' )
-		);
+		if ( '' === $this->wp->get_reply_moderation_links( $reply_id ) ) {
+			return;
+		}
+
+		$this->open_group( __( 'Reply actions', 'jtzl-bulletin' ) );
+		$this->wp->print_reply_moderation_links( $reply_id );
+		echo '</div>';
 	}
 
 	/**
@@ -83,22 +89,16 @@ class ModerationActions {
 	}
 
 	/**
-	 * One group of links, or nothing at all.
+	 * Open the wrapper for one group of bbPress's links.
 	 *
-	 * @since 0.3.0
+	 * The links themselves are printed by bbPress, which keeps the inline confirm()
+	 * on its permanent-delete link.
 	 *
-	 * @param string $links bbPress's link markup, or ''.
+	 * @since 0.6.5
+	 *
 	 * @param string $label Accessible name for the group.
 	 */
-	private function render_group( string $links, string $label ): void {
-		if ( '' === $links ) {
-			return;
-		}
-
-		printf(
-			'<div class="bltn-mod" role="group" aria-label="%1$s">%2$s</div>',
-			esc_attr( $label ),
-			$links // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- bbPress-generated markup; each link is escaped at source (wp_nonce_url + esc_url/esc_attr in bbp_get_*_link).
-		);
+	private function open_group( string $label ): void {
+		printf( '<div class="bltn-mod" role="group" aria-label="%s">', esc_attr( $label ) );
 	}
 }

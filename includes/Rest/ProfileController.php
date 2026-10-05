@@ -27,16 +27,20 @@ class ProfileController implements ControllerInterface {
 
 	private ResponseFactory $responses;
 
+	private AccessPolicy $access;
+
 	public function __construct(
 		ProfilePresenter $profiles,
 		ProfileEditService $edits,
 		RequestBounds $bounds,
-		ResponseFactory $responses
+		ResponseFactory $responses,
+		AccessPolicy $access
 	) {
 		$this->profiles  = $profiles;
 		$this->edits     = $edits;
 		$this->bounds    = $bounds;
 		$this->responses = $responses;
+		$this->access    = $access;
 	}
 
 	/**
@@ -54,7 +58,7 @@ class ProfileController implements ControllerInterface {
 				),
 				$this->bounds->authenticated_route(
 					array( $this, 'update_item' ),
-					array( $this->responses, 'authenticated' ),
+					array( $this, 'may_edit' ),
 					array(
 
 						'name' => $this->bounds->string_arg(),
@@ -76,6 +80,27 @@ class ProfileController implements ControllerInterface {
 			$this->bounds->caller(),
 			$this->bounds->avatar_size( $request )
 		);
+	}
+
+	/**
+	 * Data contract.
+	 *
+	 * @return true|\WP_Error
+	 */
+	public function may_edit() {
+		$authenticated = $this->responses->authenticated();
+
+		if ( true !== $authenticated ) {
+			return $authenticated;
+		}
+
+		return $this->access->can_edit_profile( $this->bounds->caller() )
+			? true
+			: new \WP_Error(
+				'forbidden',
+				__( 'You cannot edit this profile.', 'jtzl-bulletin' ),
+				array( 'status' => 403 )
+			);
 	}
 
 	/**

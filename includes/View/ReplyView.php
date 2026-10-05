@@ -8,6 +8,7 @@
 
 namespace JTZL\Bulletin\View;
 
+use JTZL\Bulletin\Support\AllowedHtml;
 use JTZL\Bulletin\Support\Icons;
 use JTZL\Bulletin\WordPress\ContextInterface;
 
@@ -109,7 +110,7 @@ class ReplyView {
 			// The full phrase names the link meaningfully outside its surrounding text.
 			'<p class="bltn-replyto"><a href="#post-%1$s">%2$s<span>%3$s</span></a></p>',
 			esc_attr( (string) $parent ),
-			Icons::reply_to(), // phpcs:ignore WordPress.Security.EscapeOutput -- static SVG.
+			wp_kses( Icons::reply_to(), AllowedHtml::icon() ),
 			esc_html(
 				sprintf(
 					/* translators: %s: display name of the member being replied to. */

@@ -28,7 +28,7 @@ $jtzl_bltn_loadmore  = $jtzl_bltn_container->get( \JTZL\Bulletin\View\LoadMore::
  * it has no back control. Load-more grows page 1 instead, which is also how the
  * thread and reply lists continue.
  */
-$jtzl_bltn_rows = $jtzl_bltn_forums->capture( $jtzl_bltn_query->args( 0, 1 ) );
+$jtzl_bltn_rows = $jtzl_bltn_forums->rows( $jtzl_bltn_query->args( 0, 1 ) );
 $jtzl_bltn_more = 1 < $jtzl_bltn_ctx->get_max_forum_pages();
 ?>
 <section class="bltn-screen">
@@ -43,7 +43,7 @@ $jtzl_bltn_more = 1 < $jtzl_bltn_ctx->get_max_forum_pages();
 	?>
 
 	<main class="bltn-scroll bltn-list" id="bltn-forums">
-		<?php if ( '' !== $jtzl_bltn_rows ) : ?>
+		<?php if ( array() !== $jtzl_bltn_rows ) : ?>
 
 			<?php
 			/*
@@ -53,8 +53,7 @@ $jtzl_bltn_more = 1 < $jtzl_bltn_ctx->get_max_forum_pages();
 			?>
 			<div id="bltn-forums-list">
 				<?php
-				// Rows are built by View\ForumRow, which escapes every field.
-				echo $jtzl_bltn_rows; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				$jtzl_bltn_forums->render( $jtzl_bltn_rows );
 				?>
 			</div>
 
