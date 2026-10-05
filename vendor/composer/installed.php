@@ -3,7 +3,7 @@
         'name' => 'jtzl/bulletin',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => 'a832dfd2a2d32dcf31f35b82a3b162aed1382919',
+        'reference' => '4149f2652bda71c4bff3c280d5619495d19438b4',
         'type' => 'wordpress-plugin',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -13,7 +13,7 @@
         'jtzl/bulletin' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => 'a832dfd2a2d32dcf31f35b82a3b162aed1382919',
+            'reference' => '4149f2652bda71c4bff3c280d5619495d19438b4',
             'type' => 'wordpress-plugin',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

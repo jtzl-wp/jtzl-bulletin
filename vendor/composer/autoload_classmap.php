@@ -171,6 +171,7 @@ return array(
     'JTZL\\Bulletin\\Rest\\WriteFields' => $baseDir . '/includes/Rest/WriteFields.php',
     'JTZL\\Bulletin\\Screen\\ScreenClassifier' => $baseDir . '/includes/Screen/ScreenClassifier.php',
     'JTZL\\Bulletin\\Screen\\ScreenTier' => $baseDir . '/includes/Screen/ScreenTier.php',
+    'JTZL\\Bulletin\\Support\\AllowedHtml' => $baseDir . '/includes/Support/AllowedHtml.php',
     'JTZL\\Bulletin\\Support\\Icons' => $baseDir . '/includes/Support/Icons.php',
     'JTZL\\Bulletin\\Takeover\\TemplateController' => $baseDir . '/includes/Takeover/TemplateController.php',
     'JTZL\\Bulletin\\Unread\\ActivityComparison' => $baseDir . '/includes/Unread/ActivityComparison.php',

@@ -222,6 +222,7 @@ class ComposerStaticInitc4a905c152df2a7bd4cf7b6c6a6f681e
         'JTZL\\Bulletin\\Rest\\WriteFields' => __DIR__ . '/../..' . '/includes/Rest/WriteFields.php',
         'JTZL\\Bulletin\\Screen\\ScreenClassifier' => __DIR__ . '/../..' . '/includes/Screen/ScreenClassifier.php',
         'JTZL\\Bulletin\\Screen\\ScreenTier' => __DIR__ . '/../..' . '/includes/Screen/ScreenTier.php',
+        'JTZL\\Bulletin\\Support\\AllowedHtml' => __DIR__ . '/../..' . '/includes/Support/AllowedHtml.php',
         'JTZL\\Bulletin\\Support\\Icons' => __DIR__ . '/../..' . '/includes/Support/Icons.php',
         'JTZL\\Bulletin\\Takeover\\TemplateController' => __DIR__ . '/../..' . '/includes/Takeover/TemplateController.php',
         'JTZL\\Bulletin\\Unread\\ActivityComparison' => __DIR__ . '/../..' . '/includes/Unread/ActivityComparison.php',
