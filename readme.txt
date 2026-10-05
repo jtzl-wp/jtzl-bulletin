@@ -5,7 +5,7 @@ Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 8.2
 Requires Plugins: bbpress
-Stable tag: 0.6.4
+Stable tag: 0.6.5
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -78,6 +78,15 @@ By design, quite a lot. There is no delete route for a member's own topic or rep
 Yes. Bulletin defers to bbPress's own access control, including forums nested under a restricted parent.
 
 == Changelog ==
+
+= 0.6.5 =
+
+The changes WordPress.org's plugin review asked for. Readers see the same pages, and one API route gains a permission check.
+
+* Changed: An app can change a member's display name only if that member may edit their own profile on the website, the same check bbPress's profile form makes. WordPress gives every member that permission unless a site takes it away, so most sites see no difference. Where it has been taken away, `PATCH /me` now answers 403 `forbidden`.
+* Changed: Bulletin escapes its markup at the moment it prints it, and bbPress's moderation and edit links are printed by bbPress itself. The pages are unchanged.
+* Changed: Bulletin no longer edits WordPress's head output to remove a theme's viewport tag. It prints its own after that output instead, and a browser applies the last one, so screens lay out on a phone exactly as before.
+* Changed: The stylesheet's build settings moved from `postcss.config.cjs` into `package.json`, so the plugin package holds only file types WordPress.org accepts.
 
 = 0.6.4 =
 
